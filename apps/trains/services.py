@@ -51,11 +51,14 @@ LAST_TRAIN_MAX_STEPS = 5  # safety cap on the per-platform walk-forward loop
 OVERNIGHT_GAP_MINUTES = 45  # a gap at least this long marks the daily service break
 LAST_TRAIN_WALK_HOURS = 10  # how far past the anchor to walk looking for that gap
 PLATFORM_DISCOVERY_HOURS = (7, 12, 17, 21)  # spread across the day to catch every platform
+TRIP_CACHE_SECONDS = 60
+MODE_NAMES = {1: "Train", 4: "Light Rail", 5: "Bus", 7: "Coach", 9: "Ferry", 11: "School Bus", 99: "Walk", 100: "Walk"}
 SEARCH_CACHE_SECONDS = 300
 DEPARTURES_CACHE_SECONDS = 60
 PLATFORM_LIST_CACHE_SECONDS = 86400
 LAST_TRAIN_CACHE_SECONDS = 1800
 PLATFORM_RE = re.compile(r"Platform\s+[\w-]+", re.IGNORECASE)
+PLATFORM_SUFFIX_RE = re.compile(r",?\s*Platform\s+[\w-]+\s*$", re.IGNORECASE)
 
 
 class TrainApiError(Exception):
@@ -90,18 +93,13 @@ def _get(endpoint, params):
         raise TrainApiError("The Transport for NSW service returned an unexpected response.") from exc
 
 
-def search_stations(query):
-    """[{id, name}] of train stations matching the search text. stop_finder
-    also returns bus stops/streets/addresses for the same text, so this
-    keeps only type=='stop' locations whose modes include train."""
+def _search_station_locations(query):
+    """[{id, name, is_best, match_quality}], best match first. stop_finder
+    also returns bus stops/streets/addresses for the same search text, so
+    this keeps only type=='stop' locations whose modes include train."""
     query = (query or "").strip()
     if len(query) < 2:
         return []
-
-    cache_key = f"trains:search:{query.lower()}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
 
     data = _get("stop_finder", {
         "outputFormat": "rapidJSON",
@@ -121,10 +119,41 @@ def search_stations(query):
         if loc["id"] in seen_ids:
             continue
         seen_ids.add(loc["id"])
-        results.append({"id": loc["id"], "name": loc.get("disassembledName") or loc.get("name")})
-    results.sort(key=lambda r: r["name"])
+        results.append({
+            "id": loc["id"], "name": loc.get("disassembledName") or loc.get("name"),
+            "is_best": bool(loc.get("isBest")), "match_quality": loc.get("matchQuality", 0),
+        })
+    results.sort(key=lambda r: -r["match_quality"])
+    return results
+
+
+def search_stations(query):
+    """[{id, name}] of train stations matching the search text, name order."""
+    cache_key = f"trains:search:{(query or '').strip().lower()}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    results = sorted(
+        ({"id": r["id"], "name": r["name"]} for r in _search_station_locations(query)),
+        key=lambda r: r["name"],
+    )
     cache.set(cache_key, results, SEARCH_CACHE_SECONDS)
     return results
+
+
+def resolve_station(query):
+    """The single best-match station for `query`, or None if the search is
+    empty, has no match, or is ambiguous (no clear best result) -- callers
+    should fall back to showing the candidate list in that case."""
+    results = _search_station_locations(query)
+    if not results:
+        return None
+    best = results[0]
+    if best["is_best"]:
+        return {"id": best["id"], "name": best["name"]}
+    if len(results) == 1:
+        return {"id": best["id"], "name": best["name"]}
+    return None
 
 
 def _sydney_now():
@@ -136,6 +165,12 @@ def _parse_time(value):
     if not value:
         return None
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _station_only_name(name):
+    """Strips a trailing ', Platform N' so a leg's origin/destination name
+    doesn't duplicate the separately-shown platform field."""
+    return PLATFORM_SUFFIX_RE.sub("", name or "").strip()
 
 
 def _platform_label(location, station_name):
@@ -330,3 +365,80 @@ def get_last_trains_today(stop_id, station_name=None):
 
     cache.set(cache_key, result, LAST_TRAIN_CACHE_SECONDS)
     return result
+
+
+def get_trip(origin_id, destination_id, when=None, arrive_by=False):
+    """[{depart, arrive, duration_minutes, transfers, legs: [...]}], soonest
+    first (or, for arrive_by, closest-to-arrival first -- matches the
+    order the API already returns). Each leg has: mode_name, line,
+    headsign, origin_name, origin_platform, destination_name,
+    destination_platform, depart, depart_is_realtime, arrive,
+    arrive_is_realtime, duration_minutes."""
+    when = when or _sydney_now()
+    cache_key = f"trains:trip:{origin_id}:{destination_id}:{when.strftime('%Y%m%d%H%M')}:{arrive_by}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    data = _get("trip", {
+        "outputFormat": "rapidJSON",
+        "coordOutputFormat": "EPSG:4326",
+        "depArrMacro": "arr" if arrive_by else "dep",
+        "itdDate": when.strftime("%Y%m%d"),
+        "itdTime": when.strftime("%H%M"),
+        "type_origin": "stop",
+        "name_origin": origin_id,
+        "type_destination": "stop",
+        "name_destination": destination_id,
+        "TfNSWTR": "true",
+    })
+
+    journeys = []
+    for journey in data.get("journeys", []):
+        legs_out = []
+        for leg in journey.get("legs", []):
+            transportation = leg.get("transportation") or {}
+            mode_class = (transportation.get("product") or {}).get("class")
+            origin = leg.get("origin") or {}
+            destination = leg.get("destination") or {}
+
+            dep_planned = _parse_time(origin.get("departureTimePlanned"))
+            dep_estimated = _parse_time(origin.get("departureTimeEstimated"))
+            arr_planned = _parse_time(destination.get("arrivalTimePlanned"))
+            arr_estimated = _parse_time(destination.get("arrivalTimeEstimated"))
+            depart = dep_estimated or dep_planned
+            arrive = arr_estimated or arr_planned
+            if depart is None or arrive is None:
+                continue
+
+            duration_seconds = leg.get("duration")
+            legs_out.append({
+                "mode_class": mode_class,
+                "mode_name": MODE_NAMES.get(mode_class, (transportation.get("product") or {}).get("name", "")),
+                "line": transportation.get("number") or "",
+                "headsign": (transportation.get("destination") or {}).get("name", ""),
+                "origin_name": _station_only_name(origin.get("disassembledName") or origin.get("name")),
+                "origin_platform": (origin.get("properties") or {}).get("platformName", "") if mode_class == TRAIN_MODE else "",
+                "destination_name": _station_only_name(destination.get("disassembledName") or destination.get("name")),
+                "destination_platform": (destination.get("properties") or {}).get("platformName", "") if mode_class == TRAIN_MODE else "",
+                "depart": depart,
+                "depart_is_realtime": dep_estimated is not None,
+                "arrive": arrive,
+                "arrive_is_realtime": arr_estimated is not None,
+                "duration_minutes": round(duration_seconds / 60) if duration_seconds else None,
+            })
+        if not legs_out:
+            continue
+
+        total_depart = legs_out[0]["depart"]
+        total_arrive = legs_out[-1]["arrive"]
+        journeys.append({
+            "depart": total_depart,
+            "arrive": total_arrive,
+            "duration_minutes": round((total_arrive - total_depart).total_seconds() / 60),
+            "transfers": journey.get("interchanges", max(0, len(legs_out) - 1)),
+            "legs": legs_out,
+        })
+
+    cache.set(cache_key, journeys, TRIP_CACHE_SECONDS)
+    return journeys

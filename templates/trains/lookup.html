@@ -14,6 +14,83 @@
   </div>
 </div>
 
+<div class="panel" style="max-width:640px;">
+  <div class="panel-head"><h2>Plan a trip</h2></div>
+  <div class="panel-body">
+    <form method="get">
+      <div class="form-grid">
+        <div class="field"><label>From</label><input type="text" name="from_q" placeholder="e.g. Auburn" value="{{ from_q }}"></div>
+        <div class="field"><label>To</label><input type="text" name="to_q" placeholder="e.g. Town Hall" value="{{ to_q }}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Date &amp; time (optional &mdash; leave blank for now)</label><input type="datetime-local" name="when" value="{{ when }}"></div>
+        <div class="field checkbox-field" style="align-self:end;">
+          <input type="checkbox" name="arrive_by" id="arrive_by" {% if arrive_by %}checked{% endif %}>
+          <label for="arrive_by" style="margin:0;">Arrive by this time (instead of depart after)</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Find trains</button>
+    </form>
+  </div>
+</div>
+
+{% if trip_origin_candidates is not None or trip_destination_candidates is not None %}
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    {% if trip_origin_candidates is not None %}
+    <p style="margin:0 0 8px;">Couldn't pin down a single station for <strong>&ldquo;{{ from_q }}&rdquo;</strong> &mdash; try one of:
+      {% for c in trip_origin_candidates %}<a href="?from_q={{ c.name|urlencode }}&to_q={{ to_q|urlencode }}">{{ c.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+      {% if not trip_origin_candidates %}no matching stations found.{% endif %}
+    </p>
+    {% endif %}
+    {% if trip_destination_candidates is not None %}
+    <p style="margin:0;">Couldn't pin down a single station for <strong>&ldquo;{{ to_q }}&rdquo;</strong> &mdash; try one of:
+      {% for c in trip_destination_candidates %}<a href="?from_q={{ from_q|urlencode }}&to_q={{ c.name|urlencode }}">{{ c.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+      {% if not trip_destination_candidates %}no matching stations found.{% endif %}
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if journeys is not None %}
+<div class="page-head">
+  <div class="desc">{{ trip_origin.name }} &rarr; {{ trip_destination.name }}</div>
+</div>
+{% if journeys %}
+<div class="card-grid">
+  {% for j in journeys %}
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ j.depart|date:"H:i" }} &rarr; {{ j.arrive|date:"H:i" }}</h2>
+        <span class="sub">{{ j.duration_minutes }} min{% if j.transfers %} &middot; {{ j.transfers }} transfer{{ j.transfers|pluralize }}{% else %} &middot; direct{% endif %}</span>
+      </div>
+      <div class="panel-body flush">
+        <table class="data">
+          <thead><tr><th>Mode</th><th>From</th><th>To</th><th class="num">Depart</th><th class="num">Arrive</th></tr></thead>
+          <tbody>
+            {% for leg in j.legs %}
+            <tr>
+              <td>{{ leg.mode_name }}{% if leg.line %} {{ leg.line }}{% endif %}</td>
+              <td>{{ leg.origin_name }}{% if leg.origin_platform %}<br><span class="muted">{{ leg.origin_platform }}</span>{% endif %}</td>
+              <td>{{ leg.destination_name }}{% if leg.destination_platform %}<br><span class="muted">{{ leg.destination_platform }}</span>{% endif %}</td>
+              <td class="num mono">{{ leg.depart|date:"H:i" }} {% if leg.depart_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
+              <td class="num mono">{{ leg.arrive|date:"H:i" }} {% if leg.arrive_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel"><div class="panel-body"><div class="empty-state">No trains found for that trip right now.</div></div></div>
+{% endif %}
+{% endif %}
+
 {% if results is not None %}
 <div class="panel" style="max-width:520px;">
   <div class="panel-head"><h2>Stations matching &ldquo;{{ query }}&rdquo;</h2></div>
@@ -42,7 +119,7 @@
 </div>
 
 {% if board.platforms %}
-<div class="two-col">
+<div class="card-grid">
   {% for p in board.platforms %}
   <div>
     <div class="panel">
