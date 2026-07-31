@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}IMS{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f5f7; color: #1a1a1a; }
+    header { background: #14213d; color: #fff; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    header a { color: #fff; text-decoration: none; }
+    main { max-width: 480px; margin: 3rem auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .wide { max-width: 960px; }
+    label { display: block; margin-top: 1rem; font-weight: 600; font-size: 0.9rem; }
+    input[type=text], input[type=password], input[type=email] {
+      width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+    }
+    button { margin-top: 1.5rem; background: #14213d; color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
+    .errors { color: #b00020; font-size: 0.85rem; }
+    .messages { list-style: none; padding: 0; }
+    .messages li { padding: 0.5rem 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; }
+    .messages .error { background: #fdecea; color: #b00020; }
+    .messages .success { background: #e6f4ea; color: #1e7e34; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="{% url 'accounts:dashboard' %}">IMS</a>
+    {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <span>{{ request.user }} ({{ request.user.get_role_display }})</span>
+        <button type="submit">Logout</button>
+      </form>
+    {% endif %}
+  </header>
+  {% if messages %}
+    <ul class="messages" style="max-width:480px;margin:1rem auto 0;">
+      {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+  {% block content %}{% endblock %}
+</body>
+</html>

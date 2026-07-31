@@ -1,0 +1,163 @@
+from django.conf import settings
+from django.db import models
+
+from apps.core.models import ImmutableModel
+
+
+class TransactionType(models.TextChoices):
+    STOCK_IN = "stock_in", "Stock In"
+    STOCK_OUT = "stock_out", "Stock Out"
+    TRANSFER_OUT = "transfer_out", "Transfer Out"
+    TRANSFER_IN = "transfer_in", "Transfer In"
+    ADJUSTMENT = "adjustment", "Adjustment"
+    RETURN = "return", "Return"
+    DAMAGED = "damaged", "Damaged"
+    LOST = "lost", "Lost"
+    EXPIRED = "expired", "Expired"
+    REVERSAL = "reversal", "Reversal"
+
+
+class InventoryTransaction(ImmutableModel):
+    """Every inventory movement, ever (SRS Section 5.4). Append-only:
+    corrections are posted as a new REVERSAL transaction, never an edit.
+
+    Note: `purchase_order` and `request` (stock-request approval) FKs are
+    intentionally not present yet -- those apps don't exist. They are added
+    as a trivial additive migration once Purchasing/Requests modules land;
+    see apps/inventory/services.py for the guard that will start using them.
+    """
+
+    type = models.CharField(max_length=20, choices=TransactionType.choices)
+    product = models.ForeignKey("catalogue.Product", on_delete=models.PROTECT, related_name="transactions")
+    batch = models.ForeignKey("catalogue.Batch", null=True, blank=True, on_delete=models.PROTECT, related_name="transactions")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)  # always positive; direction implied by `type`
+
+    source_warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    dest_warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+
+    reason_code = models.CharField(max_length=40, blank=True)
+    comment = models.TextField(blank=True)
+
+    reversal_of = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="reversals")
+
+    performed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )  # sign-off, e.g. required for LOST (Section 5.4)
+
+    photo = models.ImageField(upload_to="damaged_stock/", blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["product", "source_warehouse", "timestamp"]),
+            models.Index(fields=["type", "timestamp"]),
+        ]
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.type} {self.quantity} {self.product} @ {self.timestamp:%Y-%m-%d %H:%M}"
+
+
+class StockLevel(models.Model):
+    """The single source of truth for current on-hand quantity per
+    product+location(+batch). Maintained exclusively through the atomic
+    conditional-update helpers in services.py -- never edited directly.
+    Always re-derivable from the InventoryTransaction log if it ever drifts.
+    """
+
+    product = models.ForeignKey("catalogue.Product", on_delete=models.PROTECT, related_name="stock_levels")
+    warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
+    )
+    station = models.ForeignKey(
+        "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
+    )
+    batch = models.ForeignKey(
+        "catalogue.Batch", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "warehouse", "station", "batch"], name="uniq_stock_level_slot"
+            )
+        ]
+        indexes = [models.Index(fields=["product", "warehouse"]), models.Index(fields=["product", "station"])]
+
+    def __str__(self):
+        location = self.warehouse or self.station
+        return f"{self.product} @ {location}: {self.quantity}"
+
+
+class Transfer(models.Model):
+    """Warehouse-to-warehouse transfers are two-phase: the debit posts
+    immediately, the credit (and StockLevel increment) only on
+    confirm_receipt (SRS Section 5.5)."""
+
+    STATUS_CHOICES = [("in_transit", "In Transit"), ("completed", "Completed")]
+
+    product = models.ForeignKey("catalogue.Product", on_delete=models.PROTECT, related_name="transfers")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    source_warehouse = models.ForeignKey("warehouses.Warehouse", on_delete=models.PROTECT, related_name="+")
+    dest_warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    dest_station = models.ForeignKey(
+        "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_transit")
+    debit_txn = models.OneToOneField(InventoryTransaction, on_delete=models.PROTECT, related_name="+")
+    credit_txn = models.OneToOneField(
+        InventoryTransaction, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Transfer #{self.pk} {self.product} x{self.quantity} ({self.status})"
+
+
+class Stocktake(models.Model):
+    STATUS_CHOICES = [("open", "Open"), ("completed", "Completed")]
+
+    warehouse = models.ForeignKey("warehouses.Warehouse", on_delete=models.PROTECT, related_name="stocktakes")
+    started_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open")
+
+    def __str__(self):
+        return f"Stocktake #{self.pk} @ {self.warehouse} ({self.status})"
+
+
+class StocktakeLine(models.Model):
+    stocktake = models.ForeignKey(Stocktake, on_delete=models.CASCADE, related_name="lines")
+    product = models.ForeignKey("catalogue.Product", on_delete=models.PROTECT, related_name="+")
+    batch = models.ForeignKey(
+        "catalogue.Batch", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    system_quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    counted_quantity = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["stocktake", "product", "batch"], name="uniq_stocktake_line")
+        ]
+
+    @property
+    def variance(self):
+        return self.counted_quantity - self.system_quantity
+
+    def __str__(self):
+        return f"{self.stocktake} / {self.product}: variance {self.variance}"
