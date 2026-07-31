@@ -1,0 +1,377 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User Guide - Cleantech1 IMS</title>
+<link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<style>
+  body { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; font-size: 15px; }
+
+  nav.toc {
+    background: var(--surface-1);
+    border-right: 1px solid var(--line);
+    padding: 20px 0;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .toc-brand { display: flex; align-items: center; gap: 10px; padding: 0 20px 16px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .toc-brand img { width: 30px; height: 30px; border-radius: 50%; }
+  .toc-brand .name { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; }
+  .toc-brand .sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; letter-spacing: 0.05em; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: sec; }
+  nav.toc li { counter-increment: sec; }
+  nav.toc ol a {
+    display: flex; gap: 8px; align-items: baseline; padding: 6px 20px; font-size: 0.84rem;
+    color: var(--ink-600); text-decoration: none; border-left: 3px solid transparent;
+  }
+  nav.toc ol a::before { content: counter(sec, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-400); flex-shrink: 0; }
+  nav.toc ol a:hover { background: var(--surface-sunken); color: var(--ink-900); }
+  nav.toc ol a.active { border-left-color: var(--accent); color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+  .toc-signin { display: block; margin: 14px 20px 0; padding: 6px 20px; font-size: 0.82rem; color: var(--accent); text-decoration: none; }
+  .toc-signin:hover { text-decoration: underline; }
+
+  details.toc-mobile { display: none; }
+
+  main.guide { padding: 44px 52px 90px; max-width: 740px; }
+  .doc-head { margin-bottom: 36px; }
+  .doc-head .eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .doc-head h1 { font-size: 1.9rem; margin: 0 0 8px; }
+  .doc-head .sub { color: var(--ink-600); font-size: 1rem; }
+  .doc-head .wordmark { height: 42px; margin-bottom: 16px; display: block; }
+
+  .guide section { margin-bottom: 46px; scroll-margin-top: 20px; }
+  .guide section h2 {
+    font-size: 1.25rem; display: flex; align-items: baseline; gap: 10px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--line); margin-bottom: 16px;
+  }
+  .guide section h2 .num { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .guide section h3 { font-size: 1rem; margin: 20px 0 6px; }
+  .guide p { margin: 0 0 12px; }
+  .guide ul, .guide ol { padding-left: 20px; margin: 0 0 12px; }
+  .guide li { margin-bottom: 5px; }
+  .guide li > ul, .guide li > ol { margin-top: 5px; }
+
+  .role-table { width: 100%; border-collapse: collapse; margin: 4px 0 16px; font-size: 0.88rem; }
+  .role-table th, .role-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .role-table th { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-400); }
+  .role-table tr:last-child td { border-bottom: none; }
+
+  .callout { background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 6px; padding: 11px 15px; font-size: 0.9rem; margin: 0 0 14px; }
+  .callout.warn { background: var(--warn-soft); border-left-color: var(--warn); }
+  .callout.good { background: var(--good-soft); border-left-color: var(--good); }
+
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps li { counter-increment: step; position: relative; padding-left: 32px; margin-bottom: 10px; }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px;
+    width: 21px; height: 21px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+
+  .faq dt { font-weight: 600; margin-top: 14px; color: var(--ink-900); }
+  .faq dd { margin: 3px 0 0; color: var(--ink-600); }
+
+  .guide-footer { padding: 22px 52px 60px; color: var(--ink-400); font-size: 0.8rem; border-top: 1px solid var(--line); margin-top: 16px; }
+  .guide-footer a { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    body { display: block; }
+    nav.toc { display: none; }
+    details.toc-mobile {
+      display: block; position: sticky; top: 0; z-index: 10;
+      background: var(--surface-1); border-bottom: 1px solid var(--line);
+    }
+    details.toc-mobile summary {
+      list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+      font-family: var(--font-display); font-weight: 700;
+    }
+    details.toc-mobile summary::-webkit-details-marker { display: none; }
+    details.toc-mobile summary img { width: 24px; height: 24px; border-radius: 50%; }
+    details.toc-mobile summary::after { content: "\25BE"; margin-left: auto; color: var(--ink-400); }
+    details.toc-mobile[open] summary::after { content: "\25B4"; }
+    details.toc-mobile .toc-list { max-height: 60vh; overflow-y: auto; border-top: 1px solid var(--line); }
+    details.toc-mobile ol { list-style: none; margin: 0; padding: 4px 0; counter-reset: sec; }
+    details.toc-mobile li { counter-increment: sec; }
+    details.toc-mobile a { display: flex; gap: 8px; padding: 9px 16px; font-size: 0.88rem; color: var(--ink-700); text-decoration: none; }
+    details.toc-mobile a::before { content: counter(sec, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); }
+
+    main.guide { padding: 24px 16px 60px; }
+    .doc-head h1 { font-size: 1.4rem; }
+    .doc-head .wordmark { height: 32px; }
+    .guide section h2 { font-size: 1.1rem; }
+    .role-table { display: block; overflow-x: auto; white-space: nowrap; }
+    .guide-footer { padding: 18px 16px 44px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="toc" aria-label="Table of contents">
+  <div class="toc-brand">
+    <img src="{% static 'img/logo-mark.jpg' %}" alt="">
+    <div><div class="name">Cleantech1</div><div class="sub">IMS GUIDE</div></div>
+  </div>
+  <ol>
+    <li><a href="#signing-in">Signing in</a></li>
+    <li><a href="#roles">Your role</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#inventory">Inventory</a></li>
+    <li><a href="#sites">Warehouses &amp; stations</a></li>
+    <li><a href="#requests">Stock requests</a></li>
+    <li><a href="#projects">Deep clean projects</a></li>
+    <li><a href="#fleet">Equipment &amp; vehicles</a></li>
+    <li><a href="#purchasing">Suppliers &amp; purchase orders</a></li>
+    <li><a href="#reports">Reports</a></li>
+    <li><a href="#notifications">Notifications</a></li>
+    <li><a href="#attachments">Attaching files</a></li>
+    <li><a href="#admin">Administration</a></li>
+    <li><a href="#mobile">Using it on your phone</a></li>
+    <li><a href="#faq">Common questions</a></li>
+  </ol>
+  <a class="toc-signin" href="{% url 'accounts:login' %}">&larr; Back to sign in</a>
+</nav>
+
+<details class="toc-mobile">
+  <summary><img src="{% static 'img/logo-mark.jpg' %}" alt="">Cleantech1 IMS Guide</summary>
+  <div class="toc-list">
+    <ol>
+      <li><a href="#signing-in">Signing in</a></li>
+      <li><a href="#roles">Your role</a></li>
+      <li><a href="#dashboard">Dashboard</a></li>
+      <li><a href="#inventory">Inventory</a></li>
+      <li><a href="#sites">Warehouses &amp; stations</a></li>
+      <li><a href="#requests">Stock requests</a></li>
+      <li><a href="#projects">Deep clean projects</a></li>
+      <li><a href="#fleet">Equipment &amp; vehicles</a></li>
+      <li><a href="#purchasing">Suppliers &amp; purchase orders</a></li>
+      <li><a href="#reports">Reports</a></li>
+      <li><a href="#notifications">Notifications</a></li>
+      <li><a href="#attachments">Attaching files</a></li>
+      <li><a href="#admin">Administration</a></li>
+      <li><a href="#mobile">Using it on your phone</a></li>
+      <li><a href="#faq">Common questions</a></li>
+    </ol>
+  </div>
+</details>
+
+<main class="guide">
+  <div class="doc-head">
+    <img class="wordmark" src="{% static 'img/logo-wordmark.jpg' %}" alt="Cleantech1">
+    <div class="eyebrow">Inventory Management System</div>
+    <h1>User Guide</h1>
+    <div class="sub">Everything you need to run inventory, equipment, vehicles, deep clean projects, and purchasing through the Cleantech1 IMS — on desktop or on your phone.</div>
+  </div>
+
+  <section id="signing-in">
+    <h2><span class="num">01</span> Signing in</h2>
+    <ol class="steps">
+      <li>Open the IMS login page and enter your <strong>username or email</strong> and <strong>password</strong>.</li>
+      <li>Some accounts require a second step — a 6-digit code. Enter it when asked.</li>
+      <li>After <strong>10 minutes of no activity</strong> you'll be signed out automatically. Just log back in.</li>
+    </ol>
+    <div class="callout warn">Locked out or forgot your password? Only an Administrator can reset your account or unlock it — contact them directly.</div>
+  </section>
+
+  <section id="roles">
+    <h2><span class="num">02</span> What your role can do</h2>
+    <p>Every account has one role, set by an Administrator. Your role decides what shows up in your menu and what you're allowed to do — you'll only see the sections described in this guide that your role actually uses.</p>
+    <table class="role-table">
+      <thead><tr><th>Role</th><th>Day-to-day job</th></tr></thead>
+      <tbody>
+        <tr><td>Administrator</td><td>Full access to everything, including user management and system-wide settings.</td></tr>
+        <tr><td>Warehouse Supervisor</td><td>Runs a warehouse: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, see reports for their warehouse.</td></tr>
+        <tr><td>Warehouse Staff</td><td>Works in a warehouse: view products, view equipment/vehicles assigned to them, take part in stocktakes, create purchase orders.</td></tr>
+        <tr><td>Station Supervisor</td><td>Runs a cleaning station: request stock from a warehouse, record daily chemical usage, view reports for their station.</td></tr>
+        <tr><td>Station Cleaning Staff</td><td>Works at a station: request stock, record chemical usage.</td></tr>
+        <tr><td>Deep Clean Supervisor</td><td>Runs deep clean projects: dispatch chemicals, take equipment/vehicles, log shifts and hours, close out projects.</td></tr>
+        <tr><td>Management</td><td>Read-only oversight across the whole company: products, requests, equipment, vehicles, projects, suppliers, purchase orders, reports.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="dashboard">
+    <h2><span class="num">03</span> Dashboard</h2>
+    <p>The first screen after login:</p>
+    <ul>
+      <li>Quick counts — products, warehouses, stations, low stock, pending requests, plus role-specific alerts like equipment maintenance due or expired safety test tags.</li>
+      <li><strong>Low stock alerts</strong> — products at or below their reorder point.</li>
+      <li><strong>Recent activity</strong> — the latest 20 stock movements, with a "View all" link to the full history.</li>
+      <li><strong>Pending stock requests</strong> waiting on approval.</li>
+      <li>Administrators also see a live <strong>Audit trail</strong>.</li>
+    </ul>
+    <p>Tap any number or row to jump straight to that item.</p>
+  </section>
+
+  <section id="inventory">
+    <h2><span class="num">04</span> Inventory</h2>
+    <h3>Products</h3>
+    <p>Search by name or barcode. Each product shows current stock, its <strong>reorder point</strong> (the level that triggers a low-stock alert), and a hazard flag if it's a hazardous chemical. Open a product for stock by location, batch/expiry info, its QR code, Safety Data Sheet, and file attachments.</p>
+    <div class="callout">Warehouse Supervisors/Admins create and edit products, and set the reorder point — set it low for slow-moving items, higher for chemicals you burn through fast, so the alert means something for that specific product.</div>
+    <h3>Categories</h3>
+    <p>Simple grouping for products (e.g. "Chemicals", "PPE", "Equipment consumables"). Admins manage these.</p>
+    <h3>Transactions</h3>
+    <p>The full, permanent history of every stock movement — stock in, stock out, transfers, returns, damaged/lost/expired write-offs, station usage. This list can never be edited or deleted, by design — it's the audit trail for where every unit of stock went.</p>
+  </section>
+
+  <section id="sites">
+    <h2><span class="num">05</span> Warehouses &amp; stations</h2>
+    <ul>
+      <li><strong>Warehouses</strong> hold bulk stock — each has an address and active/inactive status.</li>
+      <li><strong>Stations</strong> are the railway station cleaning sites stock gets issued to.</li>
+      <li>Open either to see current stock levels there.</li>
+      <li>Warehouse Supervisors manage stock <strong>in</strong> their warehouse (receiving, adjustments, transfers) from the warehouse detail page.</li>
+    </ul>
+  </section>
+
+  <section id="requests">
+    <h2><span class="num">06</span> Stock requests</h2>
+    <p>How a station gets more stock from a warehouse.</p>
+    <ol class="steps">
+      <li><strong>Station staff/supervisor</strong>: open the station, click Request stock, pick a warehouse, add products and quantities, submit.</li>
+      <li><strong>Warehouse Supervisor</strong>: sees the request in their queue, Approve or Reject (a rejection needs a reason).</li>
+      <li>Once approved, the warehouse <strong>Dispatches</strong> it — deducts warehouse stock and adds it to the station automatically. If there isn't enough stock for everything, it dispatches what's available and marks the rest short (status: <em>Partially Fulfilled</em>).</li>
+    </ol>
+    <p>Filter the list by status: Pending, Approved, Rejected, Partially Fulfilled, Fulfilled.</p>
+  </section>
+
+  <section id="projects">
+    <h2><span class="num">07</span> Deep clean projects</h2>
+    <p>For multi-day deep-clean jobs at a station — tracks chemicals, equipment, vehicles, and hours separately from routine station stock.</p>
+    <ul>
+      <li><strong>Admin</strong> creates the project: reference, name, station, supervisor, start/end dates.</li>
+      <li><strong>Deep Clean Supervisor</strong> runs it from the project's detail page:
+        <ul>
+          <li><strong>Dispatch chemicals</strong> from a warehouse, and <strong>Return</strong> what's left over when done.</li>
+          <li><strong>Take equipment / Take vehicle</strong> — checks it out to the project (blocked if it has overdue maintenance or a failed safety test, unless you tick Override with a reason).</li>
+          <li><strong>Release</strong> equipment/vehicles when finished with them.</li>
+          <li><strong>Log a shift</strong> — date, day/night, start and end time, who worked it. Hours calculate automatically, including overnight shifts crossing midnight.</li>
+          <li><strong>Close project</strong> — only works once everything checked out has been released. If something's outstanding you'll see exactly what; override with a reason if you must close anyway.</li>
+        </ul>
+      </li>
+    </ul>
+    <div class="callout good">A project moves itself from Planned &rarr; Active the first time anything happens on it (a dispatch, an equipment take, or a shift log), and to Completed when you close it.</div>
+  </section>
+
+  <section id="fleet">
+    <h2><span class="num">08</span> Equipment &amp; vehicles</h2>
+    <h3>Equipment</h3>
+    <p>Reusable gear (vacuums, scrubbers, pressure washers), each with its own asset ID and QR code. Assign to a station or project (and a specific person if useful), Release when done, Start/End maintenance, or record a safety test result. Equipment with overdue maintenance or a failed/overdue safety test is blocked from assignment — override with a reason if genuinely necessary. Mark lost or Write off when equipment is gone for good (write-off is permanent).</p>
+    <h3>Test tags</h3>
+    <p>For smaller electrical items too numerous to track individually (extension cords, chargers, power leads). Record name, location, start date, expiry date. Filter by expired / expiring soon.</p>
+    <h3>Vehicles</h3>
+    <p>Same idea: assign to a station/project and driver, release, log running costs (fuel, tolls, repairs), track service due dates and insurance expiry. Vehicles with overdue service or expired insurance are blocked from assignment unless overridden.</p>
+  </section>
+
+  <section id="purchasing">
+    <h2><span class="num">09</span> Suppliers &amp; purchase orders</h2>
+    <h3>Suppliers</h3>
+    <p>Contact details for who you buy from, plus what products each supplier sells and at what price — used to auto-fill pricing on a purchase order.</p>
+    <h3>Purchase orders</h3>
+    <ol class="steps">
+      <li><strong>Create</strong>: pick a supplier, the warehouse it's delivering to, add line items (product, quantity, unit price — auto-fills from the supplier's saved price if set up).</li>
+      <li>Starts as a <strong>Draft</strong> — add or remove lines freely.</li>
+      <li><strong>Send to supplier</strong> locks it and makes it official.</li>
+      <li><strong>Print</strong> gives a clean printable copy.</li>
+      <li>When stock arrives, <strong>Receive</strong> it against each line — partial deliveries are fine. Warehouse stock updates the moment you record a receipt.</li>
+    </ol>
+    <p>Status tracks itself: Draft &rarr; Sent &rarr; Partially Received &rarr; Received. <strong>Cancel</strong> is available any time before it's fully received (needs a reason).</p>
+  </section>
+
+  <section id="reports">
+    <h2><span class="num">10</span> Reports</h2>
+    <p>On-screen reports, filterable by date range where relevant:</p>
+    <ul>
+      <li><strong>Inventory</strong> — on hand, estimated stock value, batch ageing, what's expiring soon.</li>
+      <li><strong>Consumption</strong> — what's been issued out, by station, by project, and by product.</li>
+      <li><strong>Equipment</strong> — status breakdown, maintenance history, most-assigned items.</li>
+      <li><strong>Deep clean projects</strong> — cost per project, on-time status, outstanding assets.</li>
+      <li><strong>Purchasing</strong> — spend by supplier, average lead time, on-time delivery rate.</li>
+      <li><strong>Vehicles</strong> — running costs, service/insurance compliance issues.</li>
+      <li><strong>Audit summary</strong> — activity volume by user and action (Admin/Management only).</li>
+    </ul>
+    <p>What you see is scoped to your role — a Warehouse Supervisor sees their own warehouse's numbers, Deep Clean Supervisors see their own projects, Admin and Management see everything.</p>
+    <div class="callout">Reports are on-screen only for now — no PDF/Excel export or scheduled email reports yet.</div>
+  </section>
+
+  <section id="notifications">
+    <h2><span class="num">11</span> Notifications</h2>
+    <p>Tap <strong>Notifications</strong> (top-right, with an unread count badge) for your alerts:</p>
+    <ul>
+      <li><strong>Low stock</strong> — a product you're responsible for dropped to/below its reorder point.</li>
+      <li><strong>Expiring stock</strong> — a batch is expiring soon or has expired.</li>
+      <li><strong>Maintenance due</strong> — equipment, a test tag, or a vehicle needs attention.</li>
+      <li><strong>Outstanding request</strong> — a stock request has been sitting too long unactioned.</li>
+      <li><strong>Purchase order</strong> — an order was fully received, or is overdue against its expected delivery date.</li>
+    </ul>
+    <p>You also get an email for each one, if your account has an email address on file. Tap <strong>Open</strong> to jump straight to what it's about, or <strong>Mark all read</strong> to clear the badge.</p>
+  </section>
+
+  <section id="attachments">
+    <h2><span class="num">12</span> Attaching files</h2>
+    <p>Products, purchase orders, equipment, vehicles, and deep clean projects each have an <strong>Attachments</strong> section on their detail page — for Safety Data Sheets, certificates, invoices, service records, contracts, site photos.</p>
+    <ul>
+      <li>Accepted types: <strong>PDF, JPG, PNG, DOCX, XLSX</strong>, up to 10MB each.</li>
+      <li>Tap Upload, choose the file, add an optional description.</li>
+      <li>Anyone who can edit that record can also upload or remove its attachments.</li>
+    </ul>
+  </section>
+
+  <section id="admin">
+    <h2><span class="num">13</span> Administration <span style="font-weight:400;font-size:0.7em;color:var(--ink-400);">— Admin only</span></h2>
+    <h3>Users</h3>
+    <p>Create accounts, assign roles, assign which warehouses/stations a user covers, deactivate accounts (with a reason — logged), reset passwords, unlock locked-out accounts.</p>
+    <h3>Audit log</h3>
+    <p>A permanent, unchangeable record of every significant action — logins, role changes, every inventory movement, equipment/vehicle status changes. Nothing here can ever be edited or deleted, by anyone, including Administrators.</p>
+  </section>
+
+  <section id="mobile">
+    <h2><span class="num">14</span> Using it on your phone</h2>
+    <ul>
+      <li>Tap the <strong>&#9776;</strong> icon top-left to open the menu; tap outside it or a menu item to close it.</li>
+      <li>Wide tables scroll <strong>sideways within the table itself</strong> — swipe left/right on the table, not the whole page.</li>
+      <li>Forms and buttons are sized for tapping — no need to zoom in.</li>
+      <li>Everything works the same as on desktop; only the layout adapts.</li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2><span class="num">15</span> Common questions</h2>
+    <dl class="faq">
+      <dt>I don't see a menu item I need.</dt>
+      <dd>Your role doesn't have access to it. Ask your Administrator if you think that's wrong.</dd>
+      <dt>A button or action is greyed out or missing.</dt>
+      <dd>Usually a permission or status issue (e.g. you can't dispatch a stock request until it's approved). Check the item's status first.</dd>
+      <dt>Equipment/vehicle assignment is blocked.</dt>
+      <dd>It has overdue maintenance, an overdue/failed safety test, or (for vehicles) overdue service/expired insurance. Fix the underlying issue, or override with a reason if it's genuinely urgent — overrides are logged.</dd>
+      <dt>I closed a project by mistake, or need to undo something.</dt>
+      <dd>Nothing in this system can be deleted or undone by design — it's an audit trail. Contact your Administrator to work out the right correction.</dd>
+      <dt>Where do I report a bug or ask for a new feature?</dt>
+      <dd>Contact your Administrator.</dd>
+    </dl>
+  </section>
+
+  <p><a href="{% url 'accounts:login' %}">&larr; Back to sign in</a></p>
+</main>
+
+<div class="guide-footer">Cleantech1 IMS &mdash; User Guide</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+    var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    function onScroll() {
+      var pos = window.scrollY + 80;
+      var current = 0;
+      sections.forEach(function (s, i) { if (s && s.offsetTop <= pos) current = i; });
+      links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+    }
+    document.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+</body>
+</html>

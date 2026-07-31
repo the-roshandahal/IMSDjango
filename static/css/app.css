@@ -485,6 +485,7 @@ legend { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppe
 .auth-logo { display: block; max-width: 220px; width: 100%; height: auto; margin-bottom: 10px; }
 .auth-sub { color: var(--ink-400); font-size: 0.85rem; margin-bottom: 22px; }
 .auth-card .btn-primary { width: 100%; justify-content: center; margin-top: 8px; }
+.auth-footer-link { text-align: center; margin-top: 18px; font-size: 0.82rem; }
 
 /* ---------- Mobile (phone/tablet) ---------- */
 @media (max-width: 860px) {

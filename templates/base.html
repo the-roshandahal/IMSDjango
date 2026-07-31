@@ -25,6 +25,9 @@
       <a class="nav-link {% if request.resolver_match.view_name == 'accounts:dashboard' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
         <span class="nav-dot"></span> Dashboard
       </a>
+      <a class="nav-link {% if request.resolver_match.view_name == 'core_web:guide' %}active{% endif %}" href="{% url 'core_web:guide' %}" target="_blank">
+        <span class="nav-dot"></span> User Guide
+      </a>
 
       {% if can_view_products %}
       <div class="nav-section">Inventory</div>

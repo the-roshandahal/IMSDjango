@@ -23,4 +23,5 @@ urlpatterns = [
     path("", include("apps.reports.urls_web")),
     path("", include("apps.notifications.urls_web")),
     path("", include("apps.documents.urls_web")),
+    path("", include("apps.core.urls_web")),
 ]
