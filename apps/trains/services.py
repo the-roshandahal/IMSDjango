@@ -9,10 +9,24 @@ returns actual stop events, so a train that skips a station has no event
 there at all. Getting that would need static GTFS timetables cross-
 referenced with real-time vehicle positions, a much larger undertaking,
 and was explicitly dropped as out of scope.
+
+Important API quirk this module works around: a station-wide departure_mon
+call returns a capped number of events (~40, trains and buses combined,
+shared across every platform). At a busy multi-platform station, a
+high-frequency platform can consume that whole budget and silently push
+a quieter platform's events out of the response entirely -- confirmed
+empirically at Auburn, where platforms 1/2 (frequent) squeezed platforms
+3/4 (less frequent) out of both a near-term and a 90-minutes-back call.
+The fix is to discover the station's platforms once (cached for a day,
+since a station's physical platforms don't change), then query each
+platform individually (`nameKey_dm=$USEPOINT$`) so every platform gets
+its own dedicated event budget.
 """
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone as dt_timezone
 
 import requests
 from django.conf import settings
@@ -29,9 +43,18 @@ logger = logging.getLogger(__name__)
 
 TRAIN_MODE = 1  # transportation.product.class value for trains
 REQUEST_TIMEOUT_SECONDS = 8
-LOOKBACK_MINUTES = 30
+RECENT_LOOKBACK_MINUTES = 90  # how far back to search for "recent" trains
+RECENT_COUNT = 5
+UPCOMING_COUNT = 10  # a platform's own dedicated event budget can span 12+ hours; cap the display
+LAST_TRAIN_ANCHOR_HOUR = 21  # start the end-of-day walk from 9pm Sydney time
+LAST_TRAIN_MAX_STEPS = 5  # safety cap on the per-platform walk-forward loop
+OVERNIGHT_GAP_MINUTES = 45  # a gap at least this long marks the daily service break
+LAST_TRAIN_WALK_HOURS = 10  # how far past the anchor to walk looking for that gap
+PLATFORM_DISCOVERY_HOURS = (7, 12, 17, 21)  # spread across the day to catch every platform
 SEARCH_CACHE_SECONDS = 300
-DEPARTURES_CACHE_SECONDS = 30
+DEPARTURES_CACHE_SECONDS = 60
+PLATFORM_LIST_CACHE_SECONDS = 86400
+LAST_TRAIN_CACHE_SECONDS = 1800
 PLATFORM_RE = re.compile(r"Platform\s+[\w-]+", re.IGNORECASE)
 
 
@@ -116,6 +139,9 @@ def _parse_time(value):
 
 
 def _platform_label(location, station_name):
+    properties = location.get("properties") or {}
+    if properties.get("platformName"):
+        return properties["platformName"]
     name = location.get("disassembledName") or location.get("name") or ""
     match = PLATFORM_RE.search(name)
     if match:
@@ -125,29 +151,31 @@ def _platform_label(location, station_name):
     return name or "Platform (unspecified)"
 
 
-def get_departure_board(stop_id, station_name=None, lookback_minutes=LOOKBACK_MINUTES):
-    """{"platforms": [{"platform": str, "last_stopped": event|None, "upcoming": [event...]}], "fetched_at": datetime}
-    An event dict has: line, destination, planned, estimated, is_realtime, minutes (negative = already departed)."""
-    cache_key = f"trains:departures:{stop_id}:{lookback_minutes}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    query_time = _sydney_now() - timedelta(minutes=lookback_minutes)
-    data = _get("departure_mon", {
+def _fetch_train_events(stop_id, anchor_time, station_name=None, use_point=False):
+    """One departure_mon call anchored at `anchor_time` (a Sydney-local
+    datetime), filtered to trains only. `use_point=True` scopes the query
+    to a single platform ID (stop_id must then be a platform location id,
+    not a station id), giving that platform its own dedicated event
+    budget instead of sharing the station-wide one. Returns item dicts
+    carrying an absolute `departure_dt` (aware UTC) alongside the
+    display-ready fields."""
+    params = {
         "outputFormat": "rapidJSON",
         "coordOutputFormat": "EPSG:4326",
         "mode": "direct",
         "type_dm": "stop",
         "name_dm": stop_id,
         "depArrMacro": "dep",
-        "itdDate": query_time.strftime("%Y%m%d"),
-        "itdTime": query_time.strftime("%H%M"),
+        "itdDate": anchor_time.strftime("%Y%m%d"),
+        "itdTime": anchor_time.strftime("%H%M"),
         "TfNSWDM": "true",
-    })
+    }
+    if use_point:
+        params["nameKey_dm"] = "$USEPOINT$"
+    data = _get("departure_mon", params)
 
     now_utc = timezone.now()
-    platforms = {}
+    events = []
     for event in data.get("stopEvents", []):
         transportation = event.get("transportation") or {}
         if (transportation.get("product") or {}).get("class") != TRAIN_MODE:
@@ -163,25 +191,142 @@ def get_departure_board(stop_id, station_name=None, lookback_minutes=LOOKBACK_MI
             continue
 
         minutes = round((effective - now_utc).total_seconds() / 60)
-        item = {
+        local_dt = effective.astimezone(SYDNEY_TZ) if SYDNEY_TZ else effective
+        events.append({
+            "platform": platform_name,
+            "platform_id": location.get("id"),
             "line": transportation.get("number") or "Train",
             "destination": (transportation.get("destination") or {}).get("name", "—"),
             "planned": planned,
             "estimated": estimated,
             "is_realtime": bool(event.get("isRealtimeControlled")),
             "minutes": minutes,
-            "minutes_ago": -minutes,  # display-ready positive value for "N min ago"
-        }
-        bucket = platforms.setdefault(platform_name, {"platform": platform_name, "last_stopped": None, "upcoming": []})
-        if item["minutes"] < 0:
-            if bucket["last_stopped"] is None or item["minutes"] > bucket["last_stopped"]["minutes"]:
-                bucket["last_stopped"] = item
-        else:
-            bucket["upcoming"].append(item)
+            "minutes_ago": -minutes,
+            "departure_dt": effective,
+            "local_time": local_dt.strftime("%H:%M"),
+            "is_next_day": local_dt.date() != _sydney_now().date(),
+        })
+    return events
 
-    for bucket in platforms.values():
-        bucket["upcoming"].sort(key=lambda i: i["minutes"])
 
-    result = {"platforms": sorted(platforms.values(), key=lambda b: b["platform"]), "fetched_at": now_utc}
+def _discover_platforms(stop_id, station_name=None):
+    """[{platform, platform_id}] -- every train platform this station has,
+    found by sampling the station-wide feed at several times of day and
+    taking the union of platforms seen (a single sample can miss a
+    quieter platform, see module docstring). Cached for a day since a
+    station's physical platforms essentially never change."""
+    cache_key = f"trains:platforms:{stop_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    today = _sydney_now().replace(minute=0, second=0, microsecond=0)
+    found = {}
+    for hour in PLATFORM_DISCOVERY_HOURS:
+        anchor = today.replace(hour=hour)
+        events = _fetch_train_events(stop_id, anchor, station_name)
+        for item in events:
+            if item["platform_id"]:
+                found.setdefault(item["platform_id"], item["platform"])
+
+    platforms = [{"platform": name, "platform_id": pid} for pid, name in found.items()]
+    platforms.sort(key=lambda p: p["platform"])
+    cache.set(cache_key, platforms, PLATFORM_LIST_CACHE_SECONDS)
+    return platforms
+
+
+def get_departure_board(stop_id, station_name=None):
+    """{"platforms": [{"platform": str, "platform_id": str, "recent": [event...], "upcoming": [event...]}], "fetched_at": datetime}
+    `recent` is up to RECENT_COUNT most-recently-departed trains (closest
+    first). `upcoming` is every returned not-yet-departed train (soonest
+    first). Queries each discovered platform individually so a quiet
+    platform can't get crowded out by a busy one sharing the same
+    station-wide response budget."""
+    cache_key = f"trains:departures:{stop_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    now_syd = _sydney_now()
+    platforms_out = []
+    for platform in _discover_platforms(stop_id, station_name):
+        pid = platform["platform_id"]
+        upcoming_events = [
+            e for e in _fetch_train_events(pid, now_syd, station_name, use_point=True) if e["minutes"] >= 0
+        ]
+        recent_events = [
+            e for e in _fetch_train_events(pid, now_syd - timedelta(minutes=RECENT_LOOKBACK_MINUTES), station_name, use_point=True)
+            if e["minutes"] < 0
+        ]
+        upcoming_events.sort(key=lambda i: i["minutes"])
+        recent_events.sort(key=lambda i: i["minutes"], reverse=True)  # closest-to-now first
+        platforms_out.append({
+            "platform": platform["platform"],
+            "platform_id": pid,
+            "recent": recent_events[:RECENT_COUNT],
+            "upcoming": upcoming_events[:UPCOMING_COUNT],
+        })
+
+    result = {"platforms": sorted(platforms_out, key=lambda b: b["platform"]), "fetched_at": timezone.now()}
     cache.set(cache_key, result, DEPARTURES_CACHE_SECONDS)
+    return result
+
+
+def _last_train_for_platform(platform_id, station_name):
+    """Walks a single platform's own departure_mon feed forward from a
+    fixed evening anchor until it finds a gap between consecutive
+    departures of at least OVERNIGHT_GAP_MINUTES -- that gap is the daily
+    service break, and the train right before it is "last train". Many
+    Sydney lines run close to 24 hours, so just taking "the latest event
+    seen" would walk straight into tomorrow's normal timetable instead of
+    stopping at a real overnight break."""
+    anchor = _sydney_now().replace(hour=LAST_TRAIN_ANCHOR_HOUR, minute=0, second=0, microsecond=0)
+    walk_until = anchor + timedelta(hours=LAST_TRAIN_WALK_HOURS)
+    walk_until_utc = walk_until.astimezone(dt_timezone.utc) if SYDNEY_TZ else walk_until
+    cursor = anchor
+    by_time = {}
+    for _ in range(LAST_TRAIN_MAX_STEPS):
+        events = _fetch_train_events(platform_id, cursor, station_name, use_point=True)
+        events = [e for e in events if e["departure_dt"] <= walk_until_utc]
+        if not events:
+            break
+        for item in events:
+            by_time[item["departure_dt"]] = item  # dedupe; overlapping calls repeat events
+        round_max = max(item["departure_dt"] for item in events)
+        next_cursor = (round_max.astimezone(SYDNEY_TZ) if SYDNEY_TZ else round_max) + timedelta(minutes=1)
+        if next_cursor <= cursor or next_cursor >= walk_until:
+            break
+        cursor = next_cursor
+
+    if not by_time:
+        return None
+    ordered = [by_time[t] for t in sorted(by_time)]
+    best_gap = timedelta(0)
+    last_before_gap = ordered[-1]
+    for earlier, later in zip(ordered, ordered[1:]):
+        gap = later["departure_dt"] - earlier["departure_dt"]
+        if gap > best_gap:
+            best_gap = gap
+            last_before_gap = earlier
+    gap_minutes = int(best_gap.total_seconds() / 60)
+    return {**last_before_gap, "gap_minutes": gap_minutes if gap_minutes >= OVERNIGHT_GAP_MINUTES else None}
+
+
+def get_last_trains_today(stop_id, station_name=None):
+    """{platform_name: event} -- the last scheduled train before the
+    overnight service gap, per platform. `gap_minutes` on the result is
+    None (show as uncertain) if no clear gap turned up within the walked
+    window (~9pm to ~7am)."""
+    cache_key = f"trains:last:{stop_id}:{_sydney_now().strftime('%Y%m%d')}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    result = {}
+    for platform in _discover_platforms(stop_id, station_name):
+        found = _last_train_for_platform(platform["platform_id"], station_name)
+        if found:
+            result[platform["platform"]] = found
+
+    cache.set(cache_key, result, LAST_TRAIN_CACHE_SECONDS)
     return result

@@ -25,7 +25,11 @@ class TrainLookupView(LoginRequiredMixin, TemplateView):
 
         try:
             if station_id:
-                ctx["board"] = services.get_departure_board(station_id, station_name=station_name or None)
+                board = services.get_departure_board(station_id, station_name=station_name or None)
+                last_trains = services.get_last_trains_today(station_id, station_name=station_name or None)
+                for platform in board["platforms"]:
+                    platform["last_train_today"] = last_trains.get(platform["platform"])
+                ctx["board"] = board
             elif query:
                 ctx["results"] = services.search_stations(query)
         except TrainApiError as exc:

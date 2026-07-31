@@ -47,17 +47,28 @@
   <div>
     <div class="panel">
       <div class="panel-head"><h2>{{ p.platform }}</h2></div>
+      {% if p.last_train_today %}
+      <div class="panel-body" style="padding-top:12px;padding-bottom:12px;border-bottom:1px solid var(--line);">
+        <strong>Last train today:</strong> {{ p.last_train_today.local_time }}{% if p.last_train_today.is_next_day %} (early hours){% endif %}
+        to {{ p.last_train_today.destination }} &middot; {{ p.last_train_today.line }}
+        {% if p.last_train_today.gap_minutes %}
+        <span class="muted">&mdash; no further service for at least {{ p.last_train_today.gap_minutes }} min after this one</span>
+        {% else %}
+        <span class="muted">&mdash; couldn't confirm this is definitely the last one; service may continue past our lookup window</span>
+        {% endif %}
+      </div>
+      {% endif %}
       <div class="panel-body flush">
         <table class="data">
           <thead><tr><th>Line</th><th>Destination</th><th class="num">When</th></tr></thead>
           <tbody>
-            {% if p.last_stopped %}
+            {% for t in p.recent %}
             <tr class="rail-row pending">
-              <td>{{ p.last_stopped.line }}</td>
-              <td>{{ p.last_stopped.destination }}</td>
-              <td class="num mono">{{ p.last_stopped.minutes_ago }} min ago</td>
+              <td>{{ t.line }}</td>
+              <td>{{ t.destination }}</td>
+              <td class="num mono">{{ t.minutes_ago }} min ago</td>
             </tr>
-            {% endif %}
+            {% endfor %}
             {% for t in p.upcoming %}
             <tr class="rail-row {% if t.is_realtime %}good{% else %}info{% endif %}">
               <td>{{ t.line }}</td>
@@ -68,7 +79,7 @@
               </td>
             </tr>
             {% endfor %}
-            {% if not p.last_stopped and not p.upcoming %}
+            {% if not p.recent and not p.upcoming %}
             <tr><td colspan="3" class="muted">Nothing in this window.</td></tr>
             {% endif %}
           </tbody>
