@@ -16,4 +16,8 @@ urlpatterns = [
     path("equipment/<int:pk>/test/", web_views.EquipmentTestView.as_view(), name="test"),
     path("equipment/<int:pk>/lost/", web_views.EquipmentLostView.as_view(), name="lost"),
     path("equipment/<int:pk>/write-off/", web_views.EquipmentWriteOffView.as_view(), name="write-off"),
+    path("test-tags/", web_views.TestTagListView.as_view(), name="test-tag-list"),
+    path("test-tags/create/", web_views.TestTagCreateView.as_view(), name="test-tag-create"),
+    path("test-tags/<int:pk>/edit/", web_views.TestTagUpdateView.as_view(), name="test-tag-edit"),
+    path("test-tags/<int:pk>/delete/", web_views.TestTagDeleteView.as_view(), name="test-tag-delete"),
 ]

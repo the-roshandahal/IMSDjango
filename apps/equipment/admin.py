@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.equipment.models import Equipment, EquipmentLog
+from apps.equipment.models import Equipment, EquipmentLog, TestTag
 
 
 @admin.register(Equipment)
@@ -21,3 +21,10 @@ class EquipmentLogAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(TestTag)
+class TestTagAdmin(admin.ModelAdmin):
+    list_display = ("name", "station", "warehouse", "start_date", "expiry_date", "tested_by")
+    list_filter = ("station", "warehouse")
+    search_fields = ("name",)

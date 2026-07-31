@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Test tags - IMS{% endblock %}
+{% block crumb %}Fleet{% endblock %}
+{% block page_title %}Electrical test tags{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Safety test tag register &mdash; cords, chargers, leads and other items not tracked as individual equipment assets.</div>
+  <div class="actions-row">
+    <form method="get" style="display:flex;gap:8px;">
+      {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+      <input type="search" name="q" placeholder="Search name" value="{{ q }}">
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+    {% if can_manage_fleet %}<a class="btn btn-primary" href="{% url 'equipment_web:test-tag-create' %}">+ Record test tag</a>{% endif %}
+  </div>
+</div>
+
+<div class="actions-row" style="margin-bottom:14px;">
+  <a class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}" href="?{% if q %}q={{ q }}{% endif %}">All</a>
+  <a class="btn btn-sm {% if active_status == 'expiring' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=expiring{% if q %}&q={{ q }}{% endif %}">Expiring soon</a>
+  <a class="btn btn-sm {% if active_status == 'expired' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=expired{% if q %}&q={{ q }}{% endif %}">Expired</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if tags %}
+    <table class="data">
+      <thead><tr><th>Item</th><th>Location</th><th>Start</th><th>Expiry</th><th>Status</th><th>Tested by</th>{% if can_manage_fleet %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for t in tags %}
+        <tr class="rail-row {% if t.is_expired %}critical{% elif t.is_expiring_soon %}warn{% else %}good{% endif %}">
+          <td>{{ t.name }}</td>
+          <td>{% if t.station %}{{ t.station.name }}{% elif t.warehouse %}{{ t.warehouse.name }}{% else %}—{% endif %}</td>
+          <td class="mono">{{ t.start_date }}</td>
+          <td class="mono">{{ t.expiry_date }}</td>
+          <td>
+            {% if t.is_expired %}<span class="status-rail critical">Expired</span>
+            {% elif t.is_expiring_soon %}<span class="status-rail warn">Expiring soon</span>
+            {% else %}<span class="status-rail good">Valid</span>{% endif %}
+          </td>
+          <td class="muted">{{ t.tested_by.username|default:"—" }}</td>
+          {% if can_manage_fleet %}
+          <td class="actions-row">
+            <a class="btn btn-secondary btn-sm" href="{% url 'equipment_web:test-tag-edit' t.pk %}">Edit</a>
+            <form method="post" action="{% url 'equipment_web:test-tag-delete' t.pk %}" onsubmit="return confirm('Remove this test tag record?');">
+              {% csrf_token %}<button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No test tags recorded</div></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if q %}&q={{ q }}{% endif %}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if q %}&q={{ q }}{% endif %}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

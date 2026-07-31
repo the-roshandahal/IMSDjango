@@ -148,3 +148,49 @@ class EquipmentLog(models.Model):
 
     def __str__(self):
         return f"{self.equipment} {self.action} @ {self.timestamp:%Y-%m-%d %H:%M}"
+
+
+class TestTag(models.Model):
+    """Electrical safety test tag register for items too small/numerous to
+    asset-track individually as Equipment (extension cords, chargers,
+    power leads...) -- a station or warehouse can have many of these.
+    Deliberately lighter than Equipment: no asset lifecycle/assignment,
+    just what's tagged, where, and when it expires. Re-testing an item
+    means adding a new row (start/expiry move forward); old rows stay as
+    the tag history for that item name/location.
+    """
+
+    EXPIRY_WARNING_DAYS = 30
+
+    name = models.CharField(max_length=200, help_text="e.g. 'Vacuum cleaner extension cord', 'Scrubber charger'")
+    warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="test_tags"
+    )
+    station = models.ForeignKey(
+        "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="test_tags"
+    )
+    start_date = models.DateField()
+    expiry_date = models.DateField(db_index=True)
+    tested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["expiry_date"]
+        indexes = [models.Index(fields=["expiry_date"])]
+
+    def __str__(self):
+        location = self.station or self.warehouse
+        return f"{self.name} @ {location} (expires {self.expiry_date})"
+
+    @property
+    def is_expired(self) -> bool:
+        return self.expiry_date <= timezone.now().date()
+
+    @property
+    def is_expiring_soon(self) -> bool:
+        if self.is_expired:
+            return False
+        return self.expiry_date <= timezone.now().date() + timedelta(days=self.EXPIRY_WARNING_DAYS)

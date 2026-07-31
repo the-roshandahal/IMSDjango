@@ -190,6 +190,13 @@ class DashboardView(View):
                 insurance_expiry__lte=today
             ).exclude(status="written_off").count()
 
+            from apps.equipment.models import TestTag
+
+            context["test_tags_expired_count"] = TestTag.objects.filter(expiry_date__lte=today).count()
+            context["test_tags_expiring_count"] = TestTag.objects.filter(
+                expiry_date__gt=today, expiry_date__lte=today + timezone.timedelta(days=TestTag.EXPIRY_WARNING_DAYS)
+            ).count()
+
         return render(request, self.template_name, context)
 
 

@@ -1,8 +1,8 @@
 from django import forms
 
 from apps.accounts.models import User
-from apps.equipment.models import Equipment, TestResult
-from apps.warehouses.models import Station
+from apps.equipment.models import Equipment, TestResult, TestTag
+from apps.warehouses.models import Station, Warehouse
 
 
 class EquipmentForm(forms.ModelForm):
@@ -34,3 +34,29 @@ class EquipmentMaintenanceForm(forms.Form):
 class EquipmentTestForm(forms.Form):
     result = forms.ChoiceField(choices=TestResult.choices)
     comment = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+
+
+class TestTagForm(forms.ModelForm):
+    class Meta:
+        model = TestTag
+        fields = ["name", "station", "warehouse", "start_date", "expiry_date", "comment"]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "expiry_date": forms.DateInput(attrs={"type": "date"}),
+            "comment": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["station"].queryset = Station.objects.filter(is_active=True)
+        self.fields["warehouse"].queryset = Warehouse.objects.filter(is_active=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("station") and not cleaned.get("warehouse"):
+            raise forms.ValidationError("Pick a station or warehouse for this tag's location.")
+        start = cleaned.get("start_date")
+        expiry = cleaned.get("expiry_date")
+        if start and expiry and expiry <= start:
+            raise forms.ValidationError("Expiry date must be after the start date.")
+        return cleaned

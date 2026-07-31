@@ -51,8 +51,11 @@
       {% if can_view_equipment or can_view_vehicles %}
       <div class="nav-section">Fleet</div>
       {% if can_view_equipment %}
-      <a class="nav-link {% if 'equipment_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'equipment_web:list' %}">
+      <a class="nav-link {% if 'equipment_web:' in request.resolver_match.view_name and 'test-tag' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:list' %}">
         <span class="nav-dot"></span> Equipment
+      </a>
+      <a class="nav-link {% if 'test-tag' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:test-tag-list' %}">
+        <span class="nav-dot"></span> Test Tags
       </a>
       {% endif %}
       {% if can_view_vehicles %}

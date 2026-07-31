@@ -54,6 +54,14 @@
     <div class="stat-label">Vehicle insurance expired</div>
     <a href="{% url 'vehicles_web:list' %}"><div class="stat-value">{{ vehicle_insurance_expired_count }}</div></a>
   </div>
+  <div class="stat-tile {% if test_tags_expired_count %}critical{% elif test_tags_expiring_count %}alert{% endif %}">
+    <div class="stat-label">Test tags expired</div>
+    <a href="{% url 'equipment_web:test-tag-list' %}?status=expired"><div class="stat-value">{{ test_tags_expired_count }}</div></a>
+  </div>
+  <div class="stat-tile {% if test_tags_expiring_count %}alert{% endif %}">
+    <div class="stat-label">Test tags expiring soon</div>
+    <a href="{% url 'equipment_web:test-tag-list' %}?status=expiring"><div class="stat-value">{{ test_tags_expiring_count }}</div></a>
+  </div>
   {% endif %}
 </div>
 
