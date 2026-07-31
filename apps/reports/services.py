@@ -8,6 +8,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
@@ -275,3 +276,52 @@ def audit_report(date_from, date_to):
     by_actor = qs.exclude(actor__isnull=True).values("actor__username").annotate(count=Count("id")).order_by("-count")[:25]
     by_action = qs.values("action").annotate(count=Count("id")).order_by("-count")[:25]
     return {"total": qs.count(), "by_actor": by_actor, "by_action": by_action}
+
+
+# --------------------------------------------------------------- Dashboard
+
+def _scope_txns(qs, warehouse_ids, station_ids):
+    if warehouse_ids is not None:
+        qs = qs.filter(
+            Q(source_warehouse_id__in=warehouse_ids) | Q(dest_warehouse_id__in=warehouse_ids)
+            | Q(station_id__in=(station_ids or []))
+        )
+    return qs
+
+
+def movement_trend(days=14, warehouse_ids=None, station_ids=None):
+    """Daily received (stock_in + return) vs dispatched (stock_out +
+    station_usage) quantity, oldest first -- feeds the dashboard trend
+    chart. One row per day even where nothing moved, so the chart has no
+    gaps to misread as missing data."""
+    today = timezone.now().date()
+    start = today - timedelta(days=days - 1)
+    qs = _scope_txns(
+        InventoryTransaction.objects.filter(timestamp__date__gte=start, timestamp__date__lte=today),
+        warehouse_ids, station_ids,
+    )
+    received = dict(
+        qs.filter(type__in=[TransactionType.STOCK_IN, TransactionType.RETURN])
+        .annotate(day=TruncDate("timestamp")).values("day").annotate(total=Sum("quantity")).values_list("day", "total")
+    )
+    dispatched = dict(
+        qs.filter(type__in=[TransactionType.STOCK_OUT, TransactionType.STATION_USAGE])
+        .annotate(day=TruncDate("timestamp")).values("day").annotate(total=Sum("quantity")).values_list("day", "total")
+    )
+    rows = []
+    for i in range(days):
+        d = start + timedelta(days=i)
+        rows.append({"date": d, "received": received.get(d, Decimal("0")), "dispatched": dispatched.get(d, Decimal("0"))})
+    return rows
+
+
+def transaction_type_breakdown(days=30, warehouse_ids=None, station_ids=None):
+    today = timezone.now().date()
+    start = today - timedelta(days=days - 1)
+    qs = _scope_txns(
+        InventoryTransaction.objects.filter(timestamp__date__gte=start, timestamp__date__lte=today),
+        warehouse_ids, station_ids,
+    )
+    rows = qs.values("type").annotate(count=Count("id")).order_by("-count")
+    labels = dict(TransactionType.choices)
+    return [{"type": r["type"], "label": labels.get(r["type"], r["type"]), "count": r["count"]} for r in rows]

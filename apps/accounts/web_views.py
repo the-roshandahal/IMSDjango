@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.db.models import F, Q, Sum
@@ -104,6 +106,50 @@ class LogoutPageView(View):
         return self.post(request)
 
 
+def _build_trend_chart(rows):
+    """Turns [{date, received, dispatched}, ...] into ready-to-render SVG
+    geometry -- the template just drops these numbers into a polyline, no
+    arithmetic in the template."""
+    width, height = 600, 180
+    pad_left, pad_right, pad_top, pad_bottom = 4, 4, 12, 22
+    plot_w = width - pad_left - pad_right
+    plot_h = height - pad_top - pad_bottom
+    n = len(rows)
+    max_value = float(max([r["received"] for r in rows] + [r["dispatched"] for r in rows] + [1]))
+
+    def x_at(i):
+        return pad_left if n <= 1 else pad_left + i * plot_w / (n - 1)
+
+    def y_at(value):
+        return height - pad_bottom - (float(value) / float(max_value)) * plot_h
+
+    received_pts, dispatched_pts, received_markers, dispatched_markers = [], [], [], []
+    for i, row in enumerate(rows):
+        x = round(x_at(i), 1)
+        ry, dy = round(y_at(row["received"]), 1), round(y_at(row["dispatched"]), 1)
+        received_pts.append(f"{x},{ry}")
+        dispatched_pts.append(f"{x},{dy}")
+        received_markers.append({"x": x, "y": ry, "date": row["date"], "value": row["received"]})
+        dispatched_markers.append({"x": x, "y": dy, "date": row["date"], "value": row["dispatched"]})
+
+    gridline_fracs = (0, 0.5, 1)
+    gridline_y = [round(y_at(max_value * frac), 1) for frac in gridline_fracs]
+    gridline_labels = [
+        round(max_value * frac) if max_value == int(max_value) else round(max_value * frac, 1)
+        for frac in gridline_fracs
+    ]
+
+    return {
+        "width": width, "height": height, "baseline_y": round(y_at(0), 1),
+        "plot_left": pad_left, "plot_right": width - pad_right,
+        "received_points": " ".join(received_pts), "dispatched_points": " ".join(dispatched_pts),
+        "received_markers": received_markers, "dispatched_markers": dispatched_markers,
+        "gridlines": list(zip(gridline_y, gridline_labels)),
+        "x_first": {"x": pad_left, "label": rows[0]["date"]} if rows else None,
+        "x_last": {"x": round(x_at(n - 1), 1), "label": rows[-1]["date"]} if rows else None,
+    }
+
+
 class DashboardView(View):
     template_name = "accounts/dashboard.html"
 
@@ -171,6 +217,48 @@ class DashboardView(View):
             context["recent_audit"] = AuditLog.objects.select_related("actor").order_by("-timestamp")[:8]
 
         from apps.core.permissions import has_capability
+
+        if has_capability(user, "product.view"):
+            from apps.reports import services as report_services
+
+            trend_rows = report_services.movement_trend(days=14, warehouse_ids=warehouse_ids, station_ids=station_ids)
+            context["trend_chart"] = _build_trend_chart(trend_rows)
+            context["week_dispatched"] = sum((r["dispatched"] for r in trend_rows[-7:]), Decimal("0"))
+            context["week_received"] = sum((r["received"] for r in trend_rows[-7:]), Decimal("0"))
+
+            type_breakdown = report_services.transaction_type_breakdown(
+                days=30, warehouse_ids=warehouse_ids, station_ids=station_ids
+            )
+            max_count = max([row["count"] for row in type_breakdown] + [1])
+            for row in type_breakdown:
+                row["pct"] = round(100 * row["count"] / max_count)
+            context["type_breakdown"] = type_breakdown
+
+            value_report = report_services.inventory_value(warehouse_ids)
+            context["inventory_value"] = value_report["grand_total"]
+            context["inventory_value_priced_count"] = value_report["priced_count"]
+            context["inventory_value_total_count"] = value_report["total_count"]
+
+        if has_capability(user, "project.manage") or has_capability(user, "project.view"):
+            from apps.projects.models import DeepCleanProject, ProjectStatus
+
+            context["active_projects_count"] = DeepCleanProject.objects.filter(status=ProjectStatus.ACTIVE).count()
+        elif has_capability(user, "project.update_own"):
+            from apps.projects.models import DeepCleanProject, ProjectStatus
+
+            context["active_projects_count"] = DeepCleanProject.objects.filter(
+                status=ProjectStatus.ACTIVE, supervisor=user
+            ).count()
+
+        if has_capability(user, "purchase_order.manage") or has_capability(user, "purchase_order.view"):
+            from apps.purchasing.models import POStatus, PurchaseOrder
+
+            open_po_qs = PurchaseOrder.objects.filter(
+                status__in=[POStatus.DRAFT, POStatus.SENT, POStatus.PARTIALLY_RECEIVED]
+            )
+            if not exempt:
+                open_po_qs = open_po_qs.filter(warehouse_id__in=warehouse_ids)
+            context["open_po_count"] = open_po_qs.count()
 
         if has_capability(user, "equipment.assign") or has_capability(user, "vehicle.assign"):
             from apps.equipment.models import Equipment

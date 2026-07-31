@@ -33,6 +33,9 @@
   --info: #2563a6;
   --info-soft: #e7f0f9;
 
+  --chart-1: #2454c7;
+  --chart-2: #0d9488;
+
   --radius: 6px;
   --radius-lg: 10px;
   --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -72,6 +75,9 @@
     --pending-soft: #1c2532;
     --info: #7db6f0;
     --info-soft: #0f2436;
+
+    --chart-1: #5b8def;
+    --chart-2: #0f9488;
 
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -276,6 +282,25 @@ main.content { padding: 24px 28px 60px; max-width: 1280px; }
 .stat-tile a { color: inherit; }
 .stat-tile a:hover { text-decoration: none; }
 .stat-tile:hover { border-color: var(--line-strong); }
+
+/* ---------- Charts ---------- */
+.chart-legend { display: flex; gap: 16px; font-size: 0.78rem; color: var(--ink-600); margin-bottom: 10px; }
+.chart-legend-item { display: flex; align-items: center; gap: 6px; }
+.chart-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+.trend-svg { width: 100%; height: auto; overflow: visible; }
+.trend-svg .gridline { stroke: var(--line); stroke-width: 1; }
+.trend-svg .axis-label { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-400); }
+.trend-svg .baseline { stroke: var(--line-strong); stroke-width: 1; }
+.trend-svg .series-line { fill: none; stroke-width: 2; }
+.trend-svg .series-marker { r: 2.5; }
+.trend-svg .series-marker:hover { r: 4; }
+
+.bar-chart .bar-row { display: grid; grid-template-columns: 140px 1fr 48px; align-items: center; gap: 10px; padding: 6px 0; }
+.bar-chart .bar-label { font-size: 0.82rem; color: var(--ink-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-chart .bar-track { background: var(--surface-sunken); border-radius: 3px; height: 10px; overflow: hidden; }
+.bar-chart .bar-fill { height: 100%; border-radius: 3px; background: var(--chart-1); }
+.bar-chart .bar-value { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-600); text-align: right; }
 
 /* ---------- Cards / panels ---------- */
 .panel {
