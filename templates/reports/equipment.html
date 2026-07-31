@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Equipment report - IMS{% endblock %}
+{% block crumb %}Reports{% endblock %}
+{% block page_title %}Equipment Report{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{% if date_from %}{{ date_from }} to {{ date_to }}{% endif %}</div>
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
+    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}">
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Status breakdown</h2><span class="sub">current, all equipment</span></div>
+      <div class="panel-body flush">
+        <table class="data">
+          <thead><tr><th>Status</th><th class="num">Count</th></tr></thead>
+          <tbody>
+            {% for row in status_breakdown %}
+            <tr><td>{{ row.status }}</td><td class="num mono">{{ row.count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Maintenance history</h2></div>
+      <div class="panel-body flush">
+        {% if maintenance_events %}
+        <table class="data">
+          <thead><tr><th>Date</th><th>Asset</th><th>Event</th></tr></thead>
+          <tbody>
+            {% for log in maintenance_events %}
+            <tr>
+              <td class="mono">{{ log.timestamp|date:"d M Y H:i" }}</td>
+              <td><a href="{% url 'equipment_web:detail' log.equipment_id %}">{{ log.equipment.asset_id }}</a></td>
+              <td>{{ log.get_action_display }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="empty-state">No maintenance events in this period.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Most-assigned equipment</h2></div>
+      <div class="panel-body flush">
+        {% if assignment_events %}
+        <table class="data">
+          <thead><tr><th>Asset</th><th class="num">Times assigned</th></tr></thead>
+          <tbody>
+            {% for row in assignment_events %}
+            <tr><td>{{ row.equipment__asset_id }} &mdash; {{ row.equipment__name }}</td><td class="num mono">{{ row.times_assigned }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="empty-state">No assignments in this period.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

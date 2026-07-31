@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Project report - IMS{% endblock %}
+{% block crumb %}Reports{% endblock %}
+{% block page_title %}Deep Clean Project Report{% endblock %}
+{% block content %}
+
+<div class="actions-row" style="margin-bottom:14px;">
+  <a class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}" href="?">All</a>
+  <a class="btn btn-sm {% if active_status == 'planned' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=planned">Planned</a>
+  <a class="btn btn-sm {% if active_status == 'active' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=active">Active</a>
+  <a class="btn btn-sm {% if active_status == 'completed' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=completed">Completed</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if rows %}
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Project</th><th>Station</th><th class="num">Chemical cost</th><th class="num">Vehicle cost</th>
+          <th class="num">Total cost</th><th>Timeline</th><th>Outstanding assets</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'projects_web:detail' row.project.pk %}" class="mono">{{ row.project.reference }}</a> &mdash; {{ row.project.name }}</td>
+          <td>{{ row.project.station.name }}</td>
+          <td class="num mono">{{ row.chemical_cost|floatformat:2 }}</td>
+          <td class="num mono">{{ row.vehicle_cost|floatformat:2 }}</td>
+          <td class="num mono">{{ row.total_cost|floatformat:2 }}</td>
+          <td>
+            {% if row.timeline == "on time" %}<span class="status-rail good">On time</span>
+            {% elif row.timeline == "late" %}<span class="status-rail warn">Late</span>
+            {% elif row.timeline == "overdue" %}<span class="status-rail critical">Overdue</span>
+            {% else %}<span class="status-rail info">In progress</span>{% endif %}
+          </td>
+          <td>{% if row.outstanding %}{{ row.outstanding|join:"; " }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No projects to report on.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

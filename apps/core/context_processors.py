@@ -30,5 +30,8 @@ def nav_capabilities(request):
         "can_view_suppliers": has_capability(user, "supplier.view") or has_capability(user, "supplier.manage"),
         "can_view_purchase_orders": has_capability(user, "purchase_order.view")
         or has_capability(user, "purchase_order.manage"),
+        "can_view_reports": has_capability(user, "reports.view")
+        or has_capability(user, "reports.view_own_site")
+        or has_capability(user, "reports.view_own_project"),
         "is_admin": user.role == Role.ADMIN,
     }

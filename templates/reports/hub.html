@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Reports - IMS{% endblock %}
+{% block crumb %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">On-screen reports. PDF/Excel export and scheduled email delivery are a future pass.</div>
+</div>
+
+<div class="form-grid" style="grid-template-columns:repeat(3,1fr);gap:14px;">
+  {% if can_reports_view or can_view_own_site %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:inventory' %}">
+    <h2 style="margin:0 0 6px;">Inventory</h2>
+    <p class="muted" style="margin:0;">On-hand, value, ageing, expiry.</p>
+  </a>
+  {% endif %}
+  {% if can_reports_view or can_view_own_site or can_view_own_project %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:consumption' %}">
+    <h2 style="margin:0 0 6px;">Consumption</h2>
+    <p class="muted" style="margin:0;">Stock issued, by station, project, and product.</p>
+  </a>
+  {% endif %}
+  {% if can_reports_view %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:equipment' %}">
+    <h2 style="margin:0 0 6px;">Equipment</h2>
+    <p class="muted" style="margin:0;">Status breakdown, maintenance history, assignment activity.</p>
+  </a>
+  {% endif %}
+  {% if can_reports_view or can_view_own_project %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:projects' %}">
+    <h2 style="margin:0 0 6px;">Deep clean projects</h2>
+    <p class="muted" style="margin:0;">Cost, outstanding assets, timeline adherence.</p>
+  </a>
+  {% endif %}
+  {% if can_reports_view or can_view_own_site %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:purchasing' %}">
+    <h2 style="margin:0 0 6px;">Purchasing</h2>
+    <p class="muted" style="margin:0;">Spend, lead time, and on-time delivery by supplier.</p>
+  </a>
+  {% endif %}
+  {% if can_reports_view %}
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:vehicles' %}">
+    <h2 style="margin:0 0 6px;">Vehicles</h2>
+    <p class="muted" style="margin:0;">Running cost and service/insurance compliance.</p>
+  </a>
+  <a class="panel" style="display:block;padding:18px;" href="{% url 'reports_web:audit' %}">
+    <h2 style="margin:0 0 6px;">Audit summary</h2>
+    <p class="muted" style="margin:0;">Activity volume by user and action.</p>
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

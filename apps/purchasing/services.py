@@ -93,6 +93,10 @@ def _refresh_status(po_id):
     lines = list(PurchaseOrderLine.objects.filter(purchase_order_id=po_id))
     if all(line.is_fully_received for line in lines):
         new_status = POStatus.RECEIVED
+        PurchaseOrder.objects.filter(pk=po_id).exclude(status=new_status).update(
+            status=new_status, received_at=timezone.now()
+        )
+        return
     elif any(line.quantity_received > 0 for line in lines):
         new_status = POStatus.PARTIALLY_RECEIVED
     else:

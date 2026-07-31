@@ -86,6 +86,13 @@
       {% endif %}
       {% endif %}
 
+      {% if can_view_reports %}
+      <div class="nav-section">Reports</div>
+      <a class="nav-link {% if 'reports_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'reports_web:hub' %}">
+        <span class="nav-dot"></span> Reports
+      </a>
+      {% endif %}
+
       {% if is_admin %}
       <div class="nav-section">Administration</div>
       <a class="nav-link {% if 'accounts:user' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'accounts:user-list-page' %}">

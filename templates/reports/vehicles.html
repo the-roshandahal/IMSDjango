@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Vehicle report - IMS{% endblock %}
+{% block crumb %}Reports{% endblock %}
+{% block page_title %}Vehicle Report{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Costs incurred {% if date_from %}{{ date_from }} to {{ date_to }}{% endif %}</div>
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
+    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}">
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Running cost by vehicle</h2></div>
+      <div class="panel-body flush">
+        {% if by_vehicle %}
+        <table class="data">
+          <thead><tr><th>Vehicle</th><th class="num">Entries</th><th class="num">Total cost</th></tr></thead>
+          <tbody>
+            {% for row in by_vehicle %}
+            <tr><td class="mono">{{ row.vehicle__registration }}</td><td class="num mono">{{ row.entries }}</td><td class="num mono">{{ row.total|floatformat:2 }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="empty-state">No cost entries in this period.</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>By cost type</h2></div>
+      <div class="panel-body flush">
+        <table class="data">
+          <thead><tr><th>Type</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            {% for row in by_type %}
+            <tr><td>{{ row.cost_type }}</td><td class="num mono">{{ row.total|floatformat:2 }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Service &amp; insurance compliance</h2></div>
+      <div class="panel-body flush">
+        {% if compliance_issues %}
+        <table class="data">
+          <thead><tr><th>Vehicle</th><th>Issue</th></tr></thead>
+          <tbody>
+            {% for row in compliance_issues %}
+            <tr class="rail-row critical">
+              <td><a href="{% url 'vehicles_web:detail' row.vehicle.pk %}" class="mono">{{ row.vehicle.registration }}</a></td>
+              <td>
+                {% if row.service_due %}<span class="status-rail critical">Service overdue</span>{% endif %}
+                {% if row.insurance_expired %}<span class="status-rail critical">Insurance expired</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="empty-state">No compliance issues.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

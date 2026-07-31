@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Inventory report - IMS{% endblock %}
+{% block crumb %}Reports{% endblock %}
+{% block page_title %}Inventory Report{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <div class="panel-head"><h2>On-hand by product</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <thead><tr><th>Product</th><th class="num">Warehouse</th><th class="num">Station</th><th class="num">Project</th><th class="num">Total</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in on_hand %}
+        <tr>
+          <td><a href="{% url 'catalogue_web:product-detail' row.product.pk %}">{{ row.product.name }}</a></td>
+          <td class="num mono">{{ row.warehouse_qty }}</td>
+          <td class="num mono">{{ row.station_qty }}</td>
+          <td class="num mono">{{ row.project_qty }}</td>
+          <td class="num mono">{{ row.total_qty }}</td>
+          <td>{% if row.is_low %}<span class="status-rail warn">Low</span>{% else %}<span class="status-rail good">OK</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Stock value</h2><span class="sub">{{ value.priced_count }} of {{ value.total_count }} products have a cost estimate</span></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Unit cost</th><th class="num">Value</th></tr></thead>
+      <tbody>
+        {% for row in value.rows %}
+        <tr>
+          <td>{{ row.product.name }}</td>
+          <td class="num mono">{{ row.total_qty }}</td>
+          <td class="num mono">{% if row.unit_cost != None %}{{ row.unit_cost }}{% else %}—{% endif %}</td>
+          <td class="num mono">{% if row.value != None %}{{ row.value|floatformat:2 }}{% else %}no cost data{% endif %}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td colspan="3" style="text-align:right;font-weight:600;">Grand total (priced products only)</td>
+          <td class="num mono" style="font-weight:600;">{{ value.grand_total|floatformat:2 }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Stock ageing (batch-tracked)</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <thead><tr><th>Age band</th><th class="num">Batches</th><th class="num">Total quantity</th></tr></thead>
+      <tbody>
+        {% for label, bucket in ageing.items %}
+        <tr>
+          <td>{{ label }}</td>
+          <td class="num mono">{{ bucket.batches|length }}</td>
+          <td class="num mono">{{ bucket.total_qty }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Expiring / expired stock</h2><span class="sub">next 30 days</span></div>
+  <div class="panel-body flush">
+    {% if expiry %}
+    <table class="data">
+      <thead><tr><th>Product</th><th>Batch</th><th>Warehouse</th><th class="num">On hand</th><th>Expiry</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in expiry %}
+        <tr class="rail-row {% if row.is_expired %}critical{% else %}warn{% endif %}">
+          <td>{{ row.batch.product.name }}</td>
+          <td class="mono">{{ row.batch.batch_number }}</td>
+          <td>{{ row.batch.warehouse.name }}</td>
+          <td class="num mono">{{ row.on_hand }}</td>
+          <td class="mono">{{ row.batch.expiry_date }}</td>
+          <td>
+            {% if row.is_expired %}<span class="status-rail critical">Expired</span>
+            {% else %}<span class="status-rail warn">{{ row.days_until_expiry }}d left</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">Nothing expiring in the next 30 days.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
