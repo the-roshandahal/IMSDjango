@@ -1,5 +1,5 @@
 from .base import *  # noqa: F401,F403
-from .base import BASE_DIR, INSTALLED_APPS, MIDDLEWARE, env
+from .base import BASE_DIR, env
 
 DEBUG = True
 
@@ -11,7 +11,3 @@ DATABASES = {
 # locking (see apps.inventory.services), so this has no bearing on correctness.
 if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
     DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 20
-
-INSTALLED_APPS = [*INSTALLED_APPS, "debug_toolbar"]
-MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware", *MIDDLEWARE]
-INTERNAL_IPS = ["127.0.0.1"]

@@ -15,6 +15,10 @@ class TwoFactorForm(forms.Form):
 
 class UserCreateForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
+    # Model field is blank=True (deactivated/system accounts may end up
+    # role-less), but a role picked at creation time is not optional --
+    # a blank role means zero RBAC capabilities and a near-unusable account.
+    role = forms.ChoiceField(choices=Role.choices)
 
     class Meta:
         model = User

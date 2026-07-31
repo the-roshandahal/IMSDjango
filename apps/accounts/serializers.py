@@ -60,6 +60,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    # role is blank=True on the model (deactivated/system accounts may end
+    # up role-less), but required at creation time -- blank means zero RBAC
+    # capabilities.
+    role = serializers.ChoiceField(choices=Role.choices)
 
     class Meta:
         model = User
