@@ -33,7 +33,7 @@ class EquipmentListView(CapabilityRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        qs = Equipment.objects.select_related("current_warehouse", "current_station", "assigned_user").order_by("asset_id")
+        qs = Equipment.objects.select_related("current_warehouse", "current_station", "current_project", "assigned_user").order_by("asset_id")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_user=self.request.user)
@@ -51,7 +51,7 @@ class EquipmentDetailView(CapabilityRequiredMixin, DetailView):
     context_object_name = "item"
 
     def get_queryset(self):
-        qs = Equipment.objects.select_related("current_warehouse", "current_station", "assigned_user")
+        qs = Equipment.objects.select_related("current_warehouse", "current_station", "current_project", "assigned_user")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_user=self.request.user)

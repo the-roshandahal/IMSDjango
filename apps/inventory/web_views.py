@@ -43,7 +43,7 @@ class TransactionListView(CapabilityRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = InventoryTransaction.objects.select_related(
-            "product", "batch", "source_warehouse", "dest_warehouse", "station", "performed_by"
+            "product", "batch", "source_warehouse", "dest_warehouse", "station", "project", "performed_by"
         ).order_by("-timestamp")
         user = self.request.user
         if user.role not in SITE_SCOPE_EXEMPT_ROLES:

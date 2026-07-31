@@ -30,7 +30,7 @@ class VehicleListView(CapabilityRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        qs = Vehicle.objects.select_related("current_station", "assigned_driver").order_by("registration")
+        qs = Vehicle.objects.select_related("current_station", "current_project", "assigned_driver").order_by("registration")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_driver=self.request.user)
@@ -48,7 +48,7 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
     context_object_name = "vehicle"
 
     def get_queryset(self):
-        qs = Vehicle.objects.select_related("current_station", "assigned_driver")
+        qs = Vehicle.objects.select_related("current_station", "current_project", "assigned_driver")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_driver=self.request.user)

@@ -53,7 +53,12 @@
           <tbody>
             {% for sl in stock_levels %}
             <tr>
-              <td>{% if sl.warehouse %}{{ sl.warehouse.name }}{% else %}{{ sl.station.name }} <span class="status-rail info">Station</span>{% endif %}</td>
+              <td>
+                {% if sl.warehouse %}{{ sl.warehouse.name }}
+                {% elif sl.station %}{{ sl.station.name }} <span class="status-rail info">Station</span>
+                {% elif sl.project %}{{ sl.project.reference }} <span class="status-rail info">Project</span>
+                {% else %}&mdash;{% endif %}
+              </td>
               <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
               <td class="num mono">{{ sl.quantity }}</td>
             </tr>

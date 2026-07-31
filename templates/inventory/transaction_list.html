@@ -38,7 +38,7 @@
           <td><a href="{% url 'catalogue_web:product-detail' t.product_id %}">{{ t.product.name }}</a></td>
           <td class="mono">{{ t.batch.batch_number|default:"—" }}</td>
           <td>{{ t.source_warehouse.name|default:"—" }}</td>
-          <td>{% if t.dest_warehouse %}{{ t.dest_warehouse.name }}{% elif t.station %}{{ t.station.name }}{% else %}—{% endif %}</td>
+          <td>{% if t.dest_warehouse %}{{ t.dest_warehouse.name }}{% elif t.station %}{{ t.station.name }}{% elif t.project %}{{ t.project.reference }}{% else %}—{% endif %}</td>
           <td class="num mono">{{ t.quantity }}</td>
           <td class="muted">{{ t.performed_by.username }}</td>
         </tr>

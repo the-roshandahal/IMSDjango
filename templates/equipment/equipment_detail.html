@@ -35,7 +35,7 @@
             {% elif item.status == "lost" %}<span class="status-rail critical">Lost</span>
             {% else %}<span class="status-rail pending">Written off</span>{% endif %}
           </dd></div>
-          <div><dt>Location</dt><dd>{% if item.current_station %}{{ item.current_station.name }}{% elif item.current_warehouse %}{{ item.current_warehouse.name }}{% else %}—{% endif %}</dd></div>
+          <div><dt>Location</dt><dd>{% if item.current_station %}{{ item.current_station.name }}{% elif item.current_warehouse %}{{ item.current_warehouse.name }}{% elif item.current_project %}{{ item.current_project.reference }} <span class="status-rail info">Project</span>{% else %}—{% endif %}</dd></div>
           <div><dt>Assigned to</dt><dd>{{ item.assigned_user.username|default:"—" }}</dd></div>
           <div><dt>Maintenance interval</dt><dd class="mono">{{ item.maintenance_interval_days|default:"—" }} days</dd></div>
           <div><dt>Next maintenance</dt><dd class="mono">{{ item.next_maintenance_due|default:"—" }}</dd></div>

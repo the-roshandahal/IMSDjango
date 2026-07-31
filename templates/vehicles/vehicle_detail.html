@@ -34,7 +34,7 @@
             {% elif vehicle.status == "in_maintenance" %}<span class="status-rail warn">In maintenance</span>
             {% else %}<span class="status-rail pending">Written off</span>{% endif %}
           </dd></div>
-          <div><dt>Station</dt><dd>{{ vehicle.current_station.name|default:"—" }}</dd></div>
+          <div><dt>Location</dt><dd>{% if vehicle.current_station %}{{ vehicle.current_station.name }}{% elif vehicle.current_project %}{{ vehicle.current_project.reference }} <span class="status-rail info">Project</span>{% else %}—{% endif %}</dd></div>
           <div><dt>Driver</dt><dd>{{ vehicle.assigned_driver.username|default:"—" }}</dd></div>
           <div><dt>Service due</dt><dd class="mono">{{ vehicle.service_due_date|default:"—" }}</dd></div>
           <div><dt>Insurance expiry</dt><dd class="mono">{{ vehicle.insurance_expiry|default:"—" }}</dd></div>

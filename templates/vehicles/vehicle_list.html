@@ -17,7 +17,7 @@
         <tr class="rail-row {% if v.compliance_blockers %}warn{% elif v.status == 'available' %}good{% elif v.status == 'assigned' %}info{% else %}pending{% endif %}">
           <td><a href="{% url 'vehicles_web:detail' v.pk %}" class="mono">{{ v.registration }}</a></td>
           <td>{{ v.make_model|default:"—" }}</td>
-          <td>{{ v.current_station.name|default:"—" }}</td>
+          <td>{% if v.current_station %}{{ v.current_station.name }}{% elif v.current_project %}{{ v.current_project.reference }}{% else %}—{% endif %}</td>
           <td>{{ v.assigned_driver.username|default:"—" }}</td>
           <td>
             {% if v.status == "available" %}<span class="status-rail good">Available</span>

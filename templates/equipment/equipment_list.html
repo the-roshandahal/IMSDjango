@@ -17,7 +17,7 @@
         <tr class="rail-row {% if e.compliance_blockers %}warn{% elif e.status == 'available' %}good{% elif e.status == 'assigned' %}info{% else %}pending{% endif %}">
           <td><a href="{% url 'equipment_web:detail' e.pk %}" class="mono">{{ e.asset_id }}</a></td>
           <td>{{ e.name }}</td>
-          <td>{% if e.current_station %}{{ e.current_station.name }}{% elif e.current_warehouse %}{{ e.current_warehouse.name }}{% else %}—{% endif %}</td>
+          <td>{% if e.current_station %}{{ e.current_station.name }}{% elif e.current_warehouse %}{{ e.current_warehouse.name }}{% elif e.current_project %}{{ e.current_project.reference }}{% else %}—{% endif %}</td>
           <td>{{ e.assigned_user.username|default:"—" }}</td>
           <td>
             {% if e.status == "available" %}<span class="status-rail good">Available</span>

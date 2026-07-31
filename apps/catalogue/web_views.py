@@ -48,7 +48,7 @@ class ProductDetailView(CapabilityRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["batches"] = self.object.batches.select_related("warehouse").order_by("expiry_date")
-        ctx["stock_levels"] = self.object.stock_levels.select_related("warehouse", "station").filter(quantity__gt=0)
+        ctx["stock_levels"] = self.object.stock_levels.select_related("warehouse", "station", "project").filter(quantity__gt=0)
         ctx["total_stock"] = (
             self.object.stock_levels.filter(warehouse__isnull=False).aggregate(t=Sum("quantity"))["t"] or 0
         )
