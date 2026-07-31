@@ -6,6 +6,12 @@
    ============================================================ */
 
 :root {
+  /* Fixed navy for the sidebar/auth shell -- always dark by design,
+     unlike --ink-900 below which is a text-ink color that inverts
+     for dark mode. Reusing --ink-900 as a background used to make
+     the sidebar go pale in dark mode; keep them separate. */
+  --panel-navy: #101828;
+
   --ink-900: #101828;
   --ink-700: #29334a;
   --ink-600: #4b5565;
@@ -18,9 +24,9 @@
   --line: #e4e7ec;
   --line-strong: #cbd1dc;
 
-  --accent: #2454c7;
+  --accent: #16789f;
   --accent-ink: #ffffff;
-  --accent-soft: #e8eefc;
+  --accent-soft: #e4f2f7;
 
   --good: #15803d;
   --good-soft: #e7f5ec;
@@ -58,9 +64,9 @@
     --line: #253143;
     --line-strong: #34435a;
 
-    --accent: #6f9bff;
+    --accent: #4fc3ec;
     --accent-ink: #0d1420;
-    --accent-soft: #17253f;
+    --accent-soft: #123244;
 
     --good: #4ade80;
     --good-soft: #113321;
@@ -115,9 +121,10 @@ code, .mono { font-family: var(--font-mono); }
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
 }
+.shell-main { min-width: 0; }
 
 .sidebar {
-  background: var(--ink-900);
+  background: var(--panel-navy);
   color: #cdd5e3;
   padding: 20px 0 20px;
   display: flex;
@@ -131,19 +138,20 @@ code, .mono { font-family: var(--font-mono); }
 .brand {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   color: #fff;
   padding: 0 20px 18px;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
+.brand-mark { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: #fff; }
 .brand .brand-tag {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 500;
   color: var(--accent);
-  background: rgba(111, 155, 255, 0.15);
+  background: rgba(79, 195, 236, 0.16);
   border-radius: 4px;
   padding: 2px 6px;
   letter-spacing: 0.06em;
@@ -173,7 +181,7 @@ code, .mono { font-family: var(--font-mono); }
   color: #fff;
 }
 .nav-link.active {
-  background: rgba(111, 155, 255, 0.12);
+  background: rgba(79, 195, 236, 0.14);
   border-left-color: var(--accent);
   color: #fff;
   font-weight: 600;
@@ -190,11 +198,33 @@ code, .mono { font-family: var(--font-mono); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   position: sticky;
   top: 0;
   z-index: 5;
 }
-.topbar h1 { font-size: 1.15rem; margin: 0; }
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar h1 {
+  font-size: 1.15rem; margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 36px; height: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.nav-toggle span { display: block; width: 16px; height: 2px; background: var(--ink-700); margin: 0 auto; }
+
+.nav-backdrop { display: none; }
 .topbar .crumb {
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -324,9 +354,10 @@ main.content { padding: 24px 28px 60px; max-width: 1280px; }
 .panel-head h2 { font-size: 0.98rem; margin: 0; }
 .panel-head .sub { font-size: 0.78rem; color: var(--ink-400); }
 .panel-body { padding: 16px 18px; }
-.panel-body.flush { padding: 0; }
+.panel-body.flush { padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 .two-col { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: start; }
+.two-col > div { min-width: 0; }
 @media (max-width: 980px) { .two-col { grid-template-columns: 1fr; } }
 
 /* ---------- Status rail (signature element) ---------- */
@@ -382,7 +413,7 @@ table.data .muted { color: var(--ink-400); font-size: 0.8rem; }
   cursor: pointer; text-decoration: none;
 }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-primary:hover { background: #1d45ab; text-decoration: none; color: var(--accent-ink); }
+.btn-primary:hover { background: #115a7a; text-decoration: none; color: var(--accent-ink); }
 .btn-secondary { background: var(--surface-1); border-color: var(--line-strong); color: var(--ink-700); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .btn-danger { background: var(--critical-soft); color: var(--critical); }
@@ -444,13 +475,88 @@ legend { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppe
 /* ---------- Auth pages ---------- */
 .auth-shell {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: var(--ink-900); background-image: radial-gradient(circle at 20% 20%, rgba(111,155,255,0.12), transparent 45%);
+  background: var(--panel-navy); background-image: radial-gradient(circle at 20% 20%, rgba(79,195,236,0.14), transparent 45%);
+  padding: 20px;
 }
 .auth-card {
   width: 100%; max-width: 380px; background: var(--surface-1); border-radius: var(--radius-lg);
   padding: 32px 30px; box-shadow: var(--shadow-2);
 }
-.auth-brand { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-.auth-brand .brand-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 2px 6px; }
+.auth-logo { display: block; max-width: 220px; width: 100%; height: auto; margin-bottom: 10px; }
 .auth-sub { color: var(--ink-400); font-size: 0.85rem; margin-bottom: 22px; }
 .auth-card .btn-primary { width: 100%; justify-content: center; margin-top: 8px; }
+
+/* ---------- Mobile (phone/tablet) ---------- */
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+
+  .nav-toggle { display: flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 260px;
+    height: 100vh;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-2);
+  }
+  .shell.nav-open .sidebar { transform: translateX(0); }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 20, 0.5);
+    z-index: 25;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .shell.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+
+  .topbar { padding: 10px 14px; }
+  .topbar h1 { font-size: 1rem; max-width: 46vw; }
+  .user-chip .who { display: none; }
+  .notif-link { font-size: 0; padding: 8px; }
+  .notif-link::before { content: "Alerts"; font-size: 0.8rem; }
+  .notif-badge { font-size: 0.68rem; }
+
+  main.content { padding: 16px 14px 40px; }
+
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .stat-tile { padding: 12px 14px; }
+  .stat-tile .stat-value { font-size: 1.5rem; }
+
+  .panel-head { padding: 12px 14px; flex-wrap: wrap; gap: 6px; }
+  .panel-body { padding: 14px; }
+
+  table.data th, table.data td { padding: 9px 12px; white-space: nowrap; }
+
+  .form-actions, .actions-row { flex-wrap: wrap; }
+  .btn { padding: 10px 16px; font-size: 0.88rem; }
+  .btn-sm { padding: 8px 12px; }
+
+  /* 16px prevents iOS Safari auto-zooming the page on input focus */
+  input[type=text], input[type=password], input[type=email], input[type=number],
+  input[type=date], input[type=time], input[type=search], input[type=file],
+  select, textarea {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  .auth-card { padding: 26px 20px; }
+
+  .detail-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+
+  /* report date-range filters and similar inline flex forms in the page
+     header -- wrap and let date inputs shrink instead of pushing width */
+  .page-head form { flex-wrap: wrap; }
+  .page-head form input[type=date] { flex: 1 1 130px; min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .topbar h1 { max-width: 40vw; }
+}

@@ -5,15 +5,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}IMS{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="icon" type="image/jpeg" sizes="200x200" href="{% static 'img/logo-mark.jpg' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <div class="shell">
+  <div class="shell" id="shell">
+    <div class="nav-backdrop" id="navBackdrop"></div>
     <aside class="sidebar">
-      <div class="brand">IMS <span class="brand-tag">CLEANTECH1</span></div>
+      <div class="brand">
+        <img src="{% static 'img/logo-mark.jpg' %}" alt="" class="brand-mark">
+        <span>Cleantech1 <span class="brand-tag">IMS</span></span>
+      </div>
 
       <div class="nav-section">Overview</div>
       <a class="nav-link {% if request.resolver_match.view_name == 'accounts:dashboard' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
@@ -104,11 +110,16 @@
       {% endif %}
     </aside>
 
-    <div>
+    <div class="shell-main">
       <header class="topbar">
-        <div>
-          <div class="crumb">{% block crumb %}IMS{% endblock %}</div>
-          <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="topbar-left">
+          <button type="button" class="nav-toggle" id="navToggle" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+          <div>
+            <div class="crumb">{% block crumb %}IMS{% endblock %}</div>
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+          </div>
         </div>
         {% if request.user.is_authenticated %}
         <div class="topbar-right">
@@ -141,5 +152,19 @@
       </main>
     </div>
   </div>
+  <script>
+  (function () {
+    var shell = document.getElementById("shell");
+    var toggle = document.getElementById("navToggle");
+    var backdrop = document.getElementById("navBackdrop");
+    if (!toggle) return;
+    function close() { shell.classList.remove("nav-open"); }
+    toggle.addEventListener("click", function () { shell.classList.toggle("nav-open"); });
+    backdrop.addEventListener("click", close);
+    document.querySelectorAll(".sidebar .nav-link").forEach(function (link) {
+      link.addEventListener("click", close);
+    });
+  })();
+  </script>
 </body>
 </html>
