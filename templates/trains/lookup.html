@@ -63,7 +63,7 @@
   <div>
     <div class="panel">
       <div class="panel-head">
-        <h2>{{ j.depart|date:"H:i" }} &rarr; {{ j.arrive|date:"H:i" }}</h2>
+        <h2>{{ j.depart_local }} &rarr; {{ j.arrive_local }}</h2>
         <span class="sub">{{ j.duration_minutes }} min{% if j.transfers %} &middot; {{ j.transfers }} transfer{{ j.transfers|pluralize }}{% else %} &middot; direct{% endif %}</span>
       </div>
       <div class="panel-body flush">
@@ -75,8 +75,8 @@
               <td>{{ leg.mode_name }}{% if leg.line %} {{ leg.line }}{% endif %}</td>
               <td>{{ leg.origin_name }}{% if leg.origin_platform %}<br><span class="muted">{{ leg.origin_platform }}</span>{% endif %}</td>
               <td>{{ leg.destination_name }}{% if leg.destination_platform %}<br><span class="muted">{{ leg.destination_platform }}</span>{% endif %}</td>
-              <td class="num mono">{{ leg.depart|date:"H:i" }} {% if leg.depart_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
-              <td class="num mono">{{ leg.arrive|date:"H:i" }} {% if leg.arrive_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
+              <td class="num mono">{{ leg.depart_local }} {% if leg.depart_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
+              <td class="num mono">{{ leg.arrive_local }} {% if leg.arrive_is_realtime %}<span class="status-rail good">Live</span>{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -114,7 +114,7 @@
 
 {% if board %}
 <div class="page-head">
-  <div class="desc">{{ station_name }} &middot; updated {{ board.fetched_at|date:"H:i:s" }}</div>
+  <div class="desc">{{ station_name }} &middot; updated {{ board.fetched_at_local }}</div>
   <a class="btn btn-secondary" href="{% url 'trains_web:lookup' %}?station={{ station_id }}&name={{ station_name|urlencode }}">Refresh</a>
 </div>
 

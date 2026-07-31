@@ -167,6 +167,20 @@ def _parse_time(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _local_time_str(dt):
+    """Sydney wall-clock "HH:MM" for an aware datetime. Needed because
+    Django's `|date` template filter converts aware datetimes to
+    settings.TIME_ZONE (UTC in this project) for display, not whatever
+    tzinfo the value already carries -- so a raw UTC datetime handed to
+    a template renders in UTC, not Sydney time. Pre-formatting the
+    string here sidesteps that entirely (same fix already applied to
+    the departure board's `local_time` field)."""
+    if dt is None:
+        return ""
+    local = dt.astimezone(SYDNEY_TZ) if SYDNEY_TZ else dt
+    return local.strftime("%H:%M")
+
+
 def _station_only_name(name):
     """Strips a trailing ', Platform N' so a leg's origin/destination name
     doesn't duplicate the separately-shown platform field."""
@@ -302,7 +316,12 @@ def get_departure_board(stop_id, station_name=None):
             "upcoming": upcoming_events[:UPCOMING_COUNT],
         })
 
-    result = {"platforms": sorted(platforms_out, key=lambda b: b["platform"]), "fetched_at": timezone.now()}
+    now = timezone.now()
+    result = {
+        "platforms": sorted(platforms_out, key=lambda b: b["platform"]),
+        "fetched_at": now,
+        "fetched_at_local": (now.astimezone(SYDNEY_TZ) if SYDNEY_TZ else now).strftime("%H:%M:%S"),
+    }
     cache.set(cache_key, result, DEPARTURES_CACHE_SECONDS)
     return result
 
@@ -422,8 +441,10 @@ def get_trip(origin_id, destination_id, when=None, arrive_by=False):
                 "destination_name": _station_only_name(destination.get("disassembledName") or destination.get("name")),
                 "destination_platform": (destination.get("properties") or {}).get("platformName", "") if mode_class == TRAIN_MODE else "",
                 "depart": depart,
+                "depart_local": _local_time_str(depart),
                 "depart_is_realtime": dep_estimated is not None,
                 "arrive": arrive,
+                "arrive_local": _local_time_str(arrive),
                 "arrive_is_realtime": arr_estimated is not None,
                 "duration_minutes": round(duration_seconds / 60) if duration_seconds else None,
             })
@@ -434,7 +455,9 @@ def get_trip(origin_id, destination_id, when=None, arrive_by=False):
         total_arrive = legs_out[-1]["arrive"]
         journeys.append({
             "depart": total_depart,
+            "depart_local": _local_time_str(total_depart),
             "arrive": total_arrive,
+            "arrive_local": _local_time_str(total_arrive),
             "duration_minutes": round((total_arrive - total_depart).total_seconds() / 60),
             "transfers": journey.get("interchanges", max(0, len(legs_out) - 1)),
             "legs": legs_out,
