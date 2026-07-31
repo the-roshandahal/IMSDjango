@@ -111,14 +111,17 @@ def stock_in(*, product_id, warehouse_id, quantity, performed_by, batch_id=None,
 @transaction.atomic
 def stock_out(
     *, product_id, warehouse_id, quantity, performed_by, station_id=None,
-    reason_code="", comment="", batch_id=None, override_fefo=False,
+    reason_code="", comment="", batch_id=None, override_fefo=False, request_id=None,
 ):
     """Debits warehouse stock. If `station_id` is given, the same quantity
     is credited to that station's stock in the same atomic operation
     (issued-to-station); otherwise this is a write-off/consumption with no
     destination stock. Defaults to FEFO for batch-tracked products; passing
     `batch_id` requires `override_fefo=True` and should carry a
-    `reason_code` (Supervisor override, SRS Section 5.4).
+    `reason_code` (Supervisor override, SRS Section 5.4). `request_id` is
+    purely for traceability back to a StockRequest -- callers (e.g.
+    apps.requests.services) are responsible for checking approval status
+    before calling this; this function has no opinion on approval workflow.
     """
     quantity = Decimal(str(quantity))
     if quantity <= 0:
@@ -156,7 +159,7 @@ def stock_out(
         txn = InventoryTransaction.objects.create(
             type=TransactionType.STOCK_OUT, product=product, batch=batch, quantity=take_qty,
             source_warehouse=warehouse, station_id=station_id, reason_code=reason_code,
-            comment=comment, performed_by=performed_by,
+            comment=comment, performed_by=performed_by, request_id=request_id,
         )
         txns.append(txn)
 
@@ -372,4 +375,28 @@ def reverse_transaction(*, transaction_id, performed_by, reason):
         type=TransactionType.REVERSAL, product=original.product, batch=original.batch, quantity=original.quantity,
         source_warehouse=reversal_source, dest_warehouse=reversal_dest, station=original.station,
         reason_code="reversal", comment=reason, reversal_of=original, performed_by=performed_by,
+    )
+
+
+@transaction.atomic
+def station_stock_usage(*, product_id, station_id, quantity, performed_by, comment="", batch_id=None):
+    """Routine consumption of stock already held at a station -- e.g. daily
+    cleaning chemical usage (SRS Section 5.6). Decrements station-side
+    StockLevel directly; nothing flows back to a warehouse."""
+    quantity = Decimal(str(quantity))
+    if quantity <= 0:
+        raise ValueError("quantity must be positive.")
+
+    product = Product.objects.get(pk=product_id)
+    batch = Batch.objects.get(pk=batch_id) if batch_id else None
+
+    updated = StockLevel.objects.filter(
+        product=product, station_id=station_id, warehouse=None, batch=batch, quantity__gte=quantity
+    ).update(quantity=F("quantity") - quantity)
+    if updated == 0:
+        raise StockLevelChangedError("Station stock level changed; please retry recording this usage.")
+
+    return InventoryTransaction.objects.create(
+        type=TransactionType.STATION_USAGE, product=product, batch=batch, quantity=quantity,
+        station_id=station_id, comment=comment, performed_by=performed_by,
     )

@@ -1,4 +1,5 @@
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -73,3 +74,24 @@ class StationViewSet(viewsets.ModelViewSet):
             .order_by("product__name")
         )
         return Response(StockSummarySerializer(qs, many=True).data)
+
+    @action(detail=True, methods=["get"], url_path="consumption-summary")
+    def consumption_summary(self, request, pk=None):
+        """Monthly consumption summary per station (SRS Section 5.6),
+        defaulting to the current month. ?year=YYYY&month=MM to pick another."""
+        from apps.inventory.models import InventoryTransaction, TransactionType
+
+        station = self.get_object()
+        now = timezone.now()
+        year = int(request.query_params.get("year", now.year))
+        month = int(request.query_params.get("month", now.month))
+        qs = (
+            InventoryTransaction.objects.filter(
+                station=station, type=TransactionType.STATION_USAGE,
+                timestamp__year=year, timestamp__month=month,
+            )
+            .values("product__id", "product__name")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity")
+        )
+        return Response({"year": year, "month": month, "usage": list(qs)})

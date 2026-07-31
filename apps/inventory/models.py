@@ -15,16 +15,18 @@ class TransactionType(models.TextChoices):
     LOST = "lost", "Lost"
     EXPIRED = "expired", "Expired"
     REVERSAL = "reversal", "Reversal"
+    STATION_USAGE = "station_usage", "Station Usage"
 
 
 class InventoryTransaction(ImmutableModel):
     """Every inventory movement, ever (SRS Section 5.4). Append-only:
     corrections are posted as a new REVERSAL transaction, never an edit.
 
-    Note: `purchase_order` and `request` (stock-request approval) FKs are
-    intentionally not present yet -- those apps don't exist. They are added
-    as a trivial additive migration once Purchasing/Requests modules land;
-    see apps/inventory/services.py for the guard that will start using them.
+    `request` links a dispatch back to the StockRequest it fulfilled --
+    purely for traceability; the actual "must be approved" business rule
+    lives in apps.requests.services (inventory stays a generic primitive
+    with no awareness of approval workflows). `purchase_order` is still
+    intentionally absent -- that app doesn't exist yet.
     """
 
     type = models.CharField(max_length=20, choices=TransactionType.choices)
@@ -39,6 +41,9 @@ class InventoryTransaction(ImmutableModel):
         "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    request = models.ForeignKey(
+        "stock_requests.StockRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="transactions"
+    )
 
     reason_code = models.CharField(max_length=40, blank=True)
     comment = models.TextField(blank=True)

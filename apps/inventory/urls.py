@@ -11,6 +11,7 @@ urlpatterns = [
     path("inventory/transfer/<int:pk>/confirm", views.TransferConfirmView.as_view(), name="transfer-confirm"),
     path("inventory/adjustment", views.AdjustmentView.as_view(), name="adjustment"),
     path("inventory/return", views.ReturnView.as_view(), name="return"),
+    path("inventory/station-usage", views.StationUsageView.as_view(), name="station-usage"),
     path("inventory/damaged", views.DamagedView.as_view(), name="damaged"),
     path("inventory/lost", views.LostView.as_view(), name="lost"),
     path("inventory/expired", views.ExpiredView.as_view(), name="expired"),

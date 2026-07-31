@@ -19,6 +19,7 @@ from apps.inventory.serializers import (
     InventoryTransactionSerializer,
     LostSerializer,
     ReturnSerializer,
+    StationUsageSerializer,
     StockInSerializer,
     StockOutSerializer,
     StocktakeCreateSerializer,
@@ -93,6 +94,18 @@ class StockOutView(StockActionView):
 
     def call_service(self, data, user):
         return services.stock_out(performed_by=user, **data)
+
+
+class StationUsageView(StockActionView):
+    """Record daily consumption of stock already held at a station (SRS
+    Section 5.6). Distinct capability from warehouse-side stock actions --
+    station staff record their own usage but don't manage warehouse stock."""
+
+    serializer_class = StationUsageSerializer
+    capability = "station.usage.record"
+
+    def call_service(self, data, user):
+        return services.station_stock_usage(performed_by=user, **data)
 
 
 class AdjustmentView(StockActionView):

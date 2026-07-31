@@ -28,7 +28,8 @@ ROLE_CAPABILITIES = {
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
-    ("station_supervisor", "station_request.view_own"): True,
+    ("station_supervisor", "station_request.view"): True,
+    ("station_supervisor", "station.usage.record"): True,
     ("station_supervisor", "equipment.request"): True,
     ("station_supervisor", "vehicle.view_own"): True,
     ("station_supervisor", "stocktake.manage"): True,
@@ -49,6 +50,7 @@ ROLE_CAPABILITIES = {
 
     ("station_staff", "product.view"): True,
     ("station_staff", "station_request.create"): True,
+    ("station_staff", "station.usage.record"): True,
     ("station_staff", "equipment.view_own"): True,
 
     ("management", "product.view"): True,

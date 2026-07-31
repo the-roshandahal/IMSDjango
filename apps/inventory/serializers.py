@@ -60,6 +60,14 @@ class ReturnSerializer(serializers.Serializer):
     comment = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class StationUsageSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    station_id = serializers.IntegerField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    batch_id = serializers.IntegerField(required=False, allow_null=True)
+    comment = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class DamagedSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     warehouse_id = serializers.IntegerField()
