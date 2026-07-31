@@ -93,12 +93,29 @@ def _refresh_status(po_id):
     lines = list(PurchaseOrderLine.objects.filter(purchase_order_id=po_id))
     if all(line.is_fully_received for line in lines):
         new_status = POStatus.RECEIVED
-        PurchaseOrder.objects.filter(pk=po_id).exclude(status=new_status).update(
+        updated = PurchaseOrder.objects.filter(pk=po_id).exclude(status=new_status).update(
             status=new_status, received_at=timezone.now()
         )
+        if updated:
+            _notify_po_received(po_id)
         return
     elif any(line.quantity_received > 0 for line in lines):
         new_status = POStatus.PARTIALLY_RECEIVED
     else:
         return
     PurchaseOrder.objects.filter(pk=po_id).exclude(status=new_status).update(status=new_status)
+
+
+def _notify_po_received(po_id):
+    from django.urls import reverse
+
+    from apps.notifications.services import notify_users, warehouse_recipients
+
+    po = PurchaseOrder.objects.select_related("supplier", "created_by").get(pk=po_id)
+    recipients = {u.id: u for u in warehouse_recipients(po.warehouse_id)}
+    recipients[po.created_by_id] = po.created_by
+    notify_users(
+        recipients.values(), type="po_status", title=f"{po.reference} fully received",
+        message=f"{po.reference} from {po.supplier.name} has been fully received into {po.warehouse.name}.",
+        link=reverse("purchasing_web:detail", args=[po.pk]),
+    )

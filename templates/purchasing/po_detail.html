@@ -130,4 +130,6 @@
   <div class="panel-body"><p style="margin:0;white-space:pre-line;">{{ po.notes }}</p></div>
 </div>
 {% endif %}
+
+{% include "documents/_attachments.html" with documents=documents can_manage_documents=can_manage_documents document_model_key=document_model_key document_object_id=document_object_id %}
 {% endblock %}

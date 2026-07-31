@@ -64,6 +64,13 @@ class EquipmentDetailView(CapabilityRequiredMixin, DetailView):
         ctx["release_form"] = EquipmentReleaseForm()
         ctx["maintenance_form"] = EquipmentMaintenanceForm()
         ctx["test_form"] = EquipmentTestForm()
+
+        from apps.documents.services import documents_for
+
+        ctx["documents"] = documents_for(self.object)
+        ctx["can_manage_documents"] = has_capability(self.request.user, "equipment.assign")
+        ctx["document_model_key"] = "equipment.equipment"
+        ctx["document_object_id"] = self.object.pk
         return ctx
 
 

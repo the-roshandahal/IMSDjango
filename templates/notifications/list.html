@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Notifications - IMS{% endblock %}
+{% block crumb %}Overview{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ page_obj.paginator.count }} notification{{ page_obj.paginator.count|pluralize }}</div>
+  <form method="post" action="{% url 'notifications_web:mark-all-read' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-secondary">Mark all read</button>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if notifications %}
+    {% for n in notifications %}
+    <div class="rail-row {% if not n.is_read %}info{% else %}pending{% endif %}" style="padding:12px 18px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
+      <div>
+        <div style="font-weight:{% if not n.is_read %}600{% else %}400{% endif %};">{{ n.title }}</div>
+        {% if n.message %}<div class="muted" style="font-size:0.85rem;margin-top:2px;">{{ n.message }}</div>{% endif %}
+        <div class="muted" style="font-size:0.75rem;margin-top:4px;">{{ n.created_at|timesince }} ago</div>
+      </div>
+      <form method="post" action="{% url 'notifications_web:read' n.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm">{% if n.link %}Open{% else %}Mark read{% endif %}</button>
+      </form>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">No notifications.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

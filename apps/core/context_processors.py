@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from apps.accounts.models import Role
 from apps.core.permissions import has_capability
 
@@ -34,4 +36,6 @@ def nav_capabilities(request):
         or has_capability(user, "reports.view_own_site")
         or has_capability(user, "reports.view_own_project"),
         "is_admin": user.role == Role.ADMIN,
+        "unread_notifications_count": user.notifications.filter(is_read=False).count(),
+        "document_max_upload_mb": settings.DOCUMENT_MAX_UPLOAD_MB,
     }

@@ -152,6 +152,8 @@
         {% endif %}
       </div>
     </div>
+
+    {% include "documents/_attachments.html" with documents=documents can_manage_documents=can_manage_documents document_model_key=document_model_key document_object_id=document_object_id %}
   </div>
 </div>
 {% endblock %}

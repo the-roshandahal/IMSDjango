@@ -204,6 +204,35 @@ code, .mono { font-family: var(--font-mono); }
   margin-bottom: 2px;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.notif-link {
+  position: relative;
+  font-size: 0.82rem;
+  color: var(--ink-600);
+  padding: 6px 2px;
+}
+.notif-link:hover, .notif-link.active { color: var(--accent); text-decoration: none; }
+.notif-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 5px;
+  border-radius: 8px;
+  background: var(--critical);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
 .user-chip {
   display: flex;
   align-items: center;

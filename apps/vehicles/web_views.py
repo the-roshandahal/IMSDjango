@@ -63,6 +63,13 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
         ctx["release_form"] = VehicleReleaseForm()
         ctx["maintenance_end_form"] = VehicleMaintenanceEndForm()
         ctx["cost_form"] = VehicleCostLogForm()
+
+        from apps.documents.services import documents_for
+
+        ctx["documents"] = documents_for(self.object)
+        ctx["can_manage_documents"] = has_capability(self.request.user, "vehicle.assign")
+        ctx["document_model_key"] = "vehicles.vehicle"
+        ctx["document_object_id"] = self.object.pk
         return ctx
 
 

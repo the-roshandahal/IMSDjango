@@ -1,0 +1,51 @@
+{% comment %}
+Include with: {% include "documents/_attachments.html" with documents=... can_manage_documents=... document_model_key="app_label.model" document_object_id=obj.pk %}
+{% endcomment %}
+<div class="panel">
+  <div class="panel-head"><h2>Attachments</h2></div>
+  <div class="panel-body flush">
+    {% if documents %}
+    <table class="data">
+      <thead><tr><th>File</th><th>Description</th><th>Uploaded</th>{% if can_manage_documents %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr>
+          <td><a href="{{ doc.file.url }}" target="_blank">{{ doc.original_filename }}</a></td>
+          <td class="muted">{{ doc.description|default:"—" }}</td>
+          <td class="muted mono">{{ doc.uploaded_at|date:"d M Y" }} &middot; {{ doc.uploaded_by.username }}</td>
+          {% if can_manage_documents %}
+          <td>
+            <form method="post" action="{% url 'documents_web:delete' doc.pk %}" onsubmit="return confirm('Remove this attachment?');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="btn btn-secondary btn-sm">Remove</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No attachments yet.</div>
+    {% endif %}
+  </div>
+  {% if can_manage_documents %}
+  <div class="panel-body" style="border-top:1px solid var(--line);">
+    <form method="post" action="{% url 'documents_web:upload' document_model_key document_object_id %}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <div class="field" style="margin-bottom:0;">
+        <label>File</label>
+        <input type="file" name="file" required>
+      </div>
+      <div class="field" style="margin-bottom:0;flex:1;min-width:160px;">
+        <label>Description</label>
+        <input type="text" name="description" placeholder="Optional description">
+      </div>
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+    <p class="hint" style="margin-top:8px;">PDF, JPG, PNG, DOCX, XLSX up to {{ document_max_upload_mb }}MB.</p>
+  </div>
+  {% endif %}
+</div>

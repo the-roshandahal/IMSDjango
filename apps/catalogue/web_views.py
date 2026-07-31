@@ -9,6 +9,7 @@ from apps.catalogue import services
 from apps.catalogue.forms import CategoryForm, ProductCreateForm, ProductForm
 from apps.catalogue.models import Category, Product
 from apps.core.mixins import CapabilityRequiredMixin
+from apps.core.permissions import has_capability
 from apps.inventory import services as inventory_services
 
 
@@ -51,6 +52,12 @@ class ProductDetailView(CapabilityRequiredMixin, DetailView):
         ctx["total_stock"] = (
             self.object.stock_levels.filter(warehouse__isnull=False).aggregate(t=Sum("quantity"))["t"] or 0
         )
+        from apps.documents.services import documents_for
+
+        ctx["documents"] = documents_for(self.object)
+        ctx["can_manage_documents"] = has_capability(self.request.user, "product.manage")
+        ctx["document_model_key"] = "catalogue.product"
+        ctx["document_object_id"] = self.object.pk
         return ctx
 
 

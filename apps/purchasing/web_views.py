@@ -75,6 +75,13 @@ class PurchaseOrderDetailView(PurchaseOrderAccessMixin, DetailView):
                 for sp in SupplierProduct.objects.filter(supplier_id=self.object.supplier_id)
             }
             ctx["supplier_prices_json"] = json.dumps(prices)
+
+        from apps.documents.services import documents_for
+
+        ctx["documents"] = documents_for(self.object)
+        ctx["can_manage_documents"] = can_manage
+        ctx["document_model_key"] = "purchasing.purchaseorder"
+        ctx["document_object_id"] = self.object.pk
         return ctx
 
 

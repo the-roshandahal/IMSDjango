@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "apps.suppliers",
     "apps.purchasing",
     "apps.reports",
+    "apps.notifications",
+    "apps.documents",
 ]
 
 MIDDLEWARE = [
@@ -136,3 +138,5 @@ PASSWORD_MAX_AGE_DAYS = env.int("PASSWORD_MAX_AGE_DAYS", default=90)
 # --- Email (password resets, notifications) ----------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@ims.local")
+
+DOCUMENT_MAX_UPLOAD_MB = env.int("DOCUMENT_MAX_UPLOAD_MB", default=10)

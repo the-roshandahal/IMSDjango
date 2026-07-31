@@ -107,6 +107,13 @@ class ProjectDetailView(ProjectAccessMixin, DetailView):
             ctx["shift_form"] = ShiftLogForm()
             ctx["close_form"] = ProjectCloseForm()
             ctx["outstanding_assets"] = services.outstanding_assets(project)
+
+        from apps.documents.services import documents_for
+
+        ctx["documents"] = documents_for(project)
+        ctx["can_manage_documents"] = can_manage
+        ctx["document_model_key"] = "projects.deepcleanproject"
+        ctx["document_object_id"] = project.pk
         return ctx
 
 
