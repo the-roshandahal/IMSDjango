@@ -48,6 +48,20 @@
       </a>
       {% endif %}
 
+      {% if can_view_equipment or can_view_vehicles %}
+      <div class="nav-section">Fleet</div>
+      {% if can_view_equipment %}
+      <a class="nav-link {% if 'equipment_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'equipment_web:list' %}">
+        <span class="nav-dot"></span> Equipment
+      </a>
+      {% endif %}
+      {% if can_view_vehicles %}
+      <a class="nav-link {% if 'vehicles_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'vehicles_web:list' %}">
+        <span class="nav-dot"></span> Vehicles
+      </a>
+      {% endif %}
+      {% endif %}
+
       {% if is_admin %}
       <div class="nav-section">Administration</div>
       <a class="nav-link {% if 'accounts:user' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'accounts:user-list-page' %}">

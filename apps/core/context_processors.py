@@ -18,5 +18,11 @@ def nav_capabilities(request):
         "can_view_requests": has_capability(user, "station_request.view"),
         "can_create_requests": has_capability(user, "station_request.create"),
         "can_approve_requests": has_capability(user, "station_request.approve"),
+        # "*.request" capabilities (station/deepclean supervisors) aren't
+        # wired to a page yet -- no equipment/vehicle request-approval flow
+        # exists (deliberately out of scope this pass, see commit notes).
+        # Only show the nav link where there's a real page behind it.
+        "can_view_equipment": has_capability(user, "equipment.view_own") or has_capability(user, "equipment.assign"),
+        "can_view_vehicles": has_capability(user, "vehicle.view_own") or has_capability(user, "vehicle.assign"),
         "is_admin": user.role == Role.ADMIN,
     }

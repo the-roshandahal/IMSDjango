@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ vehicle.registration }} - IMS{% endblock %}
+{% block crumb %}Fleet / Vehicles{% endblock %}
+{% block page_title %}{{ vehicle.registration }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ vehicle.make_model|default:"No make/model on file" }}</div>
+  <div class="actions-row">
+    {% if can_manage_fleet %}<a class="btn btn-secondary" href="{% url 'vehicles_web:edit' vehicle.pk %}">Edit</a>{% endif %}
+    {% if vehicle.status == "available" and can_manage_fleet %}
+    <form method="post" action="{% url 'vehicles_web:maintenance-start' vehicle.pk %}" style="display:inline;">
+      {% csrf_token %}<button type="submit" class="btn btn-secondary">Send to maintenance</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if vehicle.compliance_blockers %}
+<div class="messages"><li class="warning" style="list-style:none;padding:10px 14px;border-radius:6px;border-left:3px solid var(--warn);background:var(--warn-soft);color:var(--warn);">
+  {{ vehicle.compliance_blockers|join:"; " }}
+</li></div>
+{% endif %}
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Status</h2></div>
+      <div class="panel-body">
+        <dl class="detail-grid">
+          <div><dt>Status</dt><dd>
+            {% if vehicle.status == "available" %}<span class="status-rail good">Available</span>
+            {% elif vehicle.status == "assigned" %}<span class="status-rail info">Assigned</span>
+            {% elif vehicle.status == "in_maintenance" %}<span class="status-rail warn">In maintenance</span>
+            {% else %}<span class="status-rail pending">Written off</span>{% endif %}
+          </dd></div>
+          <div><dt>Station</dt><dd>{{ vehicle.current_station.name|default:"—" }}</dd></div>
+          <div><dt>Driver</dt><dd>{{ vehicle.assigned_driver.username|default:"—" }}</dd></div>
+          <div><dt>Service due</dt><dd class="mono">{{ vehicle.service_due_date|default:"—" }}</dd></div>
+          <div><dt>Insurance expiry</dt><dd class="mono">{{ vehicle.insurance_expiry|default:"—" }}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Running costs</h2><span class="sub">total {{ total_cost }}</span></div>
+      <div class="panel-body flush">
+        {% if costs %}
+        <table class="data">
+          <thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>By</th></tr></thead>
+          <tbody>
+            {% for c in costs %}
+            <tr>
+              <td class="mono">{{ c.incurred_at }}</td>
+              <td><span class="status-rail info">{{ c.get_cost_type_display }}</span></td>
+              <td class="num mono">{{ c.amount }}</td>
+              <td class="muted">{{ c.comment }}</td>
+              <td class="muted">{{ c.recorded_by.username }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No costs recorded yet.</div>
+        {% endif %}
+      </div>
+      {% if can_manage_fleet %}
+      <div class="panel-body" style="border-top:1px solid var(--line);">
+        <form method="post" action="{% url 'vehicles_web:cost-log' vehicle.pk %}">
+          {% csrf_token %}
+          <div class="form-grid">
+            <div class="field"><label>Type</label>{{ cost_form.cost_type }}</div>
+            <div class="field"><label>Amount</label>{{ cost_form.amount }}</div>
+            <div class="field"><label>Date</label>{{ cost_form.incurred_at }}</div>
+            <div class="field"><label>Note</label>{{ cost_form.comment }}</div>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm">Add cost</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Assignment history</h2></div>
+      <div class="panel-body flush">
+        {% if logs %}
+        <table class="data">
+          <thead><tr><th>When</th><th>Action</th><th>Detail</th><th>By</th></tr></thead>
+          <tbody>
+            {% for l in logs %}
+            <tr>
+              <td class="mono muted">{{ l.timestamp|date:"d M H:i" }}</td>
+              <td><span class="status-rail {% if l.override_used %}warn{% else %}info{% endif %}">{{ l.get_action_display }}{% if l.override_used %} (override){% endif %}</span></td>
+              <td class="muted">{{ l.station.name|default:"" }} {{ l.comment }}</td>
+              <td class="muted">{{ l.performed_by.username }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No history yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    {% if can_manage_fleet %}
+    {% if vehicle.status == "available" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Assign</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'vehicles_web:assign' vehicle.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Station</label>{{ assign_form.station }}</div>
+          <div class="field"><label>Driver (optional)</label>{{ assign_form.driver }}</div>
+          <div class="field"><label>Comment</label>{{ assign_form.comment }}</div>
+          {% if vehicle.compliance_blockers %}
+          <div class="field checkbox-field">{{ assign_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field"><label>Override reason</label>{{ assign_form.override_reason }}</div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Assign</button>
+        </form>
+      </div>
+    </div>
+    {% elif vehicle.status == "assigned" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Release</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'vehicles_web:release' vehicle.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Comment</label>{{ release_form.comment }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Release</button>
+        </form>
+      </div>
+    </div>
+    {% elif vehicle.status == "in_maintenance" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Maintenance</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'vehicles_web:maintenance-end' vehicle.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Comment</label>{{ maintenance_end_form.comment }}</div>
+          <div class="field"><label>Next service due</label>{{ maintenance_end_form.next_service_due_date }}</div>
+          <button type="submit" class="btn btn-good" style="width:100%;justify-content:center;">Complete maintenance</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if vehicle.status != "written_off" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Write off</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'vehicles_web:write-off' vehicle.pk %}" onsubmit="return confirm('Write off this vehicle? This is permanent.');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Write off</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -170,6 +170,26 @@ class DashboardView(View):
             context["locked_users_count"] = User.objects.filter(locked_until__gt=timezone.now()).count()
             context["recent_audit"] = AuditLog.objects.select_related("actor").order_by("-timestamp")[:8]
 
+        from apps.core.permissions import has_capability
+
+        if has_capability(user, "equipment.assign") or has_capability(user, "vehicle.assign"):
+            from apps.equipment.models import Equipment
+            from apps.vehicles.models import Vehicle
+
+            today = timezone.now().date()
+            context["equipment_maintenance_due_count"] = Equipment.objects.filter(
+                next_maintenance_due__lte=today
+            ).exclude(status="written_off").count()
+            context["equipment_test_issues_count"] = Equipment.objects.filter(
+                Q(next_test_due__lte=today) | Q(last_test_result="fail")
+            ).exclude(status="written_off").count()
+            context["vehicle_service_due_count"] = Vehicle.objects.filter(
+                service_due_date__lte=today
+            ).exclude(status="written_off").count()
+            context["vehicle_insurance_expired_count"] = Vehicle.objects.filter(
+                insurance_expiry__lte=today
+            ).exclude(status="written_off").count()
+
         return render(request, self.template_name, context)
 
 

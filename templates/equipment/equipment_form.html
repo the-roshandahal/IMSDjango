@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit equipment{% else %}New equipment{% endif %} - IMS{% endblock %}
+{% block crumb %}Fleet / Equipment{% endblock %}
+{% block page_title %}{% if object %}Edit {{ object.asset_id }}{% else %}New equipment{% endif %}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{% if object %}Save changes{% else %}Create equipment{% endif %}</button>
+        <a class="btn btn-secondary" href="{% url 'equipment_web:list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Vehicles - IMS{% endblock %}
+{% block crumb %}Fleet{% endblock %}
+{% block page_title %}Vehicles{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ vehicles|length }} vehicle{{ vehicles|length|pluralize }}{% if not can_manage_fleet %} assigned to you{% endif %}</div>
+  {% if can_manage_fleet %}<a class="btn btn-primary" href="{% url 'vehicles_web:create' %}">+ New vehicle</a>{% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if vehicles %}
+    <table class="data">
+      <thead><tr><th>Registration</th><th>Make/model</th><th>Station</th><th>Driver</th><th>Status</th><th>Service due</th><th>Insurance</th></tr></thead>
+      <tbody>
+        {% for v in vehicles %}
+        <tr class="rail-row {% if v.compliance_blockers %}warn{% elif v.status == 'available' %}good{% elif v.status == 'assigned' %}info{% else %}pending{% endif %}">
+          <td><a href="{% url 'vehicles_web:detail' v.pk %}" class="mono">{{ v.registration }}</a></td>
+          <td>{{ v.make_model|default:"—" }}</td>
+          <td>{{ v.current_station.name|default:"—" }}</td>
+          <td>{{ v.assigned_driver.username|default:"—" }}</td>
+          <td>
+            {% if v.status == "available" %}<span class="status-rail good">Available</span>
+            {% elif v.status == "assigned" %}<span class="status-rail info">Assigned</span>
+            {% elif v.status == "in_maintenance" %}<span class="status-rail warn">Maintenance</span>
+            {% else %}<span class="status-rail pending">Written off</span>{% endif %}
+          </td>
+          <td>{% if v.is_service_due %}<span class="status-rail warn">{{ v.service_due_date }}</span>{% else %}<span class="muted">{{ v.service_due_date|default:"—" }}</span>{% endif %}</td>
+          <td>{% if v.is_insurance_expired %}<span class="status-rail critical">{{ v.insurance_expiry }}</span>{% else %}<span class="muted">{{ v.insurance_expiry|default:"—" }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No vehicles{% if not can_manage_fleet %} assigned to you{% endif %}</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

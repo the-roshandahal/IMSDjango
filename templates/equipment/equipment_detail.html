@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ item.asset_id }} - IMS{% endblock %}
+{% block crumb %}Fleet / Equipment{% endblock %}
+{% block page_title %}{{ item.asset_id }} &mdash; {{ item.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc mono">S/N {{ item.serial_number }}</div>
+  <div class="actions-row">
+    {% if can_manage_fleet %}<a class="btn btn-secondary" href="{% url 'equipment_web:edit' item.pk %}">Edit</a>{% endif %}
+    {% if item.status == "available" and can_manage_fleet %}
+    <form method="post" action="{% url 'equipment_web:maintenance-start' item.pk %}" style="display:inline;">
+      {% csrf_token %}<button type="submit" class="btn btn-secondary">Send to maintenance</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if item.compliance_blockers %}
+<div class="messages"><li class="warning" style="list-style:none;padding:10px 14px;border-radius:6px;border-left:3px solid var(--warn);background:var(--warn-soft);color:var(--warn);">
+  {{ item.compliance_blockers|join:"; " }}
+</li></div>
+{% endif %}
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Status</h2></div>
+      <div class="panel-body">
+        <dl class="detail-grid">
+          <div><dt>Status</dt><dd>
+            {% if item.status == "available" %}<span class="status-rail good">Available</span>
+            {% elif item.status == "assigned" %}<span class="status-rail info">Assigned</span>
+            {% elif item.status == "in_maintenance" %}<span class="status-rail warn">In maintenance</span>
+            {% elif item.status == "lost" %}<span class="status-rail critical">Lost</span>
+            {% else %}<span class="status-rail pending">Written off</span>{% endif %}
+          </dd></div>
+          <div><dt>Location</dt><dd>{% if item.current_station %}{{ item.current_station.name }}{% elif item.current_warehouse %}{{ item.current_warehouse.name }}{% else %}—{% endif %}</dd></div>
+          <div><dt>Assigned to</dt><dd>{{ item.assigned_user.username|default:"—" }}</dd></div>
+          <div><dt>Maintenance interval</dt><dd class="mono">{{ item.maintenance_interval_days|default:"—" }} days</dd></div>
+          <div><dt>Next maintenance</dt><dd class="mono">{{ item.next_maintenance_due|default:"—" }}</dd></div>
+          <div><dt>Last test</dt><dd class="mono">{{ item.last_test_date|default:"—" }} ({{ item.get_last_test_result_display }})</dd></div>
+          <div><dt>Next test due</dt><dd class="mono">{{ item.next_test_due|default:"—" }}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Service &amp; assignment history</h2></div>
+      <div class="panel-body flush">
+        {% if logs %}
+        <table class="data">
+          <thead><tr><th>When</th><th>Action</th><th>Detail</th><th>By</th></tr></thead>
+          <tbody>
+            {% for l in logs %}
+            <tr>
+              <td class="mono muted">{{ l.timestamp|date:"d M H:i" }}</td>
+              <td><span class="status-rail {% if l.override_used %}warn{% else %}info{% endif %}">{{ l.get_action_display }}{% if l.override_used %} (override){% endif %}</span></td>
+              <td class="muted">{{ l.station.name|default:"" }} {{ l.comment }}</td>
+              <td class="muted">{{ l.performed_by.username }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No history yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    {% if can_manage_fleet %}
+    {% if item.status == "available" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Assign</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'equipment_web:assign' item.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Station</label>{{ assign_form.station }}</div>
+          <div class="field"><label>Assign to user (optional)</label>{{ assign_form.assigned_user }}</div>
+          <div class="field"><label>Comment</label>{{ assign_form.comment }}</div>
+          {% if item.compliance_blockers %}
+          <div class="field checkbox-field">{{ assign_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field"><label>Override reason</label>{{ assign_form.override_reason }}</div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Assign</button>
+        </form>
+      </div>
+    </div>
+    {% elif item.status == "assigned" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Release</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'equipment_web:release' item.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Comment</label>{{ release_form.comment }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Release back to store</button>
+        </form>
+      </div>
+    </div>
+    {% elif item.status == "in_maintenance" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Maintenance</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'equipment_web:maintenance-end' item.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Comment</label><textarea name="comment" rows="2"></textarea></div>
+          <button type="submit" class="btn btn-good" style="width:100%;justify-content:center;">Complete maintenance</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>Record safety test</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'equipment_web:test' item.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Result</label>{{ test_form.result }}</div>
+          <div class="field"><label>Comment</label>{{ test_form.comment }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Record test</button>
+        </form>
+      </div>
+    </div>
+
+    {% if item.status != "lost" and item.status != "written_off" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Write off / lost</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'equipment_web:lost' item.pk %}" style="margin-bottom:10px;" onsubmit="return confirm('Mark this equipment lost?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Mark lost</button>
+        </form>
+        <form method="post" action="{% url 'equipment_web:write-off' item.pk %}" onsubmit="return confirm('Write off this equipment? This is permanent.');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Write off</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>Identification</h2></div>
+      <div class="panel-body" style="text-align:center;">
+        {% if item.qr_code_image %}
+        <div class="qr-box"><img src="{{ item.qr_code_image.url }}" alt="QR code"></div>
+        <p class="mono" style="margin-top:10px;font-size:0.75rem;color:var(--ink-400);">{{ item.qr_code_data }}</p>
+        {% else %}
+        <p class="muted">QR code not generated.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

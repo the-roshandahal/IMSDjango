@@ -37,6 +37,24 @@
   </div>
   {% endif %}
   {% endif %}
+  {% if equipment_maintenance_due_count is not None %}
+  <div class="stat-tile {% if equipment_maintenance_due_count %}alert{% endif %}">
+    <div class="stat-label">Equipment maintenance due</div>
+    <a href="{% url 'equipment_web:list' %}"><div class="stat-value">{{ equipment_maintenance_due_count }}</div></a>
+  </div>
+  <div class="stat-tile {% if equipment_test_issues_count %}alert{% endif %}">
+    <div class="stat-label">Equipment test tag issues</div>
+    <a href="{% url 'equipment_web:list' %}"><div class="stat-value">{{ equipment_test_issues_count }}</div></a>
+  </div>
+  <div class="stat-tile {% if vehicle_service_due_count %}alert{% endif %}">
+    <div class="stat-label">Vehicle service due</div>
+    <a href="{% url 'vehicles_web:list' %}"><div class="stat-value">{{ vehicle_service_due_count }}</div></a>
+  </div>
+  <div class="stat-tile {% if vehicle_insurance_expired_count %}critical{% endif %}">
+    <div class="stat-label">Vehicle insurance expired</div>
+    <a href="{% url 'vehicles_web:list' %}"><div class="stat-value">{{ vehicle_insurance_expired_count }}</div></a>
+  </div>
+  {% endif %}
 </div>
 
 <div class="two-col">
