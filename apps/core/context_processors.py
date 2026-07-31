@@ -27,5 +27,6 @@ def nav_capabilities(request):
         "can_view_projects": has_capability(user, "project.manage")
         or has_capability(user, "project.view")
         or has_capability(user, "project.update_own"),
+        "can_view_suppliers": has_capability(user, "supplier.view") or has_capability(user, "supplier.manage"),
         "is_admin": user.role == Role.ADMIN,
     }

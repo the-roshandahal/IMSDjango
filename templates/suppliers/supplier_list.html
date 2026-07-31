@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Suppliers - IMS{% endblock %}
+{% block crumb %}Purchasing{% endblock %}
+{% block page_title %}Suppliers{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ page_obj.paginator.count }} supplier{{ page_obj.paginator.count|pluralize }}</div>
+  <div class="actions-row">
+    <form method="get" style="display:flex;gap:8px;">
+      <input type="search" name="q" placeholder="Search name" value="{{ q }}">
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+    {% if can_manage %}
+    <a class="btn btn-primary" href="{% url 'suppliers_web:create' %}">+ New supplier</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="actions-row" style="margin-bottom:14px;">
+  <a class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}" href="?{% if q %}q={{ q }}{% endif %}">All</a>
+  <a class="btn btn-sm {% if active_status == 'active' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=active{% if q %}&q={{ q }}{% endif %}">Active</a>
+  <a class="btn btn-sm {% if active_status == 'inactive' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=inactive{% if q %}&q={{ q }}{% endif %}">Inactive</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if suppliers %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for s in suppliers %}
+        <tr class="rail-row {% if s.is_active %}good{% else %}pending{% endif %}">
+          <td><a href="{% url 'suppliers_web:detail' s.pk %}">{{ s.name }}</a></td>
+          <td>{{ s.contact_person|default:"—" }}</td>
+          <td class="mono">{{ s.phone|default:"—" }}</td>
+          <td>{{ s.email|default:"—" }}</td>
+          <td>
+            {% if s.is_active %}<span class="status-rail good">Active</span>
+            {% else %}<span class="status-rail pending">Inactive</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="big">No suppliers yet</div>
+      <p>{% if can_manage %}Add the first supplier to start linking products and prices.{% else %}Nothing has been added yet.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

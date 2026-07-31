@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} - IMS{% endblock %}
+{% block crumb %}Purchasing / Suppliers{% endblock %}
+{% block page_title %}{{ supplier.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">
+    {% if supplier.contact_person %}{{ supplier.contact_person }} &middot; {% endif %}
+    {% if supplier.phone %}{{ supplier.phone }} &middot; {% endif %}
+    {{ supplier.email|default:"no email on file" }}
+  </div>
+  <div class="actions-row">
+    {% if supplier.is_active %}<span class="status-rail good">Active</span>{% else %}<span class="status-rail pending">Inactive</span>{% endif %}
+    {% if can_manage %}<a class="btn btn-secondary" href="{% url 'suppliers_web:edit' supplier.pk %}">Edit</a>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    {% if supplier.address %}
+    <div class="panel">
+      <div class="panel-head"><h2>Address</h2></div>
+      <div class="panel-body"><p style="margin:0;white-space:pre-line;">{{ supplier.address }}</p></div>
+    </div>
+    {% endif %}
+
+    {% if supplier.notes %}
+    <div class="panel">
+      <div class="panel-head"><h2>Notes</h2></div>
+      <div class="panel-body"><p style="margin:0;white-space:pre-line;">{{ supplier.notes }}</p></div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>Products supplied</h2></div>
+      <div class="panel-body flush">
+        {% if supplier_products %}
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Product</th><th>Supplier SKU</th><th class="num">Unit price</th>
+              <th class="num">Lead time</th><th>Preferred</th>{% if can_manage %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for sp in supplier_products %}
+            <tr>
+              <td><a href="{% url 'catalogue_web:product-detail' sp.product_id %}">{{ sp.product.name }}</a></td>
+              <td class="mono">{{ sp.supplier_sku|default:"—" }}</td>
+              <td class="num mono">{{ sp.unit_price }}</td>
+              <td class="num mono">{% if sp.lead_time_days %}{{ sp.lead_time_days }}d{% else %}—{% endif %}</td>
+              <td>{% if sp.is_preferred %}<span class="status-rail info">Preferred</span>{% else %}—{% endif %}</td>
+              {% if can_manage %}
+              <td>
+                <form method="post" action="{% url 'suppliers_web:product-remove' supplier.pk sp.pk %}" onsubmit="return confirm('Remove this product from the supplier?');">
+                  {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Remove</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No products linked to this supplier yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if can_manage %}
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Add product</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'suppliers_web:product-add' supplier.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Product</label>{{ product_form.product }}</div>
+          <div class="field"><label>Unit price</label>{{ product_form.unit_price }}</div>
+          <div class="field"><label>Supplier SKU</label>{{ product_form.supplier_sku }}</div>
+          <div class="field"><label>Lead time (days)</label>{{ product_form.lead_time_days }}</div>
+          <div class="field checkbox-field">{{ product_form.is_preferred }}<label style="margin:0;">Preferred supplier for this product</label></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add product</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
