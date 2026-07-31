@@ -25,28 +25,6 @@
     <div class="stat-label">Pending requests</div>
     <a href="{% url 'stock_requests_web:list' %}?status=pending"><div class="stat-value">{{ pending_requests_count }}</div></a>
   </div>
-  {% if inventory_value is not None %}
-  <div class="stat-tile">
-    <div class="stat-label">Stock value (est.)</div>
-    <a href="{% url 'reports_web:inventory' %}"><div class="stat-value">{{ inventory_value|floatformat:0 }}</div></a>
-  </div>
-  <div class="stat-tile">
-    <div class="stat-label">Dispatched, last 7d</div>
-    <a href="{% url 'reports_web:consumption' %}"><div class="stat-value">{{ week_dispatched|floatformat:0 }}</div></a>
-  </div>
-  {% endif %}
-  {% if active_projects_count is not None %}
-  <div class="stat-tile">
-    <div class="stat-label">Active deep clean projects</div>
-    <a href="{% url 'projects_web:list' %}?status=active"><div class="stat-value">{{ active_projects_count }}</div></a>
-  </div>
-  {% endif %}
-  {% if open_po_count is not None %}
-  <div class="stat-tile {% if open_po_count %}alert{% endif %}">
-    <div class="stat-label">Open purchase orders</div>
-    <a href="{% url 'purchasing_web:list' %}"><div class="stat-value">{{ open_po_count }}</div></a>
-  </div>
-  {% endif %}
   {% if is_admin %}
   <div class="stat-tile">
     <div class="stat-label">Users</div>
@@ -87,63 +65,6 @@
   {% endif %}
 </div>
 
-{% if trend_chart %}
-<div class="two-col">
-  <div>
-    <div class="panel">
-      <div class="panel-head"><h2>Stock movement</h2><span class="sub">last 14 days</span></div>
-      <div class="panel-body">
-        <div class="chart-legend">
-          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--chart-1);"></span>Received</span>
-          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--chart-2);"></span>Dispatched</span>
-        </div>
-        <svg class="trend-svg" viewBox="0 0 {{ trend_chart.width }} {{ trend_chart.height }}" preserveAspectRatio="none">
-          {% for y, label in trend_chart.gridlines %}
-          <line class="gridline" x1="{{ trend_chart.plot_left }}" y1="{{ y }}" x2="{{ trend_chart.plot_right }}" y2="{{ y }}"></line>
-          <text class="axis-label" x="{{ trend_chart.plot_right }}" y="{{ y }}" dy="-2" text-anchor="end">{{ label }}</text>
-          {% endfor %}
-          <line class="baseline" x1="{{ trend_chart.plot_left }}" y1="{{ trend_chart.baseline_y }}" x2="{{ trend_chart.plot_right }}" y2="{{ trend_chart.baseline_y }}"></line>
-
-          <polyline class="series-line" points="{{ trend_chart.received_points }}" style="stroke:var(--chart-1);"></polyline>
-          <polyline class="series-line" points="{{ trend_chart.dispatched_points }}" style="stroke:var(--chart-2);"></polyline>
-
-          {% for m in trend_chart.received_markers %}
-          <circle class="series-marker" cx="{{ m.x }}" cy="{{ m.y }}" style="fill:var(--chart-1);"><title>{{ m.date }} received: {{ m.value }}</title></circle>
-          {% endfor %}
-          {% for m in trend_chart.dispatched_markers %}
-          <circle class="series-marker" cx="{{ m.x }}" cy="{{ m.y }}" style="fill:var(--chart-2);"><title>{{ m.date }} dispatched: {{ m.value }}</title></circle>
-          {% endfor %}
-
-          {% if trend_chart.x_first %}<text class="axis-label" x="{{ trend_chart.x_first.x }}" y="{{ trend_chart.height }}" text-anchor="start">{{ trend_chart.x_first.label|date:"d M" }}</text>{% endif %}
-          {% if trend_chart.x_last %}<text class="axis-label" x="{{ trend_chart.x_last.x }}" y="{{ trend_chart.height }}" text-anchor="end">{{ trend_chart.x_last.label|date:"d M" }}</text>{% endif %}
-        </svg>
-      </div>
-    </div>
-  </div>
-
-  <div>
-    <div class="panel">
-      <div class="panel-head"><h2>Movement by type</h2><span class="sub">last 30 days</span></div>
-      <div class="panel-body">
-        {% if type_breakdown %}
-        <div class="bar-chart">
-          {% for row in type_breakdown %}
-          <div class="bar-row">
-            <div class="bar-label">{{ row.label }}</div>
-            <div class="bar-track"><div class="bar-fill" style="width:{{ row.pct }}%;"></div></div>
-            <div class="bar-value">{{ row.count }}</div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state">No movements in the last 30 days.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-
 <div class="two-col">
   <div>
     <div class="panel">
@@ -169,7 +90,7 @@
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>Recent activity</h2><span class="sub">latest stock movements</span></div>
+      <div class="panel-head"><h2>Recent activity</h2><a href="{% url 'inventory_web:transaction-list' %}" class="sub">View all</a></div>
       <div class="panel-body flush">
         {% if recent_transactions %}
         <table class="data">
