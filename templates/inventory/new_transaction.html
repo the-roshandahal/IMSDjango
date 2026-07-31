@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load dict_extras %}
+{% block title %}New transaction - IMS{% endblock %}
+{% block crumb %}Inventory{% endblock %}
+{% block page_title %}Record stock movement{% endblock %}
+{% block content %}
+
+<div class="tabs">
+  {% for key, label in labels.items %}
+  <a class="tab {% if key == active %}active{% endif %}" href="?type={{ key }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action_type" value="{{ active }}">
+      {% with active_form=forms|dict_get:active %}
+      {% for field in active_form %}
+        <div class="field {% if field.field.widget.input_type == 'checkbox' %}checkbox-field{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      {% if active_form.non_field_errors %}<div class="errors">{{ active_form.non_field_errors }}</div>{% endif %}
+      {% endwith %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit {{ labels|dict_get:active|default:active }}</button>
+        <a class="btn btn-secondary" href="{% url 'inventory_web:transaction-list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

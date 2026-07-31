@@ -1,43 +1,94 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}IMS{% endblock %}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f5f7; color: #1a1a1a; }
-    header { background: #14213d; color: #fff; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-    header a { color: #fff; text-decoration: none; }
-    main { max-width: 480px; margin: 3rem auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-    .wide { max-width: 960px; }
-    label { display: block; margin-top: 1rem; font-weight: 600; font-size: 0.9rem; }
-    input[type=text], input[type=password], input[type=email] {
-      width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
-    }
-    button { margin-top: 1.5rem; background: #14213d; color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
-    .errors { color: #b00020; font-size: 0.85rem; }
-    .messages { list-style: none; padding: 0; }
-    .messages li { padding: 0.5rem 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; }
-    .messages .error { background: #fdecea; color: #b00020; }
-    .messages .success { background: #e6f4ea; color: #1e7e34; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <header>
-    <a href="{% url 'accounts:dashboard' %}">IMS</a>
-    {% if request.user.is_authenticated %}
-      <form method="post" action="{% url 'accounts:logout' %}">
-        {% csrf_token %}
-        <span>{{ request.user }} ({{ request.user.get_role_display }})</span>
-        <button type="submit">Logout</button>
-      </form>
-    {% endif %}
-  </header>
-  {% if messages %}
-    <ul class="messages" style="max-width:480px;margin:1rem auto 0;">
-      {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
-    </ul>
-  {% endif %}
-  {% block content %}{% endblock %}
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">IMS <span class="brand-tag">CLEANTECH1</span></div>
+
+      <div class="nav-section">Overview</div>
+      <a class="nav-link {% if request.resolver_match.view_name == 'accounts:dashboard' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
+        <span class="nav-dot"></span> Dashboard
+      </a>
+
+      {% if can_view_products %}
+      <div class="nav-section">Inventory</div>
+      <a class="nav-link {% if 'catalogue_web:product' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'catalogue_web:product-list' %}">
+        <span class="nav-dot"></span> Products
+      </a>
+      <a class="nav-link {% if 'catalogue_web:category' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'catalogue_web:category-list' %}">
+        <span class="nav-dot"></span> Categories
+      </a>
+      <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
+        <span class="nav-dot"></span> Transactions
+      </a>
+      {% endif %}
+
+      <div class="nav-section">Sites</div>
+      <a class="nav-link {% if 'warehouses_web:warehouse' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:warehouse-list' %}">
+        <span class="nav-dot"></span> Warehouses
+      </a>
+      <a class="nav-link {% if 'warehouses_web:station' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:station-list' %}">
+        <span class="nav-dot"></span> Stations
+      </a>
+
+      {% if can_view_requests or can_create_requests %}
+      <div class="nav-section">Requests</div>
+      <a class="nav-link {% if 'stock_requests_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'stock_requests_web:list' %}">
+        <span class="nav-dot"></span> Stock Requests
+      </a>
+      {% endif %}
+
+      {% if is_admin %}
+      <div class="nav-section">Administration</div>
+      <a class="nav-link {% if 'accounts:user' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'accounts:user-list-page' %}">
+        <span class="nav-dot"></span> Users
+      </a>
+      <a class="nav-link {% if request.resolver_match.view_name == 'audit:log' %}active{% endif %}" href="{% url 'audit:log' %}">
+        <span class="nav-dot"></span> Audit Log
+      </a>
+      {% endif %}
+    </aside>
+
+    <div>
+      <header class="topbar">
+        <div>
+          <div class="crumb">{% block crumb %}IMS{% endblock %}</div>
+          <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        </div>
+        {% if request.user.is_authenticated %}
+        <div class="user-chip">
+          <div class="avatar">{{ request.user.username|slice:":2"|upper }}</div>
+          <div class="who">
+            <div class="name">{{ request.user.get_full_name|default:request.user.username }}</div>
+            <div class="role">{{ request.user.get_role_display }}</div>
+          </div>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-ghost-sm">Log out</button>
+          </form>
+        </div>
+        {% endif %}
+      </header>
+
+      <main class="content">
+        {% if messages %}
+          <ul class="messages">
+            {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
 </body>
 </html>

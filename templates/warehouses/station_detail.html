@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ station.name }} - IMS{% endblock %}
+{% block crumb %}Sites / Stations{% endblock %}
+{% block page_title %}{{ station.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ station.address|default:"No address on file" }}</div>
+  <div class="actions-row">
+    {% if is_admin %}<a class="btn btn-secondary" href="{% url 'warehouses_web:station-edit' station.pk %}">Edit</a>{% endif %}
+    {% if can_create_requests %}<a class="btn btn-primary" href="{% url 'stock_requests_web:create' station.pk %}">Request stock</a>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Current stock</h2><span class="sub">{{ stock|length }} line{{ stock|length|pluralize }}</span></div>
+      <div class="panel-body flush">
+        {% if stock %}
+        <table class="data">
+          <thead><tr><th>Product</th><th>Batch</th><th class="num">Quantity</th></tr></thead>
+          <tbody>
+            {% for sl in stock %}
+            <tr>
+              <td><a href="{% url 'catalogue_web:product-detail' sl.product_id %}">{{ sl.product.name }}</a></td>
+              <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
+              <td class="num mono">{{ sl.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No stock on hand at this station yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Consumption this month</h2></div>
+      <div class="panel-body flush">
+        {% if consumption_summary %}
+        <table class="data">
+          <thead><tr><th>Product</th><th class="num">Used</th></tr></thead>
+          <tbody>
+            {% for row in consumption_summary %}
+            <tr><td>{{ row.product__name }}</td><td class="num mono">{{ row.total }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No usage recorded this month yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Recent stock requests</h2></div>
+      <div class="panel-body flush">
+        {% if recent_requests %}
+        <table class="data">
+          <thead><tr><th>#</th><th>Warehouse</th><th>Status</th><th>Raised</th></tr></thead>
+          <tbody>
+            {% for r in recent_requests %}
+            <tr>
+              <td><a href="{% url 'stock_requests_web:detail' r.pk %}">#{{ r.pk }}</a></td>
+              <td>{{ r.warehouse.name }}</td>
+              <td>
+                {% if r.status == "pending" %}<span class="status-rail pending">Pending</span>
+                {% elif r.status == "approved" %}<span class="status-rail info">Approved</span>
+                {% elif r.status == "rejected" %}<span class="status-rail critical">Rejected</span>
+                {% elif r.status == "fulfilled" %}<span class="status-rail good">Fulfilled</span>
+                {% else %}<span class="status-rail warn">{{ r.get_status_display }}</span>{% endif %}
+              </td>
+              <td class="muted">{{ r.requested_at|date:"d M, H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No requests raised from this station yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    {% if can_record_usage %}
+    <div class="panel">
+      <div class="panel-head"><h2>Record daily usage</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'inventory_web:station-usage' %}">
+          {% csrf_token %}
+          <input type="hidden" name="station_id" value="{{ station.pk }}">
+          <div class="field">
+            <label for="usage-product">Product</label>
+            <select id="usage-product" name="product_id" required>
+              {% for sl in stock %}
+                <option value="{{ sl.product_id }}">{{ sl.product.name }} ({{ sl.quantity }} on hand)</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="usage-qty">Quantity used</label>
+            <input id="usage-qty" type="number" name="quantity" step="0.01" min="0.01" required>
+          </div>
+          <div class="field">
+            <label for="usage-comment">Note</label>
+            <input id="usage-comment" type="text" name="comment" placeholder="e.g. daily platform clean">
+          </div>
+          <button type="submit" class="btn btn-primary">Record usage</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

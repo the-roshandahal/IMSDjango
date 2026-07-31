@@ -1,16 +1,16 @@
-{% extends "base.html" %}
-{% block title %}Two-factor verification - IMS{% endblock %}
+{% extends "auth_base.html" %}
+{% block title %}Verification code - IMS{% endblock %}
+{% block auth_sub %}Enter the 6-digit code from your authenticator app{% endblock %}
 {% block content %}
-<main>
-  <h1>Enter authentication code</h1>
-  <form method="post">
-    {% csrf_token %}
-    {% for field in form %}
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="field">
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}
       {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
-    {% endfor %}
-    <button type="submit">Verify</button>
-  </form>
-</main>
+    </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Verify</button>
+</form>
 {% endblock %}

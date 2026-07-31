@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Stations - IMS{% endblock %}
+{% block crumb %}Sites{% endblock %}
+{% block page_title %}Stations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ stations|length }} station{{ stations|length|pluralize }}</div>
+  {% if is_admin %}<a class="btn btn-primary" href="{% url 'warehouses_web:station-create' %}">+ New station</a>{% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if stations %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Address</th></tr></thead>
+      <tbody>
+        {% for s in stations %}
+        <tr>
+          <td><a href="{% url 'warehouses_web:station-detail' s.pk %}">{{ s.name }}</a></td>
+          <td class="muted">{{ s.address|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No stations assigned to you yet</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

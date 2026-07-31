@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ warehouse.name }} - IMS{% endblock %}
+{% block crumb %}Sites / Warehouses{% endblock %}
+{% block page_title %}{{ warehouse.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ warehouse.address|default:"No address on file" }}{% if warehouse.capacity %} &middot; capacity {{ warehouse.capacity }}{% endif %}</div>
+  <div class="actions-row">
+    {% if is_admin %}<a class="btn btn-secondary" href="{% url 'warehouses_web:warehouse-edit' warehouse.pk %}">Edit</a>{% endif %}
+    {% if can_manage_stock %}<a class="btn btn-primary" href="{% url 'inventory_web:new-transaction' %}?warehouse={{ warehouse.pk }}">Record stock movement</a>{% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Current stock</h2><span class="sub">{{ stock|length }} line{{ stock|length|pluralize }}</span></div>
+  <div class="panel-body flush">
+    {% if stock %}
+    <table class="data">
+      <thead><tr><th>Product</th><th>Batch</th><th>Expiry</th><th class="num">Quantity</th></tr></thead>
+      <tbody>
+        {% for sl in stock %}
+        <tr>
+          <td><a href="{% url 'catalogue_web:product-detail' sl.product_id %}">{{ sl.product.name }}</a></td>
+          <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
+          <td class="mono">{{ sl.batch.expiry_date|default:"—" }}</td>
+          <td class="num mono">{{ sl.quantity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No stock on hand at this warehouse.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

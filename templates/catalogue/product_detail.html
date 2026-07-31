@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - IMS{% endblock %}
+{% block crumb %}Inventory / Products{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ product.category.name }} &middot; <span class="mono">{{ product.barcode }}</span></div>
+  {% if can_manage_products %}
+  <div class="actions-row">
+    <a class="btn btn-secondary" href="{% url 'catalogue_web:product-edit' product.pk %}">Edit</a>
+    <form method="post" action="{% url 'catalogue_web:product-archive' product.pk %}" onsubmit="return confirm('Archive this product? It will be hidden from new transactions.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Archive</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Details</h2></div>
+      <div class="panel-body">
+        <dl class="detail-grid">
+          <div><dt>Category</dt><dd>{{ product.category.name }}</dd></div>
+          <div><dt>Barcode</dt><dd class="mono">{{ product.barcode }}</dd></div>
+          <div><dt>Total stock</dt><dd class="mono">{{ total_stock }}</dd></div>
+          <div><dt>Reorder point</dt><dd class="mono">{{ product.reorder_point }}</dd></div>
+          <div><dt>Minimum level</dt><dd class="mono">{{ product.minimum_stock_level }}</dd></div>
+          <div><dt>Batch tracked</dt><dd>{{ product.is_batch_tracked|yesno:"Yes,No" }}</dd></div>
+          <div><dt>Hazardous</dt><dd>{% if product.is_hazardous %}<span class="status-rail warn">{{ product.hazard_class|default:"Yes" }}</span>{% else %}No{% endif %}</dd></div>
+          <div><dt>Storage location</dt><dd>{{ product.default_storage_location|default:"—" }}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Stock by location</h2></div>
+      <div class="panel-body flush">
+        {% if stock_levels %}
+        <table class="data">
+          <thead><tr><th>Location</th><th>Batch</th><th class="num">Quantity</th></tr></thead>
+          <tbody>
+            {% for sl in stock_levels %}
+            <tr>
+              <td>{% if sl.warehouse %}{{ sl.warehouse.name }}{% else %}{{ sl.station.name }} <span class="status-rail info">Station</span>{% endif %}</td>
+              <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
+              <td class="num mono">{{ sl.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No stock recorded for this product yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if product.is_batch_tracked %}
+    <div class="panel">
+      <div class="panel-head"><h2>Batches</h2><span class="sub">FEFO order</span></div>
+      <div class="panel-body flush">
+        {% if batches %}
+        <table class="data">
+          <thead><tr><th>Batch #</th><th>Warehouse</th><th>Expiry</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in batches %}
+            <tr>
+              <td class="mono">{{ b.batch_number }}</td>
+              <td>{{ b.warehouse.name }}</td>
+              <td class="mono">{{ b.expiry_date|default:"—" }}</td>
+              <td>{% if b.is_expired %}<span class="status-rail critical">Expired</span>{% else %}<span class="status-rail good">Active</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No batches received yet.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Identification</h2></div>
+      <div class="panel-body" style="text-align:center;">
+        {% if product.qr_code_image %}
+        <div class="qr-box"><img src="{{ product.qr_code_image.url }}" alt="QR code"></div>
+        <p class="mono" style="margin-top:10px;font-size:0.75rem;color:var(--ink-400);">{{ product.qr_code_data }}</p>
+        {% else %}
+        <p class="muted">QR code not generated.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if product.sds_document %}
+    <div class="panel">
+      <div class="panel-head"><h2>Safety data sheet</h2></div>
+      <div class="panel-body"><a href="{{ product.sds_document.url }}">Download SDS</a></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Categories - IMS{% endblock %}
+{% block crumb %}Inventory{% endblock %}
+{% block page_title %}Categories{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}</div>
+  {% if can_manage_products %}
+  <a class="btn btn-primary" href="{% url 'catalogue_web:category-create' %}">+ New category</a>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if categories %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Parent</th><th class="num">Active products</th></tr></thead>
+      <tbody>
+        {% for c in categories %}
+        <tr>
+          <td>{{ c.name }}</td>
+          <td>{{ c.parent.name|default:"—" }}</td>
+          <td class="num mono">{{ c.product_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No categories yet</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

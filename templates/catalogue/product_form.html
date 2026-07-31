@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit product{% else %}New product{% endif %} - IMS{% endblock %}
+{% block crumb %}Inventory / Products{% endblock %}
+{% block page_title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ form.name.id_for_label }}">Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="errors">{{ form.name.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.category.id_for_label }}">Category</label>
+          {{ form.category }}
+          {% if form.category.errors %}<div class="errors">{{ form.category.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.barcode.id_for_label }}">Barcode</label>
+          {{ form.barcode }}
+          {% if form.barcode.errors %}<div class="errors">{{ form.barcode.errors }}</div>{% endif %}
+          <div class="hint">Must be unique. QR code is generated automatically.</div>
+        </div>
+        <div class="field">
+          <label for="{{ form.default_storage_location.id_for_label }}">Storage location</label>
+          {{ form.default_storage_location }}
+        </div>
+        <div class="field">
+          <label for="{{ form.reorder_point.id_for_label }}">Reorder point</label>
+          {{ form.reorder_point }}
+        </div>
+        <div class="field">
+          <label for="{{ form.minimum_stock_level.id_for_label }}">Minimum stock level</label>
+          {{ form.minimum_stock_level }}
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>Chemical safety</legend>
+        <div class="field checkbox-field">
+          {{ form.is_hazardous }}
+          <label for="{{ form.is_hazardous.id_for_label }}" style="margin:0;">Hazardous / requires SDS</label>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="{{ form.hazard_class.id_for_label }}">Hazard classification</label>
+            {{ form.hazard_class }}
+          </div>
+          <div class="field">
+            <label for="{{ form.sds_document.id_for_label }}">SDS document</label>
+            {{ form.sds_document }}
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Batch &amp; expiry</legend>
+        <div class="field checkbox-field">
+          {{ form.is_batch_tracked }}
+          <label for="{{ form.is_batch_tracked.id_for_label }}" style="margin:0;">Track by batch / expiry date</label>
+        </div>
+        <div class="field">
+          <label for="{{ form.image.id_for_label }}">Product image</label>
+          {{ form.image }}
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{% if object %}Save changes{% else %}Create product{% endif %}</button>
+        <a class="btn btn-secondary" href="{% url 'catalogue_web:product-list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

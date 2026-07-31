@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ target_user.username }} - IMS{% endblock %}
+{% block crumb %}Administration / Users{% endblock %}
+{% block page_title %}{{ target_user.username }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ target_user.email }}{% if target_user.phone %} &middot; {{ target_user.phone }}{% endif %}</div>
+  <div>
+    {% if target_user.is_locked %}<span class="status-rail critical">Locked</span>
+    {% elif not target_user.is_active %}<span class="status-rail pending">Deactivated</span>
+    {% else %}<span class="status-rail good">Active</span>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Profile</h2></div>
+      <div class="panel-body">
+        <dl class="detail-grid">
+          <div><dt>Full name</dt><dd>{{ target_user.get_full_name|default:"—" }}</dd></div>
+          <div><dt>Role</dt><dd>{{ target_user.get_role_display }}</dd></div>
+          <div><dt>Joined</dt><dd class="mono">{{ target_user.date_joined|date:"d M Y" }}</dd></div>
+          <div><dt>2FA</dt><dd>{% if target_user.is_2fa_enabled %}<span class="status-rail info">Enabled</span>{% else %}Disabled{% endif %}</dd></div>
+          <div><dt>Failed logins</dt><dd class="mono">{{ target_user.failed_login_attempts }}</dd></div>
+          {% if target_user.deactivated_at %}
+          <div><dt>Deactivated</dt><dd>{{ target_user.deactivated_at|date:"d M Y, H:i" }} by {{ target_user.deactivated_by|default:"—" }}</dd></div>
+          <div><dt>Reason</dt><dd>{{ target_user.deactivation_reason }}</dd></div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Site assignments</h2></div>
+      <div class="panel-body flush">
+        {% if target_user.site_assignments.all %}
+        <table class="data">
+          <thead><tr><th>Type</th><th>Site</th><th></th></tr></thead>
+          <tbody>
+            {% for sa in target_user.site_assignments.all %}
+            <tr>
+              <td>{% if sa.warehouse %}Warehouse{% else %}Station{% endif %}</td>
+              <td>{% if sa.warehouse %}{{ sa.warehouse.name }}{% else %}{{ sa.station.name }}{% endif %}</td>
+              <td>
+                <form method="post" action="{% url 'accounts:user-site-delete-page' target_user.pk sa.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No sites assigned yet.</div>
+        {% endif %}
+      </div>
+      <div class="panel-body" style="border-top:1px solid var(--line);">
+        <form method="post" action="{% url 'accounts:user-site-add-page' target_user.pk %}">
+          {% csrf_token %}
+          <div class="form-grid">
+            <div class="field">
+              <label for="{{ site_form.warehouse.id_for_label }}">Warehouse</label>
+              {{ site_form.warehouse }}
+            </div>
+            <div class="field">
+              <label for="{{ site_form.station.id_for_label }}">Station</label>
+              {{ site_form.station }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm">Add assignment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Role</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'accounts:user-role-page' target_user.pk %}">
+          {% csrf_token %}
+          <div class="field">
+            {{ role_form.role }}
+          </div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Update role</button>
+        </form>
+      </div>
+    </div>
+
+    {% if target_user.is_locked %}
+    <div class="panel">
+      <div class="panel-head"><h2>Lockout</h2></div>
+      <div class="panel-body">
+        <p class="muted" style="margin-top:0;">Locked until {{ target_user.locked_until|date:"H:i" }}.</p>
+        <form method="post" action="{% url 'accounts:user-unlock-page' target_user.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-good" style="width:100%;justify-content:center;">Clear lockout</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>Account status</h2></div>
+      <div class="panel-body">
+        {% if target_user.is_active %}
+          {% if pending_blockers %}
+          <p class="errors">Blocked: {{ pending_blockers|join:"; " }}</p>
+          {% endif %}
+          <form method="post" action="{% url 'accounts:user-deactivate-page' target_user.pk %}">
+            {% csrf_token %}
+            <div class="field">
+              <label for="{{ deactivate_form.reason.id_for_label }}">Reason</label>
+              {{ deactivate_form.reason }}
+            </div>
+            <div class="field checkbox-field">
+              {{ deactivate_form.override }}
+              <label for="{{ deactivate_form.override.id_for_label }}" style="margin:0;">{{ deactivate_form.override.label }}</label>
+            </div>
+            <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Deactivate user</button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'accounts:user-reactivate-page' target_user.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-good" style="width:100%;justify-content:center;">Reactivate user</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

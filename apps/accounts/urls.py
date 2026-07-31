@@ -2,7 +2,21 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts import views
-from apps.accounts.web_views import DashboardView, LoginPageView, LogoutPageView, TwoFactorPageView
+from apps.accounts.web_views import (
+    DashboardView,
+    LoginPageView,
+    LogoutPageView,
+    TwoFactorPageView,
+    UserCreateView,
+    UserDeactivateWebView,
+    UserDetailView,
+    UserListView,
+    UserReactivateWebView,
+    UserRoleChangeWebView,
+    UserSiteAssignmentCreateWebView,
+    UserSiteAssignmentDeleteWebView,
+    UserUnlockWebView,
+)
 
 app_name = "accounts"
 
@@ -28,6 +42,15 @@ web_urlpatterns = [
     path("login/", LoginPageView.as_view(), name="login"),
     path("login/2fa/", TwoFactorPageView.as_view(), name="login-2fa"),
     path("logout/", LogoutPageView.as_view(), name="logout"),
+    path("users/", UserListView.as_view(), name="user-list-page"),
+    path("users/create/", UserCreateView.as_view(), name="user-create-page"),
+    path("users/<int:pk>/", UserDetailView.as_view(), name="user-detail-page"),
+    path("users/<int:pk>/role/", UserRoleChangeWebView.as_view(), name="user-role-page"),
+    path("users/<int:pk>/deactivate/", UserDeactivateWebView.as_view(), name="user-deactivate-page"),
+    path("users/<int:pk>/reactivate/", UserReactivateWebView.as_view(), name="user-reactivate-page"),
+    path("users/<int:pk>/unlock/", UserUnlockWebView.as_view(), name="user-unlock-page"),
+    path("users/<int:pk>/sites/", UserSiteAssignmentCreateWebView.as_view(), name="user-site-add-page"),
+    path("users/<int:pk>/sites/<int:assignment_id>/delete/", UserSiteAssignmentDeleteWebView.as_view(), name="user-site-delete-page"),
     path("", DashboardView.as_view(), name="dashboard"),
 ]
 

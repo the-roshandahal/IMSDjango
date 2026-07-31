@@ -9,6 +9,11 @@ urlpatterns = [
     path("api/", include("apps.warehouses.urls")),
     path("api/", include("apps.inventory.urls")),
     path("api/", include("apps.requests.urls")),
+    path("", include("apps.catalogue.urls_web")),
+    path("", include("apps.warehouses.urls_web")),
+    path("", include("apps.inventory.urls_web")),
+    path("", include("apps.requests.urls_web")),
+    path("", include("apps.audit.urls")),
 ]
 
 if settings.DEBUG:

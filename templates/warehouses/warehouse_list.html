@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Warehouses - IMS{% endblock %}
+{% block crumb %}Sites{% endblock %}
+{% block page_title %}Warehouses{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ warehouses|length }} warehouse{{ warehouses|length|pluralize }}</div>
+  {% if is_admin %}<a class="btn btn-primary" href="{% url 'warehouses_web:warehouse-create' %}">+ New warehouse</a>{% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if warehouses %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Address</th><th class="num">Capacity</th></tr></thead>
+      <tbody>
+        {% for w in warehouses %}
+        <tr>
+          <td><a href="{% url 'warehouses_web:warehouse-detail' w.pk %}">{{ w.name }}</a></td>
+          <td class="muted">{{ w.address|default:"—" }}</td>
+          <td class="num mono">{{ w.capacity|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No warehouses assigned to you yet</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

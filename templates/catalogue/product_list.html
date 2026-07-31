@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Products - IMS{% endblock %}
+{% block crumb %}Inventory{% endblock %}
+{% block page_title %}Products{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }} in the catalogue</div>
+  <div class="actions-row">
+    <form method="get" style="display:flex;gap:8px;">
+      <input type="search" name="q" placeholder="Search name or barcode" value="{{ q }}">
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+    {% if can_manage_products %}
+    <a class="btn btn-primary" href="{% url 'catalogue_web:product-create' %}">+ New product</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if products %}
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Name</th><th>Category</th><th class="num">Barcode</th>
+          <th class="num">Stock</th><th class="num">Reorder pt.</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td><a href="{% url 'catalogue_web:product-detail' p.pk %}">{{ p.name }}</a>{% if p.is_hazardous %} <span class="status-rail warn" style="padding:2px 6px;">Hazard</span>{% endif %}</td>
+          <td>{{ p.category.name }}</td>
+          <td class="num mono">{{ p.barcode }}</td>
+          <td class="num mono">{{ p.total_stock|default:0 }}</td>
+          <td class="num mono">{{ p.reorder_point }}</td>
+          <td>
+            {% if not p.total_stock %}
+              <span class="status-rail critical">Out</span>
+            {% elif p.total_stock <= p.reorder_point %}
+              <span class="status-rail warn">Low</span>
+            {% else %}
+              <span class="status-rail good">OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="big">No products yet</div>
+      <p>{% if can_manage_products %}Create the first product to start tracking stock.{% else %}Nothing has been added to the catalogue yet.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

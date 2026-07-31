@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}New user - IMS{% endblock %}
+{% block crumb %}Administration / Users{% endblock %}
+{% block page_title %}New user{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ form.username.id_for_label }}">Username</label>
+          {{ form.username }}
+          {% if form.username.errors %}<div class="errors">{{ form.username.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.email.id_for_label }}">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}<div class="errors">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.first_name.id_for_label }}">First name</label>
+          {{ form.first_name }}
+        </div>
+        <div class="field">
+          <label for="{{ form.last_name.id_for_label }}">Last name</label>
+          {{ form.last_name }}
+        </div>
+        <div class="field">
+          <label for="{{ form.phone.id_for_label }}">Phone</label>
+          {{ form.phone }}
+        </div>
+        <div class="field">
+          <label for="{{ form.role.id_for_label }}">Role</label>
+          {{ form.role }}
+          {% if form.role.errors %}<div class="errors">{{ form.role.errors }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{ form.password.id_for_label }}">Temporary password</label>
+        {{ form.password }}
+        {% if form.password.errors %}<div class="errors">{{ form.password.errors }}</div>{% endif %}
+        <div class="hint">Minimum 10 characters, must include upper/lowercase, a digit, and a symbol.</div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create user</button>
+        <a class="btn btn-secondary" href="{% url 'accounts:user-list-page' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

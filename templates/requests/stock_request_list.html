@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Stock requests - IMS{% endblock %}
+{% block crumb %}Requests{% endblock %}
+{% block page_title %}Stock requests{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Station replenishment requests routed to a warehouse for approval and dispatch.</div>
+</div>
+
+<div class="actions-row" style="margin-bottom:14px;">
+  <a class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}" href="?">All</a>
+  <a class="btn btn-sm {% if active_status == 'pending' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=pending">Pending</a>
+  <a class="btn btn-sm {% if active_status == 'approved' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=approved">Approved</a>
+  <a class="btn btn-sm {% if active_status == 'fulfilled' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=fulfilled">Fulfilled</a>
+  <a class="btn btn-sm {% if active_status == 'rejected' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=rejected">Rejected</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if stock_requests %}
+    <table class="data">
+      <thead><tr><th>#</th><th>Station</th><th>Warehouse</th><th>Requested by</th><th>Status</th><th>Raised</th></tr></thead>
+      <tbody>
+        {% for r in stock_requests %}
+        <tr>
+          <td><a href="{% url 'stock_requests_web:detail' r.pk %}">#{{ r.pk }}</a></td>
+          <td>{{ r.station.name }}</td>
+          <td>{{ r.warehouse.name }}</td>
+          <td class="muted">{{ r.requested_by.username }}</td>
+          <td>
+            {% if r.status == "pending" %}<span class="status-rail pending">Pending</span>
+            {% elif r.status == "approved" %}<span class="status-rail info">Approved</span>
+            {% elif r.status == "rejected" %}<span class="status-rail critical">Rejected</span>
+            {% elif r.status == "partially_fulfilled" %}<span class="status-rail warn">Partial</span>
+            {% elif r.status == "fulfilled" %}<span class="status-rail good">Fulfilled</span>{% endif %}
+          </td>
+          <td class="muted">{{ r.requested_at|date:"d M, H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No stock requests</div></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

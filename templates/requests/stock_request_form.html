@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Request stock - IMS{% endblock %}
+{% block crumb %}Requests{% endblock %}
+{% block page_title %}Request stock for {{ station.name }}{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ warehouse_form.warehouse.id_for_label }}">Warehouse</label>
+        {{ warehouse_form.warehouse }}
+        {% if warehouse_form.warehouse.errors %}<div class="errors">{{ warehouse_form.warehouse.errors }}</div>{% endif %}
+      </div>
+
+      <fieldset>
+        <legend>Items</legend>
+        {{ formset.management_form }}
+        {% for line in formset %}
+        <div class="form-grid" style="margin-bottom:10px;align-items:end;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Product</label>
+            {{ line.product }}
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Quantity</label>
+            {{ line.quantity }}
+          </div>
+        </div>
+        {% if line.errors %}<div class="errors">{{ line.errors }}</div>{% endif %}
+        {% endfor %}
+        {% if formset.non_form_errors %}<div class="errors">{{ formset.non_form_errors }}</div>{% endif %}
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit request</button>
+        <a class="btn btn-secondary" href="{% url 'warehouses_web:station-detail' station.pk %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

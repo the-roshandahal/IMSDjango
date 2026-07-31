@@ -1,14 +1,26 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.db.models import F, Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
+from django.views.generic import CreateView, DetailView, ListView
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from apps.accounts import services
-from apps.accounts.forms import LoginForm, TwoFactorForm
-from apps.accounts.models import User
+from apps.accounts.forms import (
+    LoginForm,
+    SiteAssignmentForm,
+    TwoFactorForm,
+    UserCreateForm,
+    UserDeactivateForm,
+    UserRoleForm,
+)
+from apps.accounts.models import Role, SiteAssignment, User
 from apps.audit.models import AuditLog
+from apps.core.mixins import CapabilityRequiredMixin
+from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids
 from apps.core.utils import get_client_ip
 
 
@@ -98,4 +110,209 @@ class DashboardView(View):
     def get(self, request):
         if not request.user.is_authenticated:
             return redirect(reverse_lazy("accounts:login"))
-        return render(request, self.template_name, {"user": request.user})
+
+        from apps.catalogue.models import Product
+        from apps.inventory.models import InventoryTransaction
+        from apps.requests.models import StockRequest, StockRequestStatus
+        from apps.warehouses.models import Station, Warehouse
+
+        user = request.user
+        exempt = user.role in SITE_SCOPE_EXEMPT_ROLES
+        warehouse_ids = None if exempt else list(assigned_site_ids(user, "warehouse"))
+        station_ids = None if exempt else list(assigned_site_ids(user, "station"))
+
+        warehouses_qs = Warehouse.objects.filter(is_active=True)
+        stations_qs = Station.objects.filter(is_active=True)
+        if not exempt:
+            warehouses_qs = warehouses_qs.filter(pk__in=warehouse_ids)
+            stations_qs = stations_qs.filter(pk__in=station_ids)
+
+        products_qs = Product.objects.filter(is_archived=False)
+
+        stock_filter = Q(stock_levels__warehouse__isnull=False)
+        if not exempt:
+            stock_filter &= Q(stock_levels__warehouse_id__in=warehouse_ids)
+        low_stock_qs = (
+            products_qs.annotate(total_stock=Sum("stock_levels__quantity", filter=stock_filter))
+            .filter(total_stock__isnull=False, total_stock__lte=F("reorder_point"))
+            .order_by("total_stock")
+        )
+        low_stock_count = low_stock_qs.count()
+        low_stock_products = low_stock_qs[:8]
+
+        pending_requests_qs = StockRequest.objects.filter(status=StockRequestStatus.PENDING)
+        if not exempt:
+            pending_requests_qs = pending_requests_qs.filter(
+                Q(warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids)
+            )
+        pending_requests = pending_requests_qs.select_related("station", "warehouse").order_by("-requested_at")[:6]
+
+        txns_qs = InventoryTransaction.objects.select_related("product", "performed_by", "source_warehouse", "dest_warehouse", "station")
+        if not exempt:
+            txns_qs = txns_qs.filter(
+                Q(source_warehouse_id__in=warehouse_ids) | Q(dest_warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids)
+            )
+        recent_transactions = txns_qs.order_by("-timestamp")[:8]
+
+        context = {
+            "total_products": products_qs.count(),
+            "total_warehouses": warehouses_qs.count(),
+            "total_stations": stations_qs.count(),
+            "low_stock_products": low_stock_products,
+            "low_stock_count": low_stock_count,
+            "pending_requests": pending_requests,
+            "pending_requests_count": pending_requests_qs.count(),
+            "recent_transactions": recent_transactions,
+        }
+
+        if user.role == Role.ADMIN:
+            context["total_users"] = User.objects.count()
+            context["locked_users_count"] = User.objects.filter(locked_until__gt=timezone.now()).count()
+            context["recent_audit"] = AuditLog.objects.select_related("actor").order_by("-timestamp")[:8]
+
+        return render(request, self.template_name, context)
+
+
+# ---------------------------------------------------------------------
+# User management (SRS Section 5.1 / 8.2). Capability "user.manage" is
+# only granted to admin (via the "*" wildcard in ROLE_CAPABILITIES), so
+# gating every view on it is effectively admin-only without a separate
+# role check.
+# ---------------------------------------------------------------------
+
+class UserListView(CapabilityRequiredMixin, ListView):
+    capability = "user.manage"
+    model = User
+    template_name = "accounts/user_list.html"
+    context_object_name = "users"
+    queryset = User.objects.all().prefetch_related("site_assignments").order_by("username")
+
+
+class UserDetailView(CapabilityRequiredMixin, DetailView):
+    capability = "user.manage"
+    model = User
+    template_name = "accounts/user_detail.html"
+    context_object_name = "target_user"
+    queryset = User.objects.all().prefetch_related("site_assignments__warehouse", "site_assignments__station")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["role_form"] = UserRoleForm(initial={"role": self.object.role})
+        ctx["deactivate_form"] = UserDeactivateForm()
+        ctx["site_form"] = SiteAssignmentForm()
+        ctx["pending_blockers"] = services.check_pending_assets(self.object) if self.object.is_active else []
+        return ctx
+
+
+class UserCreateView(CapabilityRequiredMixin, CreateView):
+    capability = "user.manage"
+    model = User
+    form_class = UserCreateForm
+    template_name = "accounts/user_form.html"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        AuditLog.log(actor=self.request.user, action="user.created", entity_type="User", entity_id=self.object.pk)
+        messages.success(self.request, f"User {self.object.username} created.")
+        return response
+
+    def get_success_url(self):
+        return reverse("accounts:user-detail-page", args=[self.object.pk])
+
+
+class UserRoleChangeWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        form = UserRoleForm(request.POST)
+        if form.is_valid():
+            old_role = user_obj.role
+            user_obj.role = form.cleaned_data["role"]
+            user_obj.save(update_fields=["role"])
+            AuditLog.log(
+                actor=request.user, action="user.role_changed", entity_type="User", entity_id=user_obj.pk,
+                metadata={"old_role": old_role, "new_role": user_obj.role},
+            )
+            messages.success(request, "Role updated.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserDeactivateWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        form = UserDeactivateForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, "A reason is required to deactivate a user.")
+            return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+        blockers = services.check_pending_assets(user_obj)
+        override = form.cleaned_data["override"]
+        if blockers and not override:
+            messages.error(request, "Cannot deactivate: " + "; ".join(blockers) + " (check Override to force it).")
+            return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+        user_obj.is_active = False
+        user_obj.deactivated_at = timezone.now()
+        user_obj.deactivation_reason = form.cleaned_data["reason"]
+        user_obj.deactivated_by = request.user
+        user_obj.save(update_fields=["is_active", "deactivated_at", "deactivation_reason", "deactivated_by"])
+        AuditLog.log(
+            actor=request.user, action="user.deactivated", entity_type="User", entity_id=user_obj.pk,
+            metadata={"reason": form.cleaned_data["reason"], "override": override, "blockers": blockers},
+        )
+        messages.success(request, f"{user_obj.username} deactivated.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserReactivateWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        user_obj.is_active = True
+        user_obj.deactivated_at = None
+        user_obj.deactivation_reason = ""
+        user_obj.deactivated_by = None
+        user_obj.save(update_fields=["is_active", "deactivated_at", "deactivation_reason", "deactivated_by"])
+        AuditLog.log(actor=request.user, action="user.reactivated", entity_type="User", entity_id=user_obj.pk)
+        messages.success(request, f"{user_obj.username} reactivated.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserUnlockWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        user_obj.reset_lockout()
+        AuditLog.log(actor=request.user, action="user.unlocked", entity_type="User", entity_id=user_obj.pk)
+        messages.success(request, "Lockout cleared.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserSiteAssignmentCreateWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        form = SiteAssignmentForm(request.POST)
+        if form.is_valid() and (form.cleaned_data.get("warehouse") or form.cleaned_data.get("station")):
+            assignment = form.save(commit=False)
+            assignment.user = user_obj
+            assignment.save()
+            messages.success(request, "Site assignment added.")
+        else:
+            messages.error(request, "Choose a warehouse or station to assign.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserSiteAssignmentDeleteWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk, assignment_id):
+        SiteAssignment.objects.filter(pk=assignment_id, user_id=pk).delete()
+        messages.success(request, "Site assignment removed.")
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Stock request #{{ req.pk }} - IMS{% endblock %}
+{% block crumb %}Requests / Stock requests{% endblock %}
+{% block page_title %}Request #{{ req.pk }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ req.station.name }} &rarr; {{ req.warehouse.name }} &middot; raised by {{ req.requested_by.username }} on {{ req.requested_at|date:"d M Y, H:i" }}</div>
+  <div>
+    {% if req.status == "pending" %}<span class="status-rail pending">Pending</span>
+    {% elif req.status == "approved" %}<span class="status-rail info">Approved</span>
+    {% elif req.status == "rejected" %}<span class="status-rail critical">Rejected</span>
+    {% elif req.status == "partially_fulfilled" %}<span class="status-rail warn">Partially fulfilled</span>
+    {% elif req.status == "fulfilled" %}<span class="status-rail good">Fulfilled</span>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Lines</h2></div>
+      <div class="panel-body flush">
+        <table class="data">
+          <thead><tr><th>Product</th><th class="num">Requested</th><th class="num">Dispatched</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for line in req.lines.all %}
+            <tr>
+              <td><a href="{% url 'catalogue_web:product-detail' line.product_id %}">{{ line.product.name }}</a></td>
+              <td class="num mono">{{ line.quantity_requested }}</td>
+              <td class="num mono">{{ line.quantity_dispatched }}</td>
+              <td>{% if line.is_fully_dispatched %}<span class="status-rail good">Complete</span>{% elif line.quantity_dispatched > 0 %}<span class="status-rail warn">Partial</span>{% else %}<span class="status-rail pending">Waiting</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if req.status == "rejected" and req.rejection_reason %}
+    <div class="panel">
+      <div class="panel-head"><h2>Rejection reason</h2></div>
+      <div class="panel-body">{{ req.rejection_reason }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if req.status == "pending" and can_approve_requests %}
+    <div class="panel">
+      <div class="panel-head"><h2>Decision</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'stock_requests_web:approve' req.pk %}" style="margin-bottom:16px;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-good" style="width:100%;justify-content:center;">Approve request</button>
+        </form>
+        <hr class="divider">
+        <form method="post" action="{% url 'stock_requests_web:reject' req.pk %}">
+          {% csrf_token %}
+          <div class="field">
+            <label for="{{ reject_form.reason.id_for_label }}">Rejection reason</label>
+            {{ reject_form.reason }}
+          </div>
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Reject request</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if req.status == "approved" or req.status == "partially_fulfilled" %}
+      {% if can_manage_stock %}
+      <div class="panel">
+        <div class="panel-head"><h2>Dispatch</h2></div>
+        <div class="panel-body">
+          <p class="muted" style="margin-top:0;">Issues stock from {{ req.warehouse.name }} to {{ req.station.name }} for every unfulfilled line.</p>
+          <form method="post" action="{% url 'stock_requests_web:dispatch' req.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Dispatch stock</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

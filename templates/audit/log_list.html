@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Audit log - IMS{% endblock %}
+{% block crumb %}Administration{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">Append-only trail of every user action, login, and permission change. Cannot be edited or deleted, by any role.</div>
+  <form method="get">
+    <input type="search" name="action" placeholder="Filter by action, e.g. auth.login" value="{{ q }}">
+  </form>
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if entries %}
+    <table class="data">
+      <thead><tr><th>When</th><th>Action</th><th>Entity</th><th>Actor</th><th>IP</th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="mono muted">{{ e.timestamp|date:"d M Y, H:i:s" }}</td>
+          <td class="mono">{{ e.action }}</td>
+          <td>{{ e.entity_type }}{% if e.entity_id %} <span class="muted">#{{ e.entity_id }}</span>{% endif %}</td>
+          <td>{{ e.actor.username|default:"system" }}</td>
+          <td class="mono muted">{{ e.ip_address|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No matching entries</div></div>
+    {% endif %}
+  </div>
+</div>
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if q %}&action={{ q }}{% endif %}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if q %}&action={{ q }}{% endif %}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

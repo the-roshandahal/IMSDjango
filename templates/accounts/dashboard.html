@@ -1,9 +1,124 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - IMS{% endblock %}
+{% block crumb %}Overview{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 {% block content %}
-<main class="wide">
-  <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
-  <p>Role: {{ user.get_role_display|default:"—" }}</p>
-  <p>This is a placeholder dashboard. Role-specific widgets (Section 5.2) land as later modules are built.</p>
-</main>
+
+<div class="stat-grid">
+  <div class="stat-tile">
+    <div class="stat-label">Products</div>
+    <a href="{% url 'catalogue_web:product-list' %}"><div class="stat-value">{{ total_products }}</div></a>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-label">Warehouses</div>
+    <a href="{% url 'warehouses_web:warehouse-list' %}"><div class="stat-value">{{ total_warehouses }}</div></a>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-label">Stations</div>
+    <a href="{% url 'warehouses_web:station-list' %}"><div class="stat-value">{{ total_stations }}</div></a>
+  </div>
+  <div class="stat-tile {% if low_stock_count %}alert{% endif %}">
+    <div class="stat-label">Low / out of stock</div>
+    <a href="{% url 'catalogue_web:product-list' %}"><div class="stat-value">{{ low_stock_count }}</div></a>
+  </div>
+  <div class="stat-tile {% if pending_requests_count %}alert{% endif %}">
+    <div class="stat-label">Pending requests</div>
+    <a href="{% url 'stock_requests_web:list' %}?status=pending"><div class="stat-value">{{ pending_requests_count }}</div></a>
+  </div>
+  {% if is_admin %}
+  <div class="stat-tile">
+    <div class="stat-label">Users</div>
+    <a href="{% url 'accounts:user-list-page' %}"><div class="stat-value">{{ total_users }}</div></a>
+  </div>
+  {% if locked_users_count %}
+  <div class="stat-tile critical">
+    <div class="stat-label">Locked accounts</div>
+    <a href="{% url 'accounts:user-list-page' %}"><div class="stat-value">{{ locked_users_count }}</div></a>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Low stock alerts</h2><span class="sub">at or below reorder point</span></div>
+      <div class="panel-body flush">
+        {% if low_stock_products %}
+        <table class="data">
+          <thead><tr><th>Product</th><th class="num">On hand</th><th class="num">Reorder pt.</th></tr></thead>
+          <tbody>
+            {% for p in low_stock_products %}
+            <tr class="rail-row {% if p.total_stock == 0 %}critical{% else %}warn{% endif %}">
+              <td><a href="{% url 'catalogue_web:product-detail' p.pk %}">{{ p.name }}</a></td>
+              <td class="num mono">{{ p.total_stock }}</td>
+              <td class="num mono">{{ p.reorder_point }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">Nothing below reorder point right now.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Recent activity</h2><span class="sub">latest stock movements</span></div>
+      <div class="panel-body flush">
+        {% if recent_transactions %}
+        <table class="data">
+          <thead><tr><th>When</th><th>Type</th><th>Product</th><th class="num">Qty</th><th>By</th></tr></thead>
+          <tbody>
+            {% for t in recent_transactions %}
+            <tr>
+              <td class="mono muted">{{ t.timestamp|date:"d M H:i" }}</td>
+              <td><span class="status-rail {% if t.type == 'stock_in' or t.type == 'return' %}good{% elif t.type == 'damaged' or t.type == 'lost' or t.type == 'expired' %}critical{% else %}info{% endif %}">{{ t.get_type_display }}</span></td>
+              <td>{{ t.product.name }}</td>
+              <td class="num mono">{{ t.quantity }}</td>
+              <td class="muted">{{ t.performed_by.username }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No stock movements yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Pending stock requests</h2></div>
+      <div class="panel-body flush">
+        {% if pending_requests %}
+        {% for r in pending_requests %}
+        <div class="rail-row pending" style="padding:10px 18px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
+          <a href="{% url 'stock_requests_web:detail' r.pk %}">#{{ r.pk }}</a> &middot; {{ r.station.name }} &rarr; {{ r.warehouse.name }}
+          <div class="muted" style="font-size:0.78rem;">{{ r.requested_at|timesince }} ago</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">No pending requests.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if is_admin and recent_audit %}
+    <div class="panel">
+      <div class="panel-head"><h2>Audit trail</h2><a href="{% url 'audit:log' %}" class="sub">View all</a></div>
+      <div class="panel-body flush">
+        {% for entry in recent_audit %}
+        <div style="padding:9px 18px;font-size:0.8rem;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
+          <span class="mono muted">{{ entry.timestamp|date:"H:i" }}</span>
+          <strong>{{ entry.action }}</strong>
+          {% if entry.actor %}<span class="muted">by {{ entry.actor.username }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
