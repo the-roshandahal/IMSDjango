@@ -1,12 +1,15 @@
-from django.db.models import Count, Q, Sum
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Count, ProtectedError, Q, Sum
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.catalogue import services
-from apps.catalogue.forms import CategoryForm, ProductForm
+from apps.catalogue.forms import CategoryForm, ProductCreateForm, ProductForm
 from apps.catalogue.models import Category, Product
 from apps.core.mixins import CapabilityRequiredMixin
+from apps.inventory import services as inventory_services
 
 
 class ProductListView(CapabilityRequiredMixin, ListView):
@@ -52,14 +55,30 @@ class ProductDetailView(CapabilityRequiredMixin, DetailView):
 
 
 class ProductCreateView(CapabilityRequiredMixin, CreateView):
+    """Also supports recording existing on-hand stock in the same step, for
+    onboarding products the company already has (not a brand-new item)."""
+
     capability = "product.manage"
     model = Product
-    form_class = ProductForm
+    form_class = ProductCreateForm
     template_name = "catalogue/product_form.html"
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        services.provision_codes(self.object)
+        with transaction.atomic():
+            response = super().form_valid(form)
+            services.provision_codes(self.object)
+
+            warehouse = form.cleaned_data.get("initial_warehouse")
+            quantity = form.cleaned_data.get("initial_quantity")
+            if warehouse and quantity:
+                inventory_services.stock_in(
+                    product_id=self.object.id, warehouse_id=warehouse.id, quantity=quantity,
+                    performed_by=self.request.user, reason_code="onboarding",
+                    comment="Existing stock recorded while adding this product to IMS.",
+                )
+                messages.success(self.request, f"{self.object.name} created with {quantity} on hand at {warehouse.name}.")
+            else:
+                messages.success(self.request, f"{self.object.name} created.")
         return response
 
     def get_success_url(self):
@@ -86,6 +105,34 @@ class ProductArchiveView(CapabilityRequiredMixin, DetailView):
         product = self.get_object()
         product.is_archived = True
         product.save(update_fields=["is_archived"])
+        messages.success(request, f"{product.name} archived.")
+        return redirect(reverse("catalogue_web:product-list"))
+
+
+class ProductDeleteView(CapabilityRequiredMixin, DetailView):
+    """POST-only. Products with any transaction/batch/stock-request history
+    are protected at the DB level (on_delete=PROTECT) -- that history is the
+    whole point of the append-only ledger, so a real delete there would be
+    silently destructive. Falls back to archiving instead, with a clear
+    message about why."""
+
+    capability = "product.manage"
+    model = Product
+
+    def post(self, request, *args, **kwargs):
+        product = self.get_object()
+        name = product.name
+        try:
+            product.delete()
+            messages.success(request, f"{name} deleted.")
+        except ProtectedError:
+            product.is_archived = True
+            product.save(update_fields=["is_archived"])
+            messages.warning(
+                request,
+                f"{name} has transaction or stock history, so it can't be permanently deleted -- "
+                "archived instead. Archived products are hidden from new transactions but keep their history.",
+            )
         return redirect(reverse("catalogue_web:product-list"))
 
 

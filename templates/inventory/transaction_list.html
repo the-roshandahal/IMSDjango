@@ -6,13 +6,20 @@
 
 <div class="page-head">
   <div class="desc">Immutable ledger of every stock movement &mdash; corrections post as a new REVERSAL, never an edit.</div>
-  {% if can_manage_stock %}<a class="btn btn-primary" href="{% url 'inventory_web:new-transaction' %}">+ Record movement</a>{% endif %}
+  <div class="actions-row">
+    <form method="get" style="display:flex;gap:8px;">
+      {% if active_type %}<input type="hidden" name="type" value="{{ active_type }}">{% endif %}
+      <input type="search" name="q" placeholder="Search product, reason, project ref" value="{{ q }}">
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+    {% if can_manage_stock %}<a class="btn btn-primary" href="{% url 'inventory_web:new-transaction' %}">+ Record movement</a>{% endif %}
+  </div>
 </div>
 
 <div class="actions-row" style="margin-bottom:14px;">
-  <a class="btn btn-sm {% if not active_type %}btn-primary{% else %}btn-secondary{% endif %}" href="?">All</a>
+  <a class="btn btn-sm {% if not active_type %}btn-primary{% else %}btn-secondary{% endif %}" href="?{% if q %}q={{ q }}{% endif %}">All</a>
   {% for value, label in types %}
-  <a class="btn btn-sm {% if active_type == value %}btn-primary{% else %}btn-secondary{% endif %}" href="?type={{ value }}">{{ label }}</a>
+  <a class="btn btn-sm {% if active_type == value %}btn-primary{% else %}btn-secondary{% endif %}" href="?type={{ value }}{% if q %}&q={{ q }}{% endif %}">{{ label }}</a>
   {% endfor %}
 </div>
 
@@ -46,9 +53,9 @@
 
 {% if is_paginated %}
 <div class="actions-row">
-  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}">Previous</a>{% endif %}
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}{% if q %}&q={{ q }}{% endif %}">Previous</a>{% endif %}
   <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}">Next</a>{% endif %}
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}{% if q %}&q={{ q }}{% endif %}">Next</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}

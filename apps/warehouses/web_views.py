@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Count, F, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -24,6 +24,18 @@ class SiteIsObjectQuerysetMixin:
         return qs.filter(pk__in=list(assigned_site_ids(user, self.site_type)))
 
 
+def _with_low_stock_count(qs):
+    """Annotates a Warehouse/Station queryset with a count of stock_levels
+    rows at or below that line's product reorder point -- same rule used on
+    the detail pages and in Product.reorder_point, just aggregated here."""
+    return qs.annotate(
+        low_stock_count=Count(
+            "stock_levels",
+            filter=Q(stock_levels__quantity__lte=F("stock_levels__product__reorder_point")),
+        )
+    )
+
+
 class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, ListView):
     capability = "product.view"
     site_type = "warehouse"
@@ -32,7 +44,7 @@ class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, List
     context_object_name = "warehouses"
 
     def get_queryset(self):
-        return super().get_queryset().filter(is_active=True).order_by("name")
+        return _with_low_stock_count(super().get_queryset().filter(is_active=True)).order_by("name")
 
 
 class WarehouseDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, DetailView):
@@ -46,8 +58,12 @@ class WarehouseDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, De
         from apps.inventory.models import StockLevel
 
         ctx = super().get_context_data(**kwargs)
+        # quantity>0, plus genuinely out-of-stock lines for actively-managed
+        # products (reorder_point set) -- surfaces real stockouts without
+        # dredging up every zero-quantity artifact a warehouse ever touched.
         ctx["stock"] = (
-            StockLevel.objects.filter(warehouse=self.object, quantity__gt=0)
+            StockLevel.objects.filter(warehouse=self.object)
+            .filter(Q(quantity__gt=0) | Q(quantity__lte=0, product__reorder_point__gt=0))
             .select_related("product", "batch")
             .order_by("product__name")
         )
@@ -82,7 +98,7 @@ class StationListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, ListVi
     context_object_name = "stations"
 
     def get_queryset(self):
-        return super().get_queryset().filter(is_active=True).order_by("name")
+        return _with_low_stock_count(super().get_queryset().filter(is_active=True)).order_by("name")
 
 
 class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, DetailView):
@@ -97,7 +113,8 @@ class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, Deta
 
         ctx = super().get_context_data(**kwargs)
         ctx["stock"] = (
-            StockLevel.objects.filter(station=self.object, quantity__gt=0)
+            StockLevel.objects.filter(station=self.object)
+            .filter(Q(quantity__gt=0) | Q(quantity__lte=0, product__reorder_point__gt=0))
             .select_related("product", "batch")
             .order_by("product__name")
         )

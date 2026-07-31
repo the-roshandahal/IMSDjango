@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.utils import timezone
 
@@ -43,6 +45,16 @@ class Product(models.Model):
     class Meta:
         ordering = ["name"]
         indexes = [models.Index(fields=["is_archived"])]
+
+    def save(self, *args, **kwargs):
+        # qr_code_data is unique; leaving it blank at insert time means any
+        # two products created without a QR code yet would collide on "".
+        # Give every row a unique placeholder immediately so that can never
+        # happen -- apps.catalogue.services.provision_codes() overwrites it
+        # with the real value right after creation in the normal flow.
+        if not self.qr_code_data:
+            self.qr_code_data = f"PENDING-{uuid.uuid4().hex}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

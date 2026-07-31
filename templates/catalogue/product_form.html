@@ -29,8 +29,9 @@
           {{ form.default_storage_location }}
         </div>
         <div class="field">
-          <label for="{{ form.reorder_point.id_for_label }}">Reorder point</label>
+          <label for="{{ form.reorder_point.id_for_label }}">Low-stock alert at</label>
           {{ form.reorder_point }}
+          <div class="hint">{{ form.reorder_point.help_text }}</div>
         </div>
         <div class="field">
           <label for="{{ form.minimum_stock_level.id_for_label }}">Minimum stock level</label>
@@ -67,6 +68,24 @@
           {{ form.image }}
         </div>
       </fieldset>
+
+      {% if not object %}
+      <fieldset>
+        <legend>Existing stock (optional)</legend>
+        <p class="hint" style="margin-top:0;">Already have this product in stock? Record it now instead of doing a separate stock-in afterwards.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="{{ form.initial_warehouse.id_for_label }}">{{ form.initial_warehouse.label }}</label>
+            {{ form.initial_warehouse }}
+          </div>
+          <div class="field">
+            <label for="{{ form.initial_quantity.id_for_label }}">{{ form.initial_quantity.label }}</label>
+            {{ form.initial_quantity }}
+          </div>
+        </div>
+        {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+      </fieldset>
+      {% endif %}
 
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if object %}Save changes{% else %}Create product{% endif %}</button>

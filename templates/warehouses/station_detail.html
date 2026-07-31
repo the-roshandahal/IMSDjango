@@ -18,13 +18,18 @@
       <div class="panel-body flush">
         {% if stock %}
         <table class="data">
-          <thead><tr><th>Product</th><th>Batch</th><th class="num">Quantity</th></tr></thead>
+          <thead><tr><th>Product</th><th>Batch</th><th class="num">Quantity</th><th>Status</th></tr></thead>
           <tbody>
             {% for sl in stock %}
-            <tr>
+            <tr class="rail-row {% if sl.quantity <= 0 %}critical{% elif sl.quantity <= sl.product.reorder_point %}warn{% else %}good{% endif %}">
               <td><a href="{% url 'catalogue_web:product-detail' sl.product_id %}">{{ sl.product.name }}</a></td>
               <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
               <td class="num mono">{{ sl.quantity }}</td>
+              <td>
+                {% if sl.quantity <= 0 %}<span class="status-rail critical">Out</span>
+                {% elif sl.quantity <= sl.product.reorder_point %}<span class="status-rail warn">Low (&le;{{ sl.product.reorder_point }})</span>
+                {% else %}<span class="status-rail good">OK</span>{% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>

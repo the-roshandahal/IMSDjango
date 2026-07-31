@@ -5,13 +5,22 @@
 {% block content %}
 
 <div class="page-head">
-  <div class="desc">{{ product.category.name }} &middot; <span class="mono">{{ product.barcode }}</span></div>
+  <div class="desc">
+    {{ product.category.name }} &middot; <span class="mono">{{ product.barcode }}</span>
+    {% if product.is_archived %} &middot; <span class="status-rail pending">Archived</span>{% endif %}
+  </div>
   {% if can_manage_products %}
   <div class="actions-row">
     <a class="btn btn-secondary" href="{% url 'catalogue_web:product-edit' product.pk %}">Edit</a>
-    <form method="post" action="{% url 'catalogue_web:product-archive' product.pk %}" onsubmit="return confirm('Archive this product? It will be hidden from new transactions.');">
+    {% if not product.is_archived %}
+    <form method="post" action="{% url 'catalogue_web:product-archive' product.pk %}" onsubmit="return confirm('Archive this product? It will be hidden from new transactions but keep its history.');">
       {% csrf_token %}
-      <button type="submit" class="btn btn-danger">Archive</button>
+      <button type="submit" class="btn btn-secondary">Archive</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{% url 'catalogue_web:product-delete' product.pk %}" onsubmit="return confirm('Delete this product? If it has any transaction or stock history it will be archived instead, since that history can\'t be removed.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Delete</button>
     </form>
   </div>
   {% endif %}

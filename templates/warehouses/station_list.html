@@ -11,12 +11,13 @@
   <div class="panel-body flush">
     {% if stations %}
     <table class="data">
-      <thead><tr><th>Name</th><th>Address</th></tr></thead>
+      <thead><tr><th>Name</th><th>Address</th><th>Low stock</th></tr></thead>
       <tbody>
         {% for s in stations %}
         <tr>
           <td><a href="{% url 'warehouses_web:station-detail' s.pk %}">{{ s.name }}</a></td>
           <td class="muted">{{ s.address|default:"—" }}</td>
+          <td>{% if s.low_stock_count %}<span class="status-rail warn">{{ s.low_stock_count }} low</span>{% else %}<span class="status-rail good">OK</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

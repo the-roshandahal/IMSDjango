@@ -57,12 +57,18 @@ class TransactionListView(CapabilityRequiredMixin, ListView):
         txn_type = self.request.GET.get("type")
         if txn_type:
             qs = qs.filter(type=txn_type)
+        q = self.request.GET.get("q")
+        if q:
+            qs = qs.filter(
+                Q(reason_code__icontains=q) | Q(comment__icontains=q) | Q(product__name__icontains=q)
+            )
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["types"] = InventoryTransaction._meta.get_field("type").choices
         ctx["active_type"] = self.request.GET.get("type", "")
+        ctx["q"] = self.request.GET.get("q", "")
         return ctx
 
 
@@ -119,10 +125,16 @@ class NewTransactionView(CapabilityRequiredMixin, View):
                 performed_by=user, reason_code=data["reason_code"], comment=data["comment"],
             )
         if action == "stock_out":
+            purpose = data["purpose"]
+            reason_code = data["reason_code"] or purpose
+            comment = data["comment"]
+            station = data.get("station")
+            if purpose == inv_forms.StockOutForm.PURPOSE_DEEP_CLEAN:
+                comment = f"Deep clean project: {data['project_reference']}. {comment}".strip()
             return services.stock_out(
                 product_id=data["product"].id, warehouse_id=data["warehouse"].id, quantity=data["quantity"],
-                performed_by=user, station_id=data["station"].id if data.get("station") else None,
-                reason_code=data["reason_code"], comment=data["comment"],
+                performed_by=user, station_id=station.id if station else None,
+                reason_code=reason_code, comment=comment,
             )
         if action == "transfer":
             return services.transfer_initiate(
