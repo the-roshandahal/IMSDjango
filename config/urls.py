@@ -26,6 +26,7 @@ urlpatterns = [
     path("", include("apps.notifications.urls_web")),
     path("", include("apps.documents.urls_web")),
     path("", include("apps.core.urls_web")),
+    path("", include("apps.trains.urls_web")),
 ]
 
 if settings.DEBUG:

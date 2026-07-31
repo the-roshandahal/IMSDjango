@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Train Lookup - IMS{% endblock %}
+{% block crumb %}Deep Clean{% endblock %}
+{% block page_title %}Train Lookup{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:520px;">
+  <div class="panel-body">
+    <form method="get" style="display:flex;gap:8px;">
+      <input type="search" name="q" placeholder="Search station name, e.g. Auburn" value="{{ query }}" autofocus>
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <p class="hint" style="margin-top:8px;margin-bottom:0;">Real-time Sydney Trains departures from Transport for NSW Open Data. Non-stopping/express services aren't shown &mdash; this data only covers trains that actually stop at a station.</p>
+  </div>
+</div>
+
+{% if results is not None %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-head"><h2>Stations matching &ldquo;{{ query }}&rdquo;</h2></div>
+  <div class="panel-body flush">
+    {% if results %}
+    <table class="data">
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td><a href="{% url 'trains_web:lookup' %}?station={{ r.id }}&name={{ r.name|urlencode }}">{{ r.name }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No train stations found for that search.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if board %}
+<div class="page-head">
+  <div class="desc">{{ station_name }} &middot; updated {{ board.fetched_at|date:"H:i:s" }}</div>
+  <a class="btn btn-secondary" href="{% url 'trains_web:lookup' %}?station={{ station_id }}&name={{ station_name|urlencode }}">Refresh</a>
+</div>
+
+{% if board.platforms %}
+<div class="two-col">
+  {% for p in board.platforms %}
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>{{ p.platform }}</h2></div>
+      <div class="panel-body flush">
+        <table class="data">
+          <thead><tr><th>Line</th><th>Destination</th><th class="num">When</th></tr></thead>
+          <tbody>
+            {% if p.last_stopped %}
+            <tr class="rail-row pending">
+              <td>{{ p.last_stopped.line }}</td>
+              <td>{{ p.last_stopped.destination }}</td>
+              <td class="num mono">{{ p.last_stopped.minutes_ago }} min ago</td>
+            </tr>
+            {% endif %}
+            {% for t in p.upcoming %}
+            <tr class="rail-row {% if t.is_realtime %}good{% else %}info{% endif %}">
+              <td>{{ t.line }}</td>
+              <td>{{ t.destination }}</td>
+              <td class="num mono">
+                {% if t.minutes == 0 %}Now{% else %}{{ t.minutes }} min{% endif %}
+                {% if t.is_realtime %}<span class="status-rail good" style="margin-left:6px;">Live</span>{% else %}<span class="status-rail pending" style="margin-left:6px;">Scheduled</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            {% if not p.last_stopped and not p.upcoming %}
+            <tr><td colspan="3" class="muted">Nothing in this window.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel"><div class="panel-body"><div class="empty-state">No train departures found for this station right now.</div></div></div>
+{% endif %}
+{% endif %}
+
+{% endblock %}

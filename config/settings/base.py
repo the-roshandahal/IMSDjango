@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.notifications",
     "apps.documents",
+    "apps.trains",
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,7 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@ims.local")
 
 DOCUMENT_MAX_UPLOAD_MB = env.int("DOCUMENT_MAX_UPLOAD_MB", default=10)
+
+# Transport for NSW Open Data (Trip Planner APIs) -- Train Lookup feature.
+TFNSW_API_KEY = env("TFNSW_API_KEY", default="")
+TFNSW_API_BASE = "https://api.transport.nsw.gov.au/v1/tp/"
