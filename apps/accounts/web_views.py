@@ -152,7 +152,7 @@ class DashboardView(View):
             txns_qs = txns_qs.filter(
                 Q(source_warehouse_id__in=warehouse_ids) | Q(dest_warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids)
             )
-        recent_transactions = txns_qs.order_by("-timestamp")[:30]
+        recent_transactions = txns_qs.order_by("-timestamp")[:20]
 
         context = {
             "total_products": products_qs.count(),
