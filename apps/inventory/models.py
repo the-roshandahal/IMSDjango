@@ -26,7 +26,9 @@ class InventoryTransaction(ImmutableModel):
     purely for traceability; the actual "must be approved" business rule
     lives in apps.requests.services (inventory stays a generic primitive
     with no awareness of approval workflows). `purchase_order` is still
-    intentionally absent -- that app doesn't exist yet.
+    intentionally absent -- that app doesn't exist yet. `project` was the
+    same kind of deferred field until apps.projects landed -- a deep clean
+    project is a stock location exactly like a warehouse or station.
     """
 
     type = models.CharField(max_length=20, choices=TransactionType.choices)
@@ -41,6 +43,9 @@ class InventoryTransaction(ImmutableModel):
         "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
     request = models.ForeignKey(
         "stock_requests.StockRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="transactions"
     )
@@ -83,6 +88,9 @@ class StockLevel(models.Model):
     station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
     )
+    project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
+    )
     batch = models.ForeignKey(
         "catalogue.Batch", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
     )
@@ -91,13 +99,17 @@ class StockLevel(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["product", "warehouse", "station", "batch"], name="uniq_stock_level_slot"
+                fields=["product", "warehouse", "station", "project", "batch"], name="uniq_stock_level_slot"
             )
         ]
-        indexes = [models.Index(fields=["product", "warehouse"]), models.Index(fields=["product", "station"])]
+        indexes = [
+            models.Index(fields=["product", "warehouse"]),
+            models.Index(fields=["product", "station"]),
+            models.Index(fields=["product", "project"]),
+        ]
 
     def __str__(self):
-        location = self.warehouse or self.station
+        location = self.warehouse or self.station or self.project
         return f"{self.product} @ {location}: {self.quantity}"
 
 

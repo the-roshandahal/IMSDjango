@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.requests",
     "apps.equipment",
     "apps.vehicles",
+    "apps.projects",
 ]
 
 MIDDLEWARE = [

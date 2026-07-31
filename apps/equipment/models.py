@@ -27,9 +27,9 @@ class Equipment(models.Model):
     inventory concurrency is: an atomic conditional UPDATE in services.py,
     never a bare .save().
 
-    `assigned_project` is intentionally absent -- Deep Clean Projects don't
-    exist yet. Added as an additive migration when that module lands,
-    exactly like InventoryTransaction.request was.
+    `current_project` mirrors `current_station`/`current_warehouse` -- an
+    equipment item can be checked out to a deep clean project the same way
+    it can be checked out to a station.
     """
 
     asset_id = models.CharField(max_length=64, unique=True, db_index=True)
@@ -44,6 +44,9 @@ class Equipment(models.Model):
     )
     current_station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="equipment"
+    )
+    current_project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="equipment"
     )
     assigned_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="assigned_equipment"
@@ -133,6 +136,9 @@ class EquipmentLog(models.Model):
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name="logs")
     action = models.CharField(max_length=24, choices=ACTION_CHOICES)
     station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     assigned_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

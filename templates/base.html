@@ -48,6 +48,13 @@
       </a>
       {% endif %}
 
+      {% if can_view_projects %}
+      <div class="nav-section">Deep Clean</div>
+      <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
+        <span class="nav-dot"></span> Projects
+      </a>
+      {% endif %}
+
       {% if can_view_equipment or can_view_vehicles %}
       <div class="nav-section">Fleet</div>
       {% if can_view_equipment %}

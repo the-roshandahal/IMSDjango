@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}{{ project.reference }} - IMS{% endblock %}
+{% block crumb %}Deep Clean / Projects{% endblock %}
+{% block page_title %}{{ project.reference }} &mdash; {{ project.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">
+    {{ project.station.name }} &middot; {{ project.start_date }}{% if project.end_date %} to {{ project.end_date }}{% endif %}
+    &middot; Supervisor: {{ project.supervisor.username }}
+  </div>
+  <div>
+    {% if project.status == "planned" %}<span class="status-rail pending">Planned</span>
+    {% elif project.status == "active" %}<span class="status-rail info">Active</span>
+    {% else %}<span class="status-rail good">Completed</span>{% endif %}
+  </div>
+</div>
+
+{% if outstanding_assets %}
+<div class="messages"><li class="warning" style="list-style:none;padding:10px 14px;border-radius:6px;border-left:3px solid var(--warn);background:var(--warn-soft);color:var(--warn);">
+  Outstanding before this project can close: {{ outstanding_assets|join:"; " }}
+</li></div>
+{% endif %}
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Chemicals &amp; consumables on site</h2><span class="sub">remaining at this project</span></div>
+      <div class="panel-body flush">
+        {% if stock %}
+        <table class="data">
+          <thead><tr><th>Product</th><th>Batch</th><th class="num">Quantity</th></tr></thead>
+          <tbody>
+            {% for sl in stock %}
+            <tr>
+              <td><a href="{% url 'catalogue_web:product-detail' sl.product_id %}">{{ sl.product.name }}</a></td>
+              <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
+              <td class="num mono">{{ sl.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">Nothing dispatched to this project yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Equipment</h2></div>
+      <div class="panel-body flush">
+        {% if equipment %}
+        <table class="data">
+          <thead><tr><th>Asset</th><th>Name</th>{% if can_manage and project.is_open %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for e in equipment %}
+            <tr>
+              <td><a href="{% url 'equipment_web:detail' e.pk %}" class="mono">{{ e.asset_id }}</a></td>
+              <td>{{ e.name }}</td>
+              {% if can_manage and project.is_open %}
+              <td>
+                <form method="post" action="{% url 'projects_web:equipment-release' project.pk e.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Release</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No equipment taken for this project yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Vehicles</h2></div>
+      <div class="panel-body flush">
+        {% if vehicles %}
+        <table class="data">
+          <thead><tr><th>Registration</th><th>Driver</th>{% if can_manage and project.is_open %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for v in vehicles %}
+            <tr>
+              <td><a href="{% url 'vehicles_web:detail' v.pk %}" class="mono">{{ v.registration }}</a></td>
+              <td>{{ v.assigned_driver.username|default:"—" }}</td>
+              {% if can_manage and project.is_open %}
+              <td>
+                <form method="post" action="{% url 'projects_web:vehicle-release' project.pk v.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Release</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No vehicles taken for this project yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Shift log</h2><span class="sub">{{ total_hours }} hours total</span></div>
+      <div class="panel-body flush">
+        {% if shift_logs %}
+        <table class="data">
+          <thead><tr><th>Date</th><th>Shift</th><th>Start</th><th>End</th><th class="num">Hours</th><th>Workers</th><th>Notes</th></tr></thead>
+          <tbody>
+            {% for s in shift_logs %}
+            <tr>
+              <td class="mono">{{ s.work_date }}</td>
+              <td><span class="status-rail {% if s.shift == 'night' %}pending{% else %}info{% endif %}">{{ s.get_shift_display }}</span></td>
+              <td class="mono">{{ s.start_time|time:"H:i" }}</td>
+              <td class="mono">{{ s.end_time|time:"H:i" }}</td>
+              <td class="num mono">{{ s.hours_worked }}</td>
+              <td class="muted">{% for w in s.workers.all %}{{ w.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+              <td class="muted">{{ s.notes }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No shifts logged yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    {% if can_manage and project.is_open %}
+    <div class="panel">
+      <div class="panel-head"><h2>Dispatch chemicals</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:dispatch' project.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Product</label>{{ dispatch_form.product }}</div>
+          <div class="field"><label>{{ dispatch_form.warehouse.label }}</label>{{ dispatch_form.warehouse }}</div>
+          <div class="field"><label>Quantity</label>{{ dispatch_form.quantity }}</div>
+          <div class="field"><label>Comment</label>{{ dispatch_form.comment }}</div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Dispatch</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Return chemicals</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:return' project.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Product</label>{{ return_form.product }}</div>
+          <div class="field"><label>{{ return_form.warehouse.label }}</label>{{ return_form.warehouse }}</div>
+          <div class="field"><label>Quantity</label>{{ return_form.quantity }}</div>
+          <div class="field"><label>Comment</label>{{ return_form.comment }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Return remaining</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Take equipment</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:equipment-assign' project.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Equipment</label>{{ equipment_form.equipment }}</div>
+          <div class="field"><label>Comment</label>{{ equipment_form.comment }}</div>
+          <div class="field checkbox-field">{{ equipment_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field"><label>Override reason</label>{{ equipment_form.override_reason }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Take equipment</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Take vehicle</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:vehicle-assign' project.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Vehicle</label>{{ vehicle_form.vehicle }}</div>
+          <div class="field"><label>Driver (optional)</label>{{ vehicle_form.driver }}</div>
+          <div class="field"><label>Comment</label>{{ vehicle_form.comment }}</div>
+          <div class="field checkbox-field">{{ vehicle_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field"><label>Override reason</label>{{ vehicle_form.override_reason }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Take vehicle</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Log a shift</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:shift-log-create' project.pk %}">
+          {% csrf_token %}
+          <div class="field"><label>Date</label>{{ shift_form.work_date }}</div>
+          <div class="field"><label>Shift</label>{{ shift_form.shift }}</div>
+          <div class="form-grid">
+            <div class="field"><label>Start time</label>{{ shift_form.start_time }}</div>
+            <div class="field"><label>End time</label>{{ shift_form.end_time }}</div>
+          </div>
+          <div class="field"><label>Workers</label>{{ shift_form.workers }}</div>
+          <div class="field"><label>Notes</label>{{ shift_form.notes }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Log shift</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Close project</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:close' project.pk %}" onsubmit="return confirm('Close this project?');">
+          {% csrf_token %}
+          {% if outstanding_assets %}
+          <div class="field checkbox-field">{{ close_form.override }}<label style="margin:0;">Override outstanding equipment/vehicles</label></div>
+          <div class="field"><label>Override reason</label>{{ close_form.override_reason }}</div>
+          {% endif %}
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Close project</button>
+        </form>
+      </div>
+    </div>
+    {% elif not project.is_open %}
+    <div class="panel">
+      <div class="panel-head"><h2>Closed</h2></div>
+      <div class="panel-body">
+        <p class="muted" style="margin-top:0;">Closed {{ project.closed_at|date:"d M Y, H:i" }} by {{ project.closed_by.username|default:"—" }}.</p>
+        {% if project.close_override_reason %}<p class="muted">Override reason: {{ project.close_override_reason }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

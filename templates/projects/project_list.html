@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Deep clean projects - IMS{% endblock %}
+{% block crumb %}Deep Clean{% endblock %}
+{% block page_title %}Projects{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ projects|length }} project{{ projects|length|pluralize }}</div>
+  {% if can_create %}<a class="btn btn-primary" href="{% url 'projects_web:create' %}">+ New project</a>{% endif %}
+</div>
+
+<div class="actions-row" style="margin-bottom:14px;">
+  <a class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}" href="?">All</a>
+  <a class="btn btn-sm {% if active_status == 'planned' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=planned">Planned</a>
+  <a class="btn btn-sm {% if active_status == 'active' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=active">Active</a>
+  <a class="btn btn-sm {% if active_status == 'completed' %}btn-primary{% else %}btn-secondary{% endif %}" href="?status=completed">Completed</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if projects %}
+    <table class="data">
+      <thead><tr><th>Reference</th><th>Name</th><th>Station</th><th>Supervisor</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for p in projects %}
+        <tr class="rail-row {% if p.status == 'active' %}info{% elif p.status == 'planned' %}pending{% else %}good{% endif %}">
+          <td><a href="{% url 'projects_web:detail' p.pk %}" class="mono">{{ p.reference }}</a></td>
+          <td>{{ p.name }}</td>
+          <td>{{ p.station.name }}</td>
+          <td>{{ p.supervisor.username }}</td>
+          <td class="mono">{{ p.start_date }}</td>
+          <td class="mono">{{ p.end_date|default:"—" }}</td>
+          <td>
+            {% if p.status == "planned" %}<span class="status-rail pending">Planned</span>
+            {% elif p.status == "active" %}<span class="status-rail info">Active</span>
+            {% else %}<span class="status-rail good">Completed</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No projects yet</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

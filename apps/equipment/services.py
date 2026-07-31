@@ -42,11 +42,17 @@ def check_assigned_equipment(user) -> list[str]:
 
 
 @transaction.atomic
-def assign_to_station(
-    *, equipment_id, station_id, assigned_user_id, performed_by,
+def assign(
+    *, equipment_id, performed_by, station_id=None, project_id=None, assigned_user_id=None,
     comment="", override=False, override_reason="",
 ):
-    equipment = Equipment.objects.select_related(None).get(pk=equipment_id)
+    """Assign to a station or a deep clean project (mutually exclusive)."""
+    if station_id is not None and project_id is not None:
+        raise ValueError("Assign to a station or a project, not both.")
+    if station_id is None and project_id is None:
+        raise ValueError("Assign requires a station_id or project_id.")
+
+    equipment = Equipment.objects.get(pk=equipment_id)
     blockers = equipment.compliance_blockers
     if blockers and not override:
         raise ComplianceBlockedError(blockers)
@@ -54,8 +60,8 @@ def assign_to_station(
         raise ValueError("Overriding a compliance block requires a reason.")
 
     updated = Equipment.objects.filter(pk=equipment_id, status=EquipmentStatus.AVAILABLE).update(
-        status=EquipmentStatus.ASSIGNED, current_station_id=station_id, current_warehouse=None,
-        assigned_user_id=assigned_user_id,
+        status=EquipmentStatus.ASSIGNED, current_station_id=station_id, current_project_id=project_id,
+        current_warehouse=None, assigned_user_id=assigned_user_id,
     )
     if updated == 0:
         raise EquipmentUnavailableError(
@@ -64,16 +70,26 @@ def assign_to_station(
         )
 
     EquipmentLog.objects.create(
-        equipment_id=equipment_id, action="assigned", station_id=station_id, assigned_user_id=assigned_user_id,
+        equipment_id=equipment_id, action="assigned", station_id=station_id, project_id=project_id,
+        assigned_user_id=assigned_user_id,
         override_used=bool(blockers and override), comment=comment or override_reason, performed_by=performed_by,
     )
     return Equipment.objects.get(pk=equipment_id)
 
 
+# Backward-compatible alias -- station-only assignment is still the common case.
+def assign_to_station(*, equipment_id, station_id, assigned_user_id, performed_by, comment="", override=False, override_reason=""):
+    return assign(
+        equipment_id=equipment_id, station_id=station_id, assigned_user_id=assigned_user_id,
+        performed_by=performed_by, comment=comment, override=override, override_reason=override_reason,
+    )
+
+
 @transaction.atomic
 def release(*, equipment_id, performed_by, comment="", warehouse_id=None):
     updated = Equipment.objects.filter(pk=equipment_id, status=EquipmentStatus.ASSIGNED).update(
-        status=EquipmentStatus.AVAILABLE, current_station=None, assigned_user=None, current_warehouse_id=warehouse_id,
+        status=EquipmentStatus.AVAILABLE, current_station=None, current_project=None, assigned_user=None,
+        current_warehouse_id=warehouse_id,
     )
     if updated == 0:
         raise EquipmentUnavailableError("Equipment is not currently assigned.")
@@ -86,7 +102,7 @@ def start_maintenance(*, equipment_id, performed_by, comment=""):
     updated = (
         Equipment.objects.filter(pk=equipment_id)
         .exclude(status__in=[EquipmentStatus.IN_MAINTENANCE, EquipmentStatus.LOST, EquipmentStatus.WRITTEN_OFF])
-        .update(status=EquipmentStatus.IN_MAINTENANCE, current_station=None, assigned_user=None)
+        .update(status=EquipmentStatus.IN_MAINTENANCE, current_station=None, current_project=None, assigned_user=None)
     )
     if updated == 0:
         raise EquipmentUnavailableError("Equipment is already in maintenance, lost, or written off.")
@@ -136,7 +152,7 @@ def mark_lost(*, equipment_id, performed_by, comment=""):
     updated = (
         Equipment.objects.filter(pk=equipment_id)
         .exclude(status__in=[EquipmentStatus.LOST, EquipmentStatus.WRITTEN_OFF])
-        .update(status=EquipmentStatus.LOST, current_station=None, current_warehouse=None, assigned_user=None)
+        .update(status=EquipmentStatus.LOST, current_station=None, current_project=None, current_warehouse=None, assigned_user=None)
     )
     if updated == 0:
         raise EquipmentUnavailableError("Equipment is already lost or written off.")
@@ -149,7 +165,7 @@ def write_off(*, equipment_id, performed_by, comment=""):
     updated = (
         Equipment.objects.filter(pk=equipment_id)
         .exclude(status=EquipmentStatus.WRITTEN_OFF)
-        .update(status=EquipmentStatus.WRITTEN_OFF, current_station=None, current_warehouse=None, assigned_user=None)
+        .update(status=EquipmentStatus.WRITTEN_OFF, current_station=None, current_project=None, current_warehouse=None, assigned_user=None)
     )
     if updated == 0:
         raise EquipmentUnavailableError("Equipment is already written off.")

@@ -60,6 +60,7 @@ ROLE_CAPABILITIES = {
     ("management", "stocktake.participate"): True,
     ("management", "reports.view"): True,
     ("management", "warehouse.stock.view"): True,
+    ("management", "project.view"): True,
 }
 
 # Roles that see everything regardless of SiteAssignment (still gated by capability).

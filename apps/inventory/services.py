@@ -32,8 +32,8 @@ from apps.inventory.models import InventoryTransaction, StockLevel, Transfer, Tr
 from apps.warehouses.models import Warehouse
 
 
-def _get_or_create_stock_level(*, product, warehouse_id=None, station_id=None, batch=None) -> StockLevel:
-    filters = dict(product=product, warehouse_id=warehouse_id, station_id=station_id, batch=batch)
+def _get_or_create_stock_level(*, product, warehouse_id=None, station_id=None, project_id=None, batch=None) -> StockLevel:
+    filters = dict(product=product, warehouse_id=warehouse_id, station_id=station_id, project_id=project_id, batch=batch)
     try:
         with transaction.atomic():
             level, _ = StockLevel.objects.get_or_create(defaults={"quantity": Decimal("0")}, **filters)
@@ -53,7 +53,7 @@ def _fefo_plan(product: Product, warehouse: Warehouse, quantity: Decimal):
         # too large (no batches, nothing to race against) is correctly
         # classified as InsufficientStockError rather than reaching the
         # conditional UPDATE and being misread as a concurrency conflict.
-        level = StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, batch=None).first()
+        level = StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, project=None, batch=None).first()
         available = level.quantity if level else Decimal("0")
         return [(None, min(available, quantity))] if available > 0 else []
 
@@ -64,7 +64,7 @@ def _fefo_plan(product: Product, warehouse: Warehouse, quantity: Decimal):
     )
     levels_by_batch = {
         level.batch_id: level.quantity
-        for level in StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, batch__in=batches)
+        for level in StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, project=None, batch__in=batches)
     }
     for batch in batches:
         if remaining <= 0:
@@ -80,7 +80,7 @@ def _fefo_plan(product: Product, warehouse: Warehouse, quantity: Decimal):
 
 def _maybe_fire_low_stock(product: Product, warehouse: Warehouse):
     total = (
-        StockLevel.objects.filter(product=product, warehouse=warehouse, station=None).aggregate(total=Sum("quantity"))[
+        StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, project=None).aggregate(total=Sum("quantity"))[
             "total"
         ]
         or Decimal("0")
@@ -110,19 +110,24 @@ def stock_in(*, product_id, warehouse_id, quantity, performed_by, batch_id=None,
 
 @transaction.atomic
 def stock_out(
-    *, product_id, warehouse_id, quantity, performed_by, station_id=None,
+    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None,
     reason_code="", comment="", batch_id=None, override_fefo=False, request_id=None,
 ):
-    """Debits warehouse stock. If `station_id` is given, the same quantity
-    is credited to that station's stock in the same atomic operation
-    (issued-to-station); otherwise this is a write-off/consumption with no
-    destination stock. Defaults to FEFO for batch-tracked products; passing
-    `batch_id` requires `override_fefo=True` and should carry a
-    `reason_code` (Supervisor override, SRS Section 5.4). `request_id` is
-    purely for traceability back to a StockRequest -- callers (e.g.
-    apps.requests.services) are responsible for checking approval status
-    before calling this; this function has no opinion on approval workflow.
+    """Debits warehouse stock. If `station_id` or `project_id` is given
+    (mutually exclusive), the same quantity is credited to that station's
+    or deep clean project's stock in the same atomic operation
+    (issued-to-station / issued-to-project); otherwise this is a
+    write-off/consumption with no destination stock. Defaults to FEFO for
+    batch-tracked products; passing `batch_id` requires `override_fefo=True`
+    and should carry a `reason_code` (Supervisor override, SRS Section 5.4).
+    `request_id` is purely for traceability back to a StockRequest --
+    callers (e.g. apps.requests.services) are responsible for checking
+    approval status before calling this; this function has no opinion on
+    approval workflow.
     """
+    if station_id is not None and project_id is not None:
+        raise ValueError("Issue stock to a station or a project, not both.")
+
     quantity = Decimal(str(quantity))
     if quantity <= 0:
         raise ValueError("quantity must be positive.")
@@ -146,7 +151,7 @@ def stock_out(
     consumed = []
     for batch, take_qty in plan:
         updated = StockLevel.objects.filter(
-            product=product, warehouse=warehouse, station=None, batch=batch, quantity__gte=take_qty
+            product=product, warehouse=warehouse, station=None, project=None, batch=batch, quantity__gte=take_qty
         ).update(quantity=F("quantity") - take_qty)
         if updated == 0:
             raise StockLevelChangedError(
@@ -158,7 +163,7 @@ def stock_out(
     for batch, take_qty in consumed:
         txn = InventoryTransaction.objects.create(
             type=TransactionType.STOCK_OUT, product=product, batch=batch, quantity=take_qty,
-            source_warehouse=warehouse, station_id=station_id, reason_code=reason_code,
+            source_warehouse=warehouse, station_id=station_id, project_id=project_id, reason_code=reason_code,
             comment=comment, performed_by=performed_by, request_id=request_id,
         )
         txns.append(txn)
@@ -166,6 +171,9 @@ def stock_out(
         if station_id is not None:
             station_level = _get_or_create_stock_level(product=product, station_id=station_id, batch=batch)
             StockLevel.objects.filter(pk=station_level.pk).update(quantity=F("quantity") + take_qty)
+        elif project_id is not None:
+            project_level = _get_or_create_stock_level(product=product, project_id=project_id, batch=batch)
+            StockLevel.objects.filter(pk=project_level.pk).update(quantity=F("quantity") + take_qty)
 
     _maybe_fire_low_stock(product, warehouse)
     return txns
@@ -247,7 +255,7 @@ def adjustment(*, product_id, warehouse_id, quantity_delta, performed_by, reason
 
     if quantity_delta < 0:
         updated = StockLevel.objects.filter(
-            product=product, warehouse=warehouse, station=None, batch=batch, quantity__gte=-quantity_delta
+            product=product, warehouse=warehouse, station=None, project=None, batch=batch, quantity__gte=-quantity_delta
         ).update(quantity=F("quantity") + quantity_delta)
         if updated == 0:
             raise StockLevelChangedError("Stock level changed; please retry the adjustment.")
@@ -268,9 +276,14 @@ def adjustment(*, product_id, warehouse_id, quantity_delta, performed_by, reason
 
 @transaction.atomic
 def return_stock(
-    *, product_id, warehouse_id, quantity, performed_by, station_id=None, reason_code="", comment="", batch_id=None
+    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None,
+    reason_code="", comment="", batch_id=None,
 ):
-    """Returns from a station/project back to a warehouse."""
+    """Returns from a station or deep clean project (mutually exclusive)
+    back to a warehouse."""
+    if station_id is not None and project_id is not None:
+        raise ValueError("Return from a station or a project, not both.")
+
     quantity = Decimal(str(quantity))
     product = Product.objects.get(pk=product_id)
     warehouse = Warehouse.objects.get(pk=warehouse_id)
@@ -278,17 +291,23 @@ def return_stock(
 
     if station_id is not None:
         updated = StockLevel.objects.filter(
-            product=product, station_id=station_id, warehouse=None, batch=batch, quantity__gte=quantity
+            product=product, station_id=station_id, warehouse=None, project=None, batch=batch, quantity__gte=quantity
         ).update(quantity=F("quantity") - quantity)
         if updated == 0:
             raise StockLevelChangedError("Station stock level changed; please retry the return.")
+    elif project_id is not None:
+        updated = StockLevel.objects.filter(
+            product=product, project_id=project_id, warehouse=None, station=None, batch=batch, quantity__gte=quantity
+        ).update(quantity=F("quantity") - quantity)
+        if updated == 0:
+            raise StockLevelChangedError("Project stock level changed; please retry the return.")
 
     level = _get_or_create_stock_level(product=product, warehouse_id=warehouse_id, batch=batch)
     StockLevel.objects.filter(pk=level.pk).update(quantity=F("quantity") + quantity)
 
     return InventoryTransaction.objects.create(
         type=TransactionType.RETURN, product=product, batch=batch, quantity=quantity,
-        dest_warehouse=warehouse, station_id=station_id, reason_code=reason_code,
+        dest_warehouse=warehouse, station_id=station_id, project_id=project_id, reason_code=reason_code,
         comment=comment, performed_by=performed_by,
     )
 
@@ -303,7 +322,7 @@ def _write_off(
     batch = Batch.objects.get(pk=batch_id) if batch_id else None
 
     updated = StockLevel.objects.filter(
-        product=product, warehouse=warehouse, station=None, batch=batch, quantity__gte=quantity
+        product=product, warehouse=warehouse, station=None, project=None, batch=batch, quantity__gte=quantity
     ).update(quantity=F("quantity") - quantity)
     if updated == 0:
         raise StockLevelChangedError(f"Stock level changed; please retry recording this {txn_type}.")
@@ -362,7 +381,7 @@ def reverse_transaction(*, transaction_id, performed_by, reason):
     elif original.dest_warehouse_id:
         # Original increased stock at dest_warehouse -> reversal decreases it.
         updated = StockLevel.objects.filter(
-            product=original.product, warehouse=original.dest_warehouse, station=None, batch=original.batch,
+            product=original.product, warehouse=original.dest_warehouse, station=None, project=None, batch=original.batch,
             quantity__gte=original.quantity,
         ).update(quantity=F("quantity") - original.quantity)
         if updated == 0:
@@ -391,7 +410,7 @@ def station_stock_usage(*, product_id, station_id, quantity, performed_by, comme
     batch = Batch.objects.get(pk=batch_id) if batch_id else None
 
     updated = StockLevel.objects.filter(
-        product=product, station_id=station_id, warehouse=None, batch=batch, quantity__gte=quantity
+        product=product, station_id=station_id, warehouse=None, project=None, batch=batch, quantity__gte=quantity
     ).update(quantity=F("quantity") - quantity)
     if updated == 0:
         raise StockLevelChangedError("Station stock level changed; please retry recording this usage.")

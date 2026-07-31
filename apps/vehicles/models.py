@@ -18,11 +18,10 @@ class CostType(models.TextChoices):
 
 
 class Vehicle(models.Model):
-    """SRS Section 5.9. `assigned_project` intentionally absent -- same
-    deferred-FK reasoning as Equipment.assigned_project and
-    InventoryTransaction.request; running costs link to whatever the
-    vehicle's current assignment is (station) until Projects exist, then
-    gain a project FK via an additive migration."""
+    """SRS Section 5.9. `current_project` mirrors `current_station` -- a
+    vehicle can be checked out to a deep clean project the same way it can
+    be checked out to a station; running cost entries record whichever the
+    vehicle was at when the cost was incurred."""
 
     registration = models.CharField(max_length=32, unique=True, db_index=True)
     make_model = models.CharField(max_length=200, blank=True)
@@ -30,6 +29,9 @@ class Vehicle(models.Model):
     status = models.CharField(max_length=20, choices=VehicleStatus.choices, default=VehicleStatus.AVAILABLE)
     current_station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="vehicles"
+    )
+    current_project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="vehicles"
     )
     assigned_driver = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="assigned_vehicles"
@@ -77,6 +79,9 @@ class VehicleLog(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="logs")
     action = models.CharField(max_length=24, choices=ACTION_CHOICES)
     station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     driver = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     override_used = models.BooleanField(default=False)
     comment = models.TextField(blank=True)
@@ -100,6 +105,10 @@ class VehicleCostLog(models.Model):
     station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
         help_text="Where the vehicle was assigned at the time of the cost.",
+    )
+    project = models.ForeignKey(
+        "projects.DeepCleanProject", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+        help_text="Deep clean project the vehicle was assigned to at the time of the cost.",
     )
     comment = models.TextField(blank=True)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")

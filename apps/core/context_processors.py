@@ -24,5 +24,8 @@ def nav_capabilities(request):
         # Only show the nav link where there's a real page behind it.
         "can_view_equipment": has_capability(user, "equipment.view_own") or has_capability(user, "equipment.assign"),
         "can_view_vehicles": has_capability(user, "vehicle.view_own") or has_capability(user, "vehicle.assign"),
+        "can_view_projects": has_capability(user, "project.manage")
+        or has_capability(user, "project.view")
+        or has_capability(user, "project.update_own"),
         "is_admin": user.role == Role.ADMIN,
     }
