@@ -28,5 +28,7 @@ def nav_capabilities(request):
         or has_capability(user, "project.view")
         or has_capability(user, "project.update_own"),
         "can_view_suppliers": has_capability(user, "supplier.view") or has_capability(user, "supplier.manage"),
+        "can_view_purchase_orders": has_capability(user, "purchase_order.view")
+        or has_capability(user, "purchase_order.manage"),
         "is_admin": user.role == Role.ADMIN,
     }

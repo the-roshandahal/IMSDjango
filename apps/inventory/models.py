@@ -25,10 +25,11 @@ class InventoryTransaction(ImmutableModel):
     `request` links a dispatch back to the StockRequest it fulfilled --
     purely for traceability; the actual "must be approved" business rule
     lives in apps.requests.services (inventory stays a generic primitive
-    with no awareness of approval workflows). `purchase_order` is still
-    intentionally absent -- that app doesn't exist yet. `project` was the
-    same kind of deferred field until apps.projects landed -- a deep clean
-    project is a stock location exactly like a warehouse or station.
+    with no awareness of approval workflows). `project` and `purchase_order`
+    are the same kind of deferred field, added once apps.projects and
+    apps.purchasing landed -- a deep clean project is a stock location
+    exactly like a warehouse or station, and a purchase order is what a
+    STOCK_IN goods receipt traces back to.
     """
 
     type = models.CharField(max_length=20, choices=TransactionType.choices)
@@ -48,6 +49,9 @@ class InventoryTransaction(ImmutableModel):
     )
     request = models.ForeignKey(
         "stock_requests.StockRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="transactions"
+    )
+    purchase_order = models.ForeignKey(
+        "purchasing.PurchaseOrder", null=True, blank=True, on_delete=models.PROTECT, related_name="receipts"
     )
 
     reason_code = models.CharField(max_length=40, blank=True)

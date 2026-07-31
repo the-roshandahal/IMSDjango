@@ -1,0 +1,77 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ po.reference }} - Purchase Order</title>
+  <style>
+    body { font-family: "IBM Plex Sans", Arial, sans-serif; color: #1a1a1a; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    .brand { font-family: "Space Grotesk", Arial, sans-serif; font-weight: 700; font-size: 1.4rem; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a1a1a; padding-bottom: 16px; margin-bottom: 20px; }
+    .ref { text-align: right; }
+    .ref .num { font-family: "IBM Plex Mono", monospace; font-size: 1.1rem; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .grid h3 { margin: 0 0 6px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; font-size: 0.9rem; }
+    th { background: #f3f3f3; text-align: left; }
+    .num { text-align: right; font-family: "IBM Plex Mono", monospace; }
+    .total-row td { font-weight: 700; }
+    .print-bar { text-align: right; margin-bottom: 20px; }
+    @media print { .print-bar { display: none; } body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="print-bar"><button onclick="window.print()">Print</button></div>
+
+  <div class="header">
+    <div class="brand">IMS <span style="font-weight:400;font-size:0.9rem;color:#666;">CLEANTECH1</span></div>
+    <div class="ref">
+      <div>Purchase Order</div>
+      <div class="num">{{ po.reference }}</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <h3>Supplier</h3>
+      <div>{{ po.supplier.name }}</div>
+      {% if po.supplier.contact_person %}<div>{{ po.supplier.contact_person }}</div>{% endif %}
+      {% if po.supplier.phone %}<div>{{ po.supplier.phone }}</div>{% endif %}
+      {% if po.supplier.email %}<div>{{ po.supplier.email }}</div>{% endif %}
+      {% if po.supplier.address %}<div style="white-space:pre-line;">{{ po.supplier.address }}</div>{% endif %}
+    </div>
+    <div>
+      <h3>Deliver to</h3>
+      <div>{{ po.warehouse.name }}</div>
+      {% if po.warehouse.address %}<div style="white-space:pre-line;">{{ po.warehouse.address }}</div>{% endif %}
+      <h3 style="margin-top:12px;">Order date</h3>
+      <div>{{ po.created_at|date:"d M Y" }}</div>
+      {% if po.expected_date %}<h3 style="margin-top:12px;">Expected delivery</h3><div>{{ po.expected_date }}</div>{% endif %}
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Product</th><th class="num">Quantity</th><th class="num">Unit price</th><th class="num">Line total</th></tr></thead>
+    <tbody>
+      {% for line in po.lines.all %}
+      <tr>
+        <td>{{ line.product.name }}</td>
+        <td class="num">{{ line.quantity_ordered }}</td>
+        <td class="num">{{ line.unit_price }}</td>
+        <td class="num">{{ line.line_total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td colspan="3" style="text-align:right;">Total</td>
+        <td class="num">{{ po.total_value|floatformat:2 }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {% if po.notes %}
+  <h3 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#666;">Notes</h3>
+  <p style="white-space:pre-line;">{{ po.notes }}</p>
+  {% endif %}
+</body>
+</html>

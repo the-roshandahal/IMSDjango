@@ -90,7 +90,10 @@ def _maybe_fire_low_stock(product: Product, warehouse: Warehouse):
 
 
 @transaction.atomic
-def stock_in(*, product_id, warehouse_id, quantity, performed_by, batch_id=None, reason_code="", comment=""):
+def stock_in(
+    *, product_id, warehouse_id, quantity, performed_by, batch_id=None, reason_code="", comment="",
+    purchase_order_id=None,
+):
     quantity = Decimal(str(quantity))
     if quantity <= 0:
         raise ValueError("quantity must be positive.")
@@ -105,6 +108,7 @@ def stock_in(*, product_id, warehouse_id, quantity, performed_by, batch_id=None,
     return InventoryTransaction.objects.create(
         type=TransactionType.STOCK_IN, product=product, batch=batch, quantity=quantity,
         dest_warehouse=warehouse, reason_code=reason_code, comment=comment, performed_by=performed_by,
+        purchase_order_id=purchase_order_id,
     )
 
 

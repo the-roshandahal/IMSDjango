@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ po.reference }} - IMS{% endblock %}
+{% block crumb %}Purchasing / Purchase Orders{% endblock %}
+{% block page_title %}{{ po.reference }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">
+    {{ po.supplier.name }} &middot; deliver to {{ po.warehouse.name }}
+    {% if po.expected_date %} &middot; expected {{ po.expected_date }}{% endif %}
+  </div>
+  <div class="actions-row">
+    {% if po.status == "draft" %}<span class="status-rail pending">Draft</span>
+    {% elif po.status == "sent" %}<span class="status-rail info">Sent</span>
+    {% elif po.status == "partially_received" %}<span class="status-rail warn">Partially received</span>
+    {% elif po.status == "received" %}<span class="status-rail good">Received</span>
+    {% else %}<span class="status-rail critical">Cancelled</span>{% endif %}
+    <a class="btn btn-secondary" href="{% url 'purchasing_web:print' po.pk %}" target="_blank">Print</a>
+    {% if can_manage and po.status == "draft" %}
+    <form method="post" action="{% url 'purchasing_web:send' po.pk %}" style="display:inline;">
+      {% csrf_token %}<button type="submit" class="btn btn-primary">Send to supplier</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if po.cancel_reason %}
+<div class="messages"><li class="warning" style="list-style:none;padding:10px 14px;border-radius:6px;border-left:3px solid var(--critical);background:var(--critical-soft);color:var(--critical);">
+  Cancelled by {{ po.cancelled_by.username|default:"—" }} on {{ po.cancelled_at|date:"d M Y" }}: {{ po.cancel_reason }}
+</li></div>
+{% endif %}
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Line items</h2><span class="sub">total {{ po.total_value|floatformat:2 }}</span></div>
+      <div class="panel-body flush">
+        {% if po.lines.all %}
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Product</th><th class="num">Ordered</th><th class="num">Received</th>
+              <th class="num">Remaining</th><th class="num">Unit price</th><th class="num">Line total</th>
+              {% if can_manage %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in po.lines.all %}
+            <tr>
+              <td><a href="{% url 'catalogue_web:product-detail' line.product_id %}">{{ line.product.name }}</a></td>
+              <td class="num mono">{{ line.quantity_ordered }}</td>
+              <td class="num mono">{{ line.quantity_received }}</td>
+              <td class="num mono">{{ line.quantity_remaining }}</td>
+              <td class="num mono">{{ line.unit_price }}</td>
+              <td class="num mono">{{ line.line_total|floatformat:2 }}</td>
+              {% if can_manage %}
+              <td>
+                {% if po.status == "draft" %}
+                <form method="post" action="{% url 'purchasing_web:line-remove' po.pk line.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Remove</button>
+                </form>
+                {% elif po.is_open_for_receiving and line.quantity_remaining > 0 %}
+                <form method="post" action="{% url 'purchasing_web:line-receive' po.pk line.pk %}" style="display:flex;gap:6px;">
+                  {% csrf_token %}
+                  <input type="number" step="0.01" min="0.01" max="{{ line.quantity_remaining }}" name="quantity" placeholder="qty" style="width:80px;" required>
+                  <button type="submit" class="btn btn-primary btn-sm">Receive</button>
+                </form>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No lines on this order.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if can_manage %}
+  <div>
+    {% if po.status == "draft" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Add line</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'purchasing_web:line-add' po.pk %}" id="add-line-form">
+          {% csrf_token %}
+          <div class="field"><label>Product</label>{{ add_line_form.product }}</div>
+          <div class="field"><label>Quantity</label>{{ add_line_form.quantity }}</div>
+          <div class="field"><label>Unit price</label>{{ add_line_form.unit_price }}</div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add line</button>
+        </form>
+      </div>
+    </div>
+    <script>
+    (function () {
+      var prices = {{ supplier_prices_json|safe }};
+      var form = document.getElementById("add-line-form");
+      var productSelect = form.querySelector("#{{ add_line_form.product.id_for_label }}");
+      var priceInput = form.querySelector("#{{ add_line_form.unit_price.id_for_label }}");
+      productSelect.addEventListener("change", function () {
+        var price = prices[productSelect.value];
+        if (price) priceInput.value = price;
+      });
+    })();
+    </script>
+    {% endif %}
+
+    {% if po.can_cancel %}
+    <div class="panel">
+      <div class="panel-head"><h2>Cancel order</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'purchasing_web:cancel' po.pk %}" onsubmit="return confirm('Cancel this purchase order?');">
+          {% csrf_token %}
+          <div class="field"><label>Reason</label>{{ cancel_form.reason }}</div>
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Cancel order</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if po.notes %}
+<div class="panel">
+  <div class="panel-head"><h2>Notes</h2></div>
+  <div class="panel-body"><p style="margin:0;white-space:pre-line;">{{ po.notes }}</p></div>
+</div>
+{% endif %}
+{% endblock %}

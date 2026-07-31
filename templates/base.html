@@ -41,11 +41,18 @@
         <span class="nav-dot"></span> Stations
       </a>
 
-      {% if can_view_suppliers %}
+      {% if can_view_suppliers or can_view_purchase_orders %}
       <div class="nav-section">Purchasing</div>
+      {% if can_view_suppliers %}
       <a class="nav-link {% if 'suppliers_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'suppliers_web:list' %}">
         <span class="nav-dot"></span> Suppliers
       </a>
+      {% endif %}
+      {% if can_view_purchase_orders %}
+      <a class="nav-link {% if 'purchasing_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'purchasing_web:list' %}">
+        <span class="nav-dot"></span> Purchase Orders
+      </a>
+      {% endif %}
       {% endif %}
 
       {% if can_view_requests or can_create_requests %}

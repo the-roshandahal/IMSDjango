@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}New purchase order - IMS{% endblock %}
+{% block crumb %}Purchasing / Purchase Orders{% endblock %}
+{% block page_title %}New purchase order{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:820px;">
+  <div class="panel-body">
+    <form method="post" id="po-form">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ header_form.supplier.id_for_label }}">Supplier</label>
+          {{ header_form.supplier }}
+          {% if header_form.supplier.errors %}<div class="errors">{{ header_form.supplier.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ header_form.warehouse.id_for_label }}">Deliver to warehouse</label>
+          {{ header_form.warehouse }}
+          {% if header_form.warehouse.errors %}<div class="errors">{{ header_form.warehouse.errors }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ header_form.expected_date.id_for_label }}">Expected delivery date</label>
+          {{ header_form.expected_date }}
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{ header_form.notes.id_for_label }}">Notes</label>
+        {{ header_form.notes }}
+      </div>
+
+      <fieldset>
+        <legend>Items</legend>
+        {{ formset.management_form }}
+        {% for line in formset %}
+        <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr;margin-bottom:10px;align-items:end;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Product</label>
+            {{ line.product }}
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Quantity</label>
+            {{ line.quantity }}
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Unit price</label>
+            {{ line.unit_price }}
+          </div>
+        </div>
+        {% if line.errors %}<div class="errors">{{ line.errors }}</div>{% endif %}
+        {% endfor %}
+        {% if formset.non_form_errors %}<div class="errors">{{ formset.non_form_errors }}</div>{% endif %}
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create purchase order</button>
+        <a class="btn btn-secondary" href="{% url 'purchasing_web:list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var prices = {{ supplier_prices_json|safe }};
+  var form = document.getElementById("po-form");
+  var supplierSelect = form.querySelector("#{{ header_form.supplier.id_for_label }}");
+
+  function priceFor(productId) {
+    var supplierId = supplierSelect.value;
+    return prices[supplierId] && prices[supplierId][productId];
+  }
+
+  function fillPriceFor(productSelect) {
+    var row = productSelect.closest(".form-grid");
+    var priceInput = row.querySelector("input[name$='-unit_price']");
+    var price = priceFor(productSelect.value);
+    if (price && priceInput) priceInput.value = price;
+  }
+
+  form.addEventListener("change", function (e) {
+    if (e.target.matches("select[name$='-product']")) {
+      fillPriceFor(e.target);
+    } else if (e.target === supplierSelect) {
+      form.querySelectorAll("select[name$='-product']").forEach(fillPriceFor);
+    }
+  });
+})();
+</script>
+{% endblock %}
