@@ -116,7 +116,7 @@
           <div class="field"><label>Driver (optional)</label>{{ assign_form.driver }}</div>
           <div class="field"><label>Comment</label>{{ assign_form.comment }}</div>
           {% if vehicle.compliance_blockers %}
-          <div class="field checkbox-field">{{ assign_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field checkbox-field">{{ assign_form.override }}<label for="{{ assign_form.override.id_for_label }}" style="margin:0;">Override compliance block</label></div>
           <div class="field"><label>Override reason</label>{{ assign_form.override_reason }}</div>
           {% endif %}
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Assign</button>

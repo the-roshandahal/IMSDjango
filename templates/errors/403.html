@@ -1,0 +1,10 @@
+{% extends "auth_base.html" %}
+{% block title %}Access denied - Cleantech1{% endblock %}
+{% block auth_sub %}Access denied{% endblock %}
+{% block content %}
+<div class="empty-state">
+  <div class="big">403</div>
+  <p class="muted">You don't have permission to view this page. If you think this is wrong, check with your supervisor or admin.</p>
+</div>
+<a class="btn btn-primary" href="{% url 'accounts:login' %}" style="width:100%;justify-content:center;">Back to Login</a>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "auth_base.html" %}
+{% block title %}Something went wrong - Cleantech1{% endblock %}
+{% block auth_sub %}Something went wrong{% endblock %}
+{% block content %}
+<div class="empty-state">
+  <div class="big">500</div>
+  <p class="muted">Something broke on our end. It's been logged -- try again in a moment.</p>
+</div>
+<a class="btn btn-primary" href="{% url 'accounts:login' %}" style="width:100%;justify-content:center;">Back to Login</a>
+{% endblock %}

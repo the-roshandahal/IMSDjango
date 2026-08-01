@@ -28,6 +28,7 @@ class Command(BaseCommand):
             "expiring_stock": self._check_expiring_stock(today),
             "outstanding_requests": self._check_outstanding_requests(),
             "overdue_pos": self._check_overdue_pos(today),
+            "overdue_stocktakes": self._check_overdue_stocktakes(today),
         }
         for label, count in counts.items():
             self.stdout.write(f"{label}: {count} notification(s)")
@@ -36,7 +37,7 @@ class Command(BaseCommand):
         from django.db.models import Q
 
         from apps.equipment.models import Equipment
-        from apps.notifications.services import admins_and_management, notify_users
+        from apps.notifications.services import admins_and_supervisors, notify_users
 
         qs = Equipment.objects.filter(
             Q(next_maintenance_due__lte=today) | Q(next_test_due__lte=today) | Q(last_test_result="fail")
@@ -44,7 +45,7 @@ class Command(BaseCommand):
         sent = 0
         for equipment in qs:
             n = notify_users(
-                admins_and_management(), type="maintenance_due", title=f"Equipment due: {equipment.asset_id}",
+                admins_and_supervisors(), type="maintenance_due", title=f"Equipment due: {equipment.asset_id}",
                 message=f"{equipment.name} ({equipment.asset_id}) needs maintenance or a safety test.",
                 link=reverse("equipment_web:detail", args=[equipment.pk]),
                 dedupe_key=f"maintenance_due:equipment:{equipment.pk}:{today.isoformat()}",
@@ -56,7 +57,7 @@ class Command(BaseCommand):
         from datetime import timedelta
 
         from apps.equipment.models import TestTag
-        from apps.notifications.services import admins_and_management, notify_users, station_recipients, warehouse_recipients
+        from apps.notifications.services import admins_and_supervisors, notify_users, station_recipients, warehouse_recipients
 
         horizon = today + timedelta(days=TestTag.EXPIRY_WARNING_DAYS)
         qs = TestTag.objects.filter(expiry_date__lte=horizon).select_related("warehouse", "station")
@@ -68,7 +69,7 @@ class Command(BaseCommand):
             elif tag.station_id:
                 recipients = {u.id: u for u in station_recipients(tag.station_id)}
             else:
-                recipients = {u.id: u for u in admins_and_management()}
+                recipients = {u.id: u for u in admins_and_supervisors()}
             n = notify_users(
                 recipients.values(), type="maintenance_due", title=f"Test tag {label}: {tag.name}",
                 message=f"{tag.name} at {tag.warehouse or tag.station or 'unassigned location'}, {label}.",
@@ -81,7 +82,7 @@ class Command(BaseCommand):
     def _check_vehicles(self, today):
         from django.db.models import Q
 
-        from apps.notifications.services import admins_and_management, notify_users
+        from apps.notifications.services import admins_and_supervisors, notify_users
         from apps.vehicles.models import Vehicle
 
         qs = Vehicle.objects.filter(
@@ -90,7 +91,7 @@ class Command(BaseCommand):
         sent = 0
         for vehicle in qs:
             n = notify_users(
-                admins_and_management(), type="vehicle_compliance", title=f"Vehicle compliance: {vehicle.registration}",
+                admins_and_supervisors(), type="vehicle_compliance", title=f"Vehicle compliance: {vehicle.registration}",
                 message=f"{vehicle.registration} has a service or insurance date that has passed.",
                 link=reverse("vehicles_web:detail", args=[vehicle.pk]),
                 dedupe_key=f"vehicle_compliance:vehicle:{vehicle.pk}:{today.isoformat()}",
@@ -117,7 +118,7 @@ class Command(BaseCommand):
         return sent
 
     def _check_outstanding_requests(self, warn_after_hours=48, escalate_after_hours=96):
-        from apps.notifications.services import admins_and_management, notify_users, warehouse_recipients
+        from apps.notifications.services import admins_and_supervisors, notify_users, warehouse_recipients
         from apps.requests.models import StockRequest, StockRequestStatus
 
         cutoff_warn = timezone.now() - timedelta(hours=warn_after_hours)
@@ -136,11 +137,39 @@ class Command(BaseCommand):
             sent += len(n)
             if req.requested_at <= cutoff_escalate:
                 n2 = notify_users(
-                    admins_and_management(), type="request_outstanding", title=f"Escalation: request #{req.pk} unactioned",
+                    admins_and_supervisors(), type="request_outstanding", title=f"Escalation: request #{req.pk} unactioned",
                     message=f"Pending since {req.requested_at:%d %b}, over {escalate_after_hours}h with no action.",
                     link=link, dedupe_key=f"request_escalated:request:{req.pk}:{date.today().isoformat()}",
                 )
                 sent += len(n2)
+        return sent
+
+    def _check_overdue_stocktakes(self, today, overdue_after_days=7):
+        """Nags whoever's assigned to a station if its weekly stock count
+        (SRS-adjacent -- done every Sunday in practice) is more than a week
+        stale, or has never been done."""
+        from apps.inventory.models import Stocktake
+        from apps.notifications.services import notify_users, station_recipients
+        from apps.warehouses.models import Station
+
+        cutoff = today - timedelta(days=overdue_after_days)
+        sent = 0
+        for station in Station.objects.filter(is_active=True):
+            last = (
+                Stocktake.objects.filter(station=station, status="completed")
+                .order_by("-completed_at").first()
+            )
+            if last and last.completed_at.date() > cutoff:
+                continue
+            when = f"last done {last.completed_at.date()}" if last else "never done"
+            n = notify_users(
+                station_recipients(station.id), type="stocktake_overdue",
+                title=f"Weekly stock count due: {station.name}",
+                message=f"{station.name} hasn't had a stock count in over {overdue_after_days} days ({when}).",
+                link=reverse("inventory_web:stocktake-list"),
+                dedupe_key=f"stocktake_overdue:station:{station.pk}:{today.isoformat()}",
+            )
+            sent += len(n)
         return sent
 
     def _check_overdue_pos(self, today):

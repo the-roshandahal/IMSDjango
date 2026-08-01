@@ -188,7 +188,7 @@
           {% csrf_token %}
           <div class="field"><label>Equipment</label>{{ equipment_form.equipment }}</div>
           <div class="field"><label>Comment</label>{{ equipment_form.comment }}</div>
-          <div class="field checkbox-field">{{ equipment_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field checkbox-field">{{ equipment_form.override }}<label for="{{ equipment_form.override.id_for_label }}" style="margin:0;">Override compliance block</label></div>
           <div class="field"><label>Override reason</label>{{ equipment_form.override_reason }}</div>
           <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Take equipment</button>
         </form>
@@ -203,7 +203,7 @@
           <div class="field"><label>Vehicle</label>{{ vehicle_form.vehicle }}</div>
           <div class="field"><label>Driver (optional)</label>{{ vehicle_form.driver }}</div>
           <div class="field"><label>Comment</label>{{ vehicle_form.comment }}</div>
-          <div class="field checkbox-field">{{ vehicle_form.override }}<label style="margin:0;">Override compliance block</label></div>
+          <div class="field checkbox-field">{{ vehicle_form.override }}<label for="{{ vehicle_form.override.id_for_label }}" style="margin:0;">Override compliance block</label></div>
           <div class="field"><label>Override reason</label>{{ vehicle_form.override_reason }}</div>
           <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Take vehicle</button>
         </form>
@@ -259,7 +259,7 @@
         <form method="post" action="{% url 'projects_web:close' project.pk %}" onsubmit="return confirm('Close this project?');">
           {% csrf_token %}
           {% if outstanding_assets %}
-          <div class="field checkbox-field">{{ close_form.override }}<label style="margin:0;">Override outstanding equipment/vehicles</label></div>
+          <div class="field checkbox-field">{{ close_form.override }}<label for="{{ close_form.override.id_for_label }}" style="margin:0;">Override outstanding equipment/vehicles</label></div>
           <div class="field"><label>Override reason</label>{{ close_form.override_reason }}</div>
           {% endif %}
           <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Close project</button>

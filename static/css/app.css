@@ -11,11 +11,18 @@
      for dark mode. Reusing --ink-900 as a background used to make
      the sidebar go pale in dark mode; keep them separate. */
   --panel-navy: #101828;
+  --accent-hover: #115a7a;
+  /* Fixed solid fills for white-text-on-solid controls (unread badge,
+     danger/good button hover) -- --critical/--good invert to pale pastel
+     shades in dark mode for text-on-soft use, which fail contrast as a
+     solid fill behind white text. Same reasoning as --panel-navy above. */
+  --critical-solid: #c0392b;
+  --good-solid: #147d3b;
 
   --ink-900: #101828;
   --ink-700: #29334a;
   --ink-600: #4b5565;
-  --ink-400: #8a94a6;
+  --ink-400: #68707e; /* darkened from #8a94a6 -- was 2.83:1 on --surface-0, fails WCAG AA (needs 4.5:1) */
 
   --surface-0: #f5f6f8;
   --surface-1: #ffffff;
@@ -28,13 +35,13 @@
   --accent-ink: #ffffff;
   --accent-soft: #e4f2f7;
 
-  --good: #15803d;
+  --good: #147d3b; /* darkened from #15803d -- was 4.46:1 on --good-soft, just under AA */
   --good-soft: #e7f5ec;
   --warn: #b45309;
   --warn-soft: #fdf1e2;
   --critical: #c0392b;
   --critical-soft: #fbeae8;
-  --pending: #6b7280;
+  --pending: #666d7a; /* darkened from #6b7280 -- was 4.23:1 on --pending-soft, fails AA */
   --pending-soft: #eef0f2;
   --info: #2563a6;
   --info-soft: #e7f0f9;
@@ -54,7 +61,6 @@
     --ink-900: #eef1f6;
     --ink-700: #d3d9e3;
     --ink-600: #a7b0c0;
-    --ink-400: #75809652;
     --ink-400: #7c8698;
 
     --surface-0: #0d1420;
@@ -78,6 +84,8 @@
     --pending-soft: #1c2532;
     --info: #7db6f0;
     --info-soft: #0f2436;
+
+    --accent-hover: #60c9ed;
 
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -112,6 +120,33 @@ code, .mono { font-family: var(--font-mono); }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 100;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 12px;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ---------- App shell ---------- */
@@ -162,7 +197,7 @@ code, .mono { font-family: var(--font-mono); }
   font-size: 0.68rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #6b7690;
+  color: #79839b; /* lightened from #6b7690 -- was 3.90:1 on --panel-navy, fails WCAG AA */
   padding: 16px 20px 6px;
 }
 
@@ -256,7 +291,7 @@ code, .mono { font-family: var(--font-mono); }
   padding: 0 4px;
   margin-left: 5px;
   border-radius: 8px;
-  background: var(--critical);
+  background: var(--critical-solid);
   color: #fff;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -420,13 +455,13 @@ table.data .muted { color: var(--ink-400); font-size: 0.8rem; }
   cursor: pointer; text-decoration: none;
 }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-primary:hover { background: #115a7a; text-decoration: none; color: var(--accent-ink); }
+.btn-primary:hover { background: var(--accent-hover); text-decoration: none; color: var(--accent-ink); }
 .btn-secondary { background: var(--surface-1); border-color: var(--line-strong); color: var(--ink-700); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .btn-danger { background: var(--critical-soft); color: var(--critical); }
-.btn-danger:hover { background: var(--critical); color: #fff; text-decoration: none; }
+.btn-danger:hover { background: var(--critical-solid); color: #fff; text-decoration: none; }
 .btn-good { background: var(--good-soft); color: var(--good); }
-.btn-good:hover { background: var(--good); color: #fff; text-decoration: none; }
+.btn-good:hover { background: var(--good-solid); color: #fff; text-decoration: none; }
 .btn-sm { padding: 5px 10px; font-size: 0.76rem; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -447,15 +482,16 @@ input[type=date], input[type=search], select, textarea {
   background: var(--surface-1); color: var(--ink-900);
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-.checkbox-field { display: flex; align-items: center; gap: 8px; }
-.checkbox-field input { width: auto; }
+.checkbox-field { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.checkbox-field input { width: 18px; height: 18px; flex-shrink: 0; }
+.checkbox-field label { cursor: pointer; }
 .checkbox-list {
   list-style: none; margin: 0; padding: 8px; border: 1px solid var(--line-strong);
   border-radius: var(--radius); max-height: 220px; overflow-y: auto; background: var(--surface-1);
 }
-.checkbox-list li { list-style: none; padding: 4px 0; }
-.checkbox-list label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 400; color: var(--ink-900); margin: 0; }
-.checkbox-list input { width: auto; }
+.checkbox-list li { list-style: none; padding: 2px 0; }
+.checkbox-list label { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 400; color: var(--ink-900); margin: 0; padding: 7px 4px; min-height: 44px; box-sizing: border-box; }
+.checkbox-list input { width: 18px; height: 18px; flex-shrink: 0; }
 
 .signature-pad-wrap { border: 1px dashed var(--line-strong); border-radius: var(--radius); background: #fff; touch-action: none; }
 .signature-pad-wrap canvas { display: block; width: 100%; height: 160px; cursor: crosshair; }
@@ -554,8 +590,9 @@ legend { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppe
   table.data th, table.data td { padding: 9px 12px; white-space: nowrap; }
 
   .form-actions, .actions-row { flex-wrap: wrap; }
-  .btn { padding: 10px 16px; font-size: 0.88rem; }
-  .btn-sm { padding: 8px 12px; }
+  .btn { padding: 12px 18px; font-size: 0.88rem; min-height: 44px; }
+  .btn-sm { padding: 10px 14px; min-height: 40px; }
+  .nav-toggle { width: 44px; height: 44px; }
 
   /* 16px prevents iOS Safari auto-zooming the page on input focus */
   input[type=text], input[type=password], input[type=email], input[type=number],

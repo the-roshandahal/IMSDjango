@@ -9,6 +9,7 @@ class NotificationType(models.TextChoices):
     VEHICLE_COMPLIANCE = "vehicle_compliance", "Vehicle compliance"
     REQUEST_OUTSTANDING = "request_outstanding", "Outstanding request"
     PO_STATUS = "po_status", "Purchase order"
+    STOCKTAKE_OVERDUE = "stocktake_overdue", "Stock count overdue"
 
 
 class Notification(models.Model):

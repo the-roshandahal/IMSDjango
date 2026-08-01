@@ -13,9 +13,10 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="shell" id="shell">
     <div class="nav-backdrop" id="navBackdrop"></div>
-    <aside class="sidebar">
+    <aside class="sidebar" aria-label="Main navigation">
       <div class="brand">
         <img src="{% static 'img/logo-mark.jpg' %}" alt="" class="brand-mark">
         <span>Cleantech1 <span class="brand-tag">IMS</span></span>
@@ -25,30 +26,64 @@
       <a class="nav-link {% if request.resolver_match.view_name == 'accounts:dashboard' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
         <span class="nav-dot"></span> Dashboard
       </a>
-      <a class="nav-link {% if request.resolver_match.view_name == 'core_web:guide' %}active{% endif %}" href="{% url 'core_web:guide' %}" target="_blank">
-        <span class="nav-dot"></span> User Guide
+
+      <div class="nav-section">Train Lookup</div>
+      <a class="nav-link {% if 'trains_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'trains_web:lookup' %}">
+        <span class="nav-dot"></span> Live Sydney Trains
       </a>
 
-      {% if can_view_products %}
+      {% if show_inventory_nav %}
       <div class="nav-section">Inventory</div>
+      {% if can_view_products %}
       <a class="nav-link {% if 'catalogue_web:product' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'catalogue_web:product-list' %}">
         <span class="nav-dot"></span> Products
       </a>
       <a class="nav-link {% if 'catalogue_web:category' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'catalogue_web:category-list' %}">
         <span class="nav-dot"></span> Categories
       </a>
+      <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name and 'stocktake' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
+        <span class="nav-dot"></span> Transactions
+      </a>
+      {% endif %}
+      {% if can_view_requests or can_create_requests %}
+      <a class="nav-link {% if 'stock_requests_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'stock_requests_web:list' %}">
+        <span class="nav-dot"></span> Stock Requests
+      </a>
+      {% endif %}
+      {% if can_view_stocktakes %}
+      <a class="nav-link {% if 'stocktake' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inventory_web:stocktake-list' %}">
+        <span class="nav-dot"></span> Stocktakes
+      </a>
+      {% endif %}
+      {% endif %}
+
+      <div class="nav-section">Sites &amp; Fleet</div>
+      {% if can_view_warehouses %}
+      <a class="nav-link {% if 'warehouses_web:warehouse' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:warehouse-list' %}">
+        <span class="nav-dot"></span> Warehouses
+      </a>
+      {% endif %}
+      <a class="nav-link {% if 'warehouses_web:station' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:station-list' %}">
+        <span class="nav-dot"></span> Stations
+      </a>
+      {% if is_station_role and can_view_transactions %}
       <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
         <span class="nav-dot"></span> Transactions
       </a>
       {% endif %}
-
-      <div class="nav-section">Sites</div>
-      <a class="nav-link {% if 'warehouses_web:warehouse' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:warehouse-list' %}">
-        <span class="nav-dot"></span> Warehouses
+      {% if can_view_equipment %}
+      <a class="nav-link {% if 'equipment_web:' in request.resolver_match.view_name and 'test-tag' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:list' %}">
+        <span class="nav-dot"></span> Equipment
       </a>
-      <a class="nav-link {% if 'warehouses_web:station' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:station-list' %}">
-        <span class="nav-dot"></span> Stations
+      <a class="nav-link {% if 'test-tag' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:test-tag-list' %}">
+        <span class="nav-dot"></span> Test Tags
       </a>
+      {% endif %}
+      {% if can_view_vehicles %}
+      <a class="nav-link {% if 'vehicles_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'vehicles_web:list' %}">
+        <span class="nav-dot"></span> Vehicles
+      </a>
+      {% endif %}
 
       {% if can_view_suppliers or can_view_purchase_orders %}
       <div class="nav-section">Purchasing</div>
@@ -64,43 +99,16 @@
       {% endif %}
       {% endif %}
 
-      {% if can_view_requests or can_create_requests %}
-      <div class="nav-section">Requests</div>
-      <a class="nav-link {% if 'stock_requests_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'stock_requests_web:list' %}">
-        <span class="nav-dot"></span> Stock Requests
-      </a>
-      {% endif %}
-
+      {% if can_view_projects or can_view_employees %}
       <div class="nav-section">Deep Clean</div>
       {% if can_view_projects %}
       <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
         <span class="nav-dot"></span> Projects
       </a>
       {% endif %}
-      <a class="nav-link {% if 'trains_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'trains_web:lookup' %}">
-        <span class="nav-dot"></span> Train Lookup
-      </a>
-
       {% if can_view_employees %}
-      <div class="nav-section">Workforce</div>
       <a class="nav-link {% if 'employees_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'employees_web:list' %}">
         <span class="nav-dot"></span> Employees
-      </a>
-      {% endif %}
-
-      {% if can_view_equipment or can_view_vehicles %}
-      <div class="nav-section">Fleet</div>
-      {% if can_view_equipment %}
-      <a class="nav-link {% if 'equipment_web:' in request.resolver_match.view_name and 'test-tag' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:list' %}">
-        <span class="nav-dot"></span> Equipment
-      </a>
-      <a class="nav-link {% if 'test-tag' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'equipment_web:test-tag-list' %}">
-        <span class="nav-dot"></span> Test Tags
-      </a>
-      {% endif %}
-      {% if can_view_vehicles %}
-      <a class="nav-link {% if 'vehicles_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'vehicles_web:list' %}">
-        <span class="nav-dot"></span> Vehicles
       </a>
       {% endif %}
       {% endif %}
@@ -121,6 +129,11 @@
         <span class="nav-dot"></span> Audit Log
       </a>
       {% endif %}
+
+      <div class="nav-section">Help</div>
+      <a class="nav-link {% if request.resolver_match.view_name == 'core_web:guide' %}active{% endif %}" href="{% url 'core_web:guide' %}" target="_blank">
+        <span class="nav-dot"></span> User Guide
+      </a>
     </aside>
 
     <div class="shell-main">
@@ -155,7 +168,7 @@
         {% endif %}
       </header>
 
-      <main class="content">
+      <main class="content" id="main-content" tabindex="-1">
         {% if messages %}
           <ul class="messages">
             {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}

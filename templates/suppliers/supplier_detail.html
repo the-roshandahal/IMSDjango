@@ -80,7 +80,7 @@
           <div class="field"><label>Unit price</label>{{ product_form.unit_price }}</div>
           <div class="field"><label>Supplier SKU</label>{{ product_form.supplier_sku }}</div>
           <div class="field"><label>Lead time (days)</label>{{ product_form.lead_time_days }}</div>
-          <div class="field checkbox-field">{{ product_form.is_preferred }}<label style="margin:0;">Preferred supplier for this product</label></div>
+          <div class="field checkbox-field">{{ product_form.is_preferred }}<label for="{{ product_form.is_preferred.id_for_label }}" style="margin:0;">Preferred supplier for this product</label></div>
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add product</button>
         </form>
       </div>

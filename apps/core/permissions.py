@@ -17,6 +17,7 @@ ROLE_CAPABILITIES = {
     ("admin", "*"): True,
 
     ("wh_supervisor", "product.view"): True,
+    ("wh_supervisor", "warehouse.view"): True,
     ("wh_supervisor", "warehouse.stock.manage"): True,
     ("wh_supervisor", "station_request.approve"): True,
     ("wh_supervisor", "station_request.view"): True,
@@ -31,18 +32,25 @@ ROLE_CAPABILITIES = {
     ("wh_supervisor", "purchase_order.manage"): True,
     ("wh_supervisor", "employee.manage"): True,
     ("wh_supervisor", "employee.view"): True,
+    # Merged in from the retired "management" role -- one person runs the
+    # whole warehouse side now, so they get the company-wide oversight
+    # view management used to have, not just their own site.
+    ("wh_supervisor", "reports.view"): True,
+    ("wh_supervisor", "warehouse.stock.view"): True,
+    ("wh_supervisor", "project.view"): True,
+    ("wh_supervisor", "stocktake.participate"): True,
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
     ("station_supervisor", "station_request.view"): True,
     ("station_supervisor", "station.usage.record"): True,
     ("station_supervisor", "equipment.request"): True,
+    ("station_supervisor", "equipment.view_own"): True,
     ("station_supervisor", "vehicle.view_own"): True,
     ("station_supervisor", "stocktake.manage"): True,
     ("station_supervisor", "reports.view_own_site"): True,
     ("station_supervisor", "purchase_request.create"): True,
-    ("station_supervisor", "employee.manage"): True,
-    ("station_supervisor", "employee.view"): True,
+    ("station_supervisor", "transaction.view"): True,
 
     ("deepclean_supervisor", "product.view"): True,
     ("deepclean_supervisor", "project.update_own"): True,
@@ -54,31 +62,25 @@ ROLE_CAPABILITIES = {
     ("deepclean_supervisor", "employee.view"): True,
 
     ("wh_staff", "product.view"): True,
+    ("wh_staff", "warehouse.view"): True,
     ("wh_staff", "equipment.view_own"): True,
     ("wh_staff", "vehicle.view_own"): True,
     ("wh_staff", "stocktake.participate"): True,
+    ("wh_staff", "stocktake.manage"): True,
     ("wh_staff", "purchase_order.manage"): True,
 
     ("station_staff", "product.view"): True,
     ("station_staff", "station_request.create"): True,
     ("station_staff", "station.usage.record"): True,
     ("station_staff", "equipment.view_own"): True,
-
-    ("management", "product.view"): True,
-    ("management", "station_request.view"): True,
-    ("management", "equipment.view_own"): True,
-    ("management", "vehicle.view_own"): True,
-    ("management", "stocktake.participate"): True,
-    ("management", "reports.view"): True,
-    ("management", "warehouse.stock.view"): True,
-    ("management", "project.view"): True,
-    ("management", "supplier.view"): True,
-    ("management", "purchase_order.view"): True,
-    ("management", "employee.view"): True,
+    ("station_staff", "stocktake.manage"): True,
+    ("station_staff", "transaction.view"): True,
 }
 
 # Roles that see everything regardless of SiteAssignment (still gated by capability).
-SITE_SCOPE_EXEMPT_ROLES = {"admin", "management"}
+# wh_supervisor is exempt too -- with the "management" role retired, they're
+# the sole company-wide oversight role now (see the capability grants above).
+SITE_SCOPE_EXEMPT_ROLES = {"admin", "wh_supervisor"}
 
 
 def has_capability(user, action: str) -> bool:

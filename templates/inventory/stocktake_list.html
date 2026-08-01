@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Stocktakes - IMS{% endblock %}
+{% block crumb %}Inventory{% endblock %}
+{% block page_title %}Stocktakes{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ stocktakes|length }} stocktake{{ stocktakes|length|pluralize }}</div>
+  {% if can_start %}<a class="btn btn-primary" href="{% url 'inventory_web:stocktake-new' %}">+ Start a stocktake</a>{% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if stocktakes %}
+    <table class="data">
+      <thead><tr><th>Site</th><th>Started</th><th>Started by</th><th class="num">Lines counted</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for s in stocktakes %}
+        <tr class="rail-row {% if s.status == 'completed' %}good{% else %}pending{% endif %}">
+          <td><a href="{% url 'inventory_web:stocktake-detail' s.pk %}">{{ s.warehouse.name|default:s.station.name }}</a>
+            {% if s.station %}<span class="status-rail info">Station</span>{% else %}<span class="status-rail pending">Warehouse</span>{% endif %}
+          </td>
+          <td class="mono muted">{{ s.started_at|date:"d M Y, H:i" }}</td>
+          <td class="muted">{{ s.started_by.username }}</td>
+          <td class="num mono">{{ s.lines.count }}</td>
+          <td>{% if s.status == "completed" %}<span class="status-rail good">Completed</span>{% else %}<span class="status-rail pending">Open</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No stocktakes recorded yet.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

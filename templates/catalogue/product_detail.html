@@ -34,7 +34,7 @@
         <dl class="detail-grid">
           <div><dt>Category</dt><dd>{{ product.category.name }}</dd></div>
           <div><dt>Barcode</dt><dd class="mono">{{ product.barcode }}</dd></div>
-          <div><dt>Total stock</dt><dd class="mono">{{ total_stock }}</dd></div>
+          {% if total_stock is not None %}<div><dt>Total stock (warehouses)</dt><dd class="mono">{{ total_stock }}</dd></div>{% endif %}
           <div><dt>Reorder point</dt><dd class="mono">{{ product.reorder_point }}</dd></div>
           <div><dt>Minimum level</dt><dd class="mono">{{ product.minimum_stock_level }}</dd></div>
           <div><dt>Batch tracked</dt><dd>{{ product.is_batch_tracked|yesno:"Yes,No" }}</dd></div>
@@ -71,7 +71,7 @@
       </div>
     </div>
 
-    {% if product.is_batch_tracked %}
+    {% if product.is_batch_tracked and can_view_warehouses %}
     <div class="panel">
       <div class="panel-head"><h2>Batches</h2><span class="sub">FEFO order</span></div>
       <div class="panel-body flush">

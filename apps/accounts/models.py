@@ -8,13 +8,18 @@ from django.utils import timezone
 
 
 class Role(models.TextChoices):
+    """`MANAGEMENT` was removed -- with a single warehouse and one person
+    running it, a separate oversight role added nothing that WH_SUPERVISOR
+    doesn't already cover, so its capabilities were folded in there.
+    `WH_STAFF` stays defined but unused for now -- ready for whenever a
+    second warehouse person is hired."""
+
     ADMIN = "admin", "Administrator"
     WH_SUPERVISOR = "wh_supervisor", "Warehouse Supervisor"
     STATION_SUPERVISOR = "station_supervisor", "Station Supervisor"
     DEEPCLEAN_SUPERVISOR = "deepclean_supervisor", "Deep Clean Supervisor"
     WH_STAFF = "wh_staff", "Warehouse Staff"
     STATION_STAFF = "station_staff", "Station Cleaning Staff"
-    MANAGEMENT = "management", "Management"
 
 
 class User(AbstractUser):

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Stocktake #{{ stocktake.pk }} - IMS{% endblock %}
+{% block crumb %}Inventory / Stocktakes{% endblock %}
+{% block page_title %}Stocktake #{{ stocktake.pk }} &mdash; {{ stocktake.site }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Started {{ stocktake.started_at|date:"d M Y, H:i" }} by {{ stocktake.started_by.username }}</div>
+  <div>{% if stocktake.status == "completed" %}<span class="status-rail good">Completed</span>{% else %}<span class="status-rail pending">Open</span>{% endif %}</div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Counted lines</h2><span class="sub">{{ stocktake.lines.count }} product{{ stocktake.lines.count|pluralize }}</span></div>
+  <div class="panel-body flush">
+    {% if stocktake.lines.all %}
+    <table class="data">
+      <thead><tr><th>Product</th><th class="num">On system</th><th class="num">Counted</th><th class="num">Variance</th></tr></thead>
+      <tbody>
+        {% for line in stocktake.lines.all %}
+        <tr class="rail-row {% if line.variance == 0 %}good{% elif line.variance > 0 %}info{% else %}warn{% endif %}">
+          <td><a href="{% url 'catalogue_web:product-detail' line.product_id %}">{{ line.product.name }}</a></td>
+          <td class="num mono">{{ line.system_quantity }}</td>
+          <td class="num mono">{{ line.counted_quantity }}</td>
+          <td class="num mono">{% if line.variance > 0 %}+{{ line.variance }}{% else %}{{ line.variance }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No lines recorded.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -37,7 +37,7 @@ def _with_low_stock_count(qs):
 
 
 class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, ListView):
-    capability = "product.view"
+    capability = "warehouse.view"
     site_type = "warehouse"
     model = Warehouse
     template_name = "warehouses/warehouse_list.html"
@@ -48,7 +48,7 @@ class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, List
 
 
 class WarehouseDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, DetailView):
-    capability = "product.view"
+    capability = "warehouse.view"
     site_type = "warehouse"
     model = Warehouse
     template_name = "warehouses/warehouse_detail.html"
@@ -129,6 +129,10 @@ class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, Deta
             .order_by("-total")
         )
         ctx["recent_requests"] = self.object.stock_requests.select_related("warehouse").order_by("-requested_at")[:5]
+
+        from apps.inventory.models import Stocktake
+
+        ctx["recent_stocktakes"] = Stocktake.objects.filter(station=self.object).select_related("started_by")[:5]
         return ctx
 
 

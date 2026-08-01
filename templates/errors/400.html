@@ -1,0 +1,10 @@
+{% extends "auth_base.html" %}
+{% block title %}Bad request - Cleantech1{% endblock %}
+{% block auth_sub %}Bad request{% endblock %}
+{% block content %}
+<div class="empty-state">
+  <div class="big">400</div>
+  <p class="muted">That request didn't look right. Try going back and trying again.</p>
+</div>
+<a class="btn btn-primary" href="{% url 'accounts:login' %}" style="width:100%;justify-content:center;">Back to Login</a>
+{% endblock %}

@@ -47,11 +47,19 @@ class ProductDetailView(CapabilityRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["batches"] = self.object.batches.select_related("warehouse").order_by("expiry_date")
-        ctx["stock_levels"] = self.object.stock_levels.select_related("warehouse", "station", "project").filter(quantity__gt=0)
-        ctx["total_stock"] = (
-            self.object.stock_levels.filter(warehouse__isnull=False).aggregate(t=Sum("quantity"))["t"] or 0
-        )
+        can_view_warehouses = has_capability(self.request.user, "warehouse.view")
+        ctx["can_view_warehouses"] = can_view_warehouses
+        stock_levels = self.object.stock_levels.select_related("warehouse", "station", "project").filter(quantity__gt=0)
+        if can_view_warehouses:
+            ctx["batches"] = self.object.batches.select_related("warehouse").order_by("expiry_date")
+            ctx["stock_levels"] = stock_levels
+            ctx["total_stock"] = (
+                self.object.stock_levels.filter(warehouse__isnull=False).aggregate(t=Sum("quantity"))["t"] or 0
+            )
+        else:
+            ctx["batches"] = self.object.batches.none()
+            ctx["stock_levels"] = stock_levels.filter(warehouse__isnull=True)
+            ctx["total_stock"] = None
         from apps.documents.services import documents_for
 
         ctx["documents"] = documents_for(self.object)

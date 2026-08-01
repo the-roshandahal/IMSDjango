@@ -40,15 +40,17 @@ def _send_email(user, subject, message):
 
 
 def warehouse_recipients(warehouse_id):
-    """wh_supervisors assigned to this warehouse, plus admin/management who
-    see everything regardless of SiteAssignment."""
+    """wh_supervisors assigned to this warehouse, plus admin who sees
+    everything regardless of SiteAssignment (wh_supervisor already does
+    too via SITE_SCOPE_EXEMPT_ROLES, but role__in below covers any
+    wh_supervisor account even without a formal SiteAssignment row)."""
     from apps.accounts.models import Role, SiteAssignment, User
 
     assigned_ids = SiteAssignment.objects.filter(warehouse_id=warehouse_id, user__role=Role.WH_SUPERVISOR).values_list(
         "user_id", flat=True
     )
     return User.objects.filter(
-        Q(id__in=assigned_ids) | Q(role__in=[Role.ADMIN, Role.MANAGEMENT])
+        Q(id__in=assigned_ids) | Q(role__in=[Role.ADMIN, Role.WH_SUPERVISOR])
     ).filter(is_active=True).distinct()
 
 
@@ -59,14 +61,14 @@ def station_recipients(station_id):
         "user_id", flat=True
     )
     return User.objects.filter(
-        Q(id__in=assigned_ids) | Q(role__in=[Role.ADMIN, Role.MANAGEMENT])
+        Q(id__in=assigned_ids) | Q(role__in=[Role.ADMIN, Role.WH_SUPERVISOR])
     ).filter(is_active=True).distinct()
 
 
-def admins_and_management():
+def admins_and_supervisors():
     from apps.accounts.models import Role, User
 
-    return User.objects.filter(role__in=[Role.ADMIN, Role.MANAGEMENT], is_active=True)
+    return User.objects.filter(role__in=[Role.ADMIN, Role.WH_SUPERVISOR], is_active=True)
 
 
 def notify_low_stock(product, warehouse, quantity):

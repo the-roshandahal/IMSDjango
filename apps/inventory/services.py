@@ -28,7 +28,7 @@ from django.utils import timezone
 from apps.catalogue.models import Batch, Product
 from apps.catalogue.signals import low_stock_signal
 from apps.inventory.exceptions import ApprovalRequiredError, InsufficientStockError, StockLevelChangedError
-from apps.inventory.models import InventoryTransaction, StockLevel, Transfer, TransactionType
+from apps.inventory.models import InventoryTransaction, StockLevel, Stocktake, StocktakeLine, Transfer, TransactionType
 from apps.warehouses.models import Warehouse
 
 
@@ -246,36 +246,102 @@ def transfer_confirm_receipt(*, transfer_id, confirmed_by):
 
 
 @transaction.atomic
-def adjustment(*, product_id, warehouse_id, quantity_delta, performed_by, reason_code, comment="", batch_id=None):
+def adjustment(
+    *, product_id, quantity_delta, performed_by, reason_code, warehouse_id=None, station_id=None,
+    comment="", batch_id=None,
+):
     """`quantity_delta` may be positive or negative. `reason_code` is
-    mandatory (SRS Section 5.4)."""
+    mandatory (SRS Section 5.4). Adjusts a warehouse or a station
+    (mutually exclusive) -- station adjustments are how a stocktake count
+    correction gets applied."""
     if not reason_code:
         raise ValueError("Stock adjustments require a reason_code.")
+    if warehouse_id is not None and station_id is not None:
+        raise ValueError("Adjust a warehouse or a station, not both.")
+    if warehouse_id is None and station_id is None:
+        raise ValueError("Adjustment requires a warehouse_id or station_id.")
 
     quantity_delta = Decimal(str(quantity_delta))
     product = Product.objects.get(pk=product_id)
-    warehouse = Warehouse.objects.get(pk=warehouse_id)
+    warehouse = Warehouse.objects.get(pk=warehouse_id) if warehouse_id is not None else None
     batch = Batch.objects.get(pk=batch_id) if batch_id else None
 
     if quantity_delta < 0:
         updated = StockLevel.objects.filter(
-            product=product, warehouse=warehouse, station=None, project=None, batch=batch, quantity__gte=-quantity_delta
+            product=product, warehouse_id=warehouse_id, station_id=station_id, project=None, batch=batch,
+            quantity__gte=-quantity_delta,
         ).update(quantity=F("quantity") + quantity_delta)
         if updated == 0:
             raise StockLevelChangedError("Stock level changed; please retry the adjustment.")
     else:
-        level = _get_or_create_stock_level(product=product, warehouse_id=warehouse_id, batch=batch)
+        level = _get_or_create_stock_level(product=product, warehouse_id=warehouse_id, station_id=station_id, batch=batch)
         StockLevel.objects.filter(pk=level.pk).update(quantity=F("quantity") + quantity_delta)
 
     txn = InventoryTransaction.objects.create(
         type=TransactionType.ADJUSTMENT, product=product, batch=batch, quantity=abs(quantity_delta),
-        source_warehouse=warehouse if quantity_delta < 0 else None,
-        dest_warehouse=warehouse if quantity_delta >= 0 else None,
+        source_warehouse=warehouse if warehouse and quantity_delta < 0 else None,
+        dest_warehouse=warehouse if warehouse and quantity_delta >= 0 else None,
+        station_id=station_id,
         reason_code=reason_code, comment=comment, performed_by=performed_by,
     )
-    if quantity_delta < 0:
+    if warehouse and quantity_delta < 0:
         _maybe_fire_low_stock(product, warehouse)
     return txn
+
+
+@transaction.atomic
+def create_stocktake(*, started_by, lines, warehouse_id=None, station_id=None):
+    """Records a count session and immediately corrects any variance found
+    -- `lines` is only the products actually counted this time (SRS: not
+    everything gets checked every stocktake), each `{"product_id", "counted_quantity"}`."""
+    if warehouse_id is not None and station_id is not None:
+        raise ValueError("Stocktake a warehouse or a station, not both.")
+    if warehouse_id is None and station_id is None:
+        raise ValueError("Stocktake requires a warehouse_id or station_id.")
+
+    stocktake = Stocktake.objects.create(warehouse_id=warehouse_id, station_id=station_id, started_by=started_by)
+
+    stocktake_lines = []
+    for line in lines:
+        system_qty = (
+            StockLevel.objects.filter(
+                product_id=line["product_id"], warehouse_id=warehouse_id, station_id=station_id, project=None,
+            ).aggregate(total=Sum("quantity"))["total"]
+            or Decimal("0")
+        )
+        stocktake_lines.append(
+            StocktakeLine(
+                stocktake=stocktake, product_id=line["product_id"],
+                system_quantity=system_qty, counted_quantity=Decimal(str(line["counted_quantity"])),
+            )
+        )
+    StocktakeLine.objects.bulk_create(stocktake_lines)
+
+    for sl in stocktake_lines:
+        delta = sl.counted_quantity - sl.system_quantity
+        if delta == 0:
+            continue
+        if station_id is not None and delta < 0:
+            # Counted less than the system expected at a station -- this IS
+            # consumption that was never logged as it happened, so record it
+            # as station usage (flows into the consumption report and
+            # transaction list the same way logged-as-it-happens usage does),
+            # not a generic adjustment.
+            station_stock_usage(
+                product_id=sl.product_id, station_id=station_id, quantity=-delta, performed_by=started_by,
+                comment=f"Stocktake #{stocktake.pk} -- unrecorded usage found during count",
+            )
+        else:
+            adjustment(
+                product_id=sl.product_id, warehouse_id=warehouse_id, station_id=station_id,
+                quantity_delta=delta, performed_by=started_by, reason_code="stocktake",
+                comment=f"Stocktake #{stocktake.pk} count correction",
+            )
+
+    stocktake.status = "completed"
+    stocktake.completed_at = timezone.now()
+    stocktake.save(update_fields=["status", "completed_at"])
+    return stocktake
 
 
 @transaction.atomic

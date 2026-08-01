@@ -20,12 +20,11 @@ Every account has one role, set by an Administrator. Your role decides what you 
 | Role | Day-to-day job |
 |---|---|
 | **Administrator** | Full access to everything, including user management and system-wide settings. |
-| **Warehouse Supervisor** | Runs a warehouse: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, see reports for their warehouse. |
-| **Warehouse Staff** | Works in a warehouse: view products, view equipment/vehicles assigned to them, take part in stocktakes, create purchase orders. |
-| **Station Supervisor** | Runs a cleaning station: request stock from a warehouse, record daily chemical usage, view reports for their station. |
-| **Station Cleaning Staff** | Works at a station: request stock, record chemical usage. |
+| **Warehouse Supervisor** | Runs the warehouse and has company-wide oversight: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, and see reports across every site, not just their own. |
+| **Warehouse Staff** | Not currently in use -- reserved for if a second warehouse person is hired. Would view products, view equipment/vehicles assigned to them, take part in stocktakes, create purchase orders. |
+| **Station Supervisor** | Runs a cleaning station (can cover several): request stock from a warehouse, record daily chemical usage, run weekly stock audits, view reports for their stations. |
+| **Station Cleaning Staff** | Works at a station: request stock, record chemical usage, run weekly stock audits. |
 | **Deep Clean Supervisor** | Runs deep clean projects: dispatch chemicals, take equipment/vehicles, log shifts and hours, close out projects. |
-| **Management** | Read-only oversight across the whole company: products, requests, equipment, vehicles, projects, suppliers, purchase orders, reports. |
 
 You only see menu sections your role has access to — if something described below isn't in your menu, your role doesn't use it.
 
@@ -138,9 +137,9 @@ On-screen reports, filterable by date range where relevant:
 - **Deep clean projects** — cost per project (chemicals + vehicle running costs), whether it finished on time, and any outstanding assets.
 - **Purchasing** — spend by supplier, average lead time, on-time delivery rate.
 - **Vehicles** — running costs, service/insurance compliance issues.
-- **Audit summary** — activity volume by user and by action (Admin/Management only).
+- **Audit summary** — activity volume by user and by action (Admin only).
 
-What you see is scoped to your role — a Warehouse Supervisor sees their own warehouse's numbers, Deep Clean Supervisors see their own projects, Admin and Management see everything.
+What you see is scoped to your role — a Station Supervisor sees their own stations' numbers, Deep Clean Supervisors see their own projects, Admin and Warehouse Supervisor see everything.
 
 *Note: reports are on-screen only for now — no PDF/Excel export or scheduled email reports yet.*
 

@@ -150,16 +150,42 @@ class Transfer(models.Model):
 
 
 class Stocktake(models.Model):
+    """A count session at exactly one site -- a warehouse (periodic full
+    count) or a station (the weekly count station staff do every week,
+    e.g. Sunday -- not every product is re-checked every time, so lines
+    only cover what was actually counted)."""
+
     STATUS_CHOICES = [("open", "Open"), ("completed", "Completed")]
 
-    warehouse = models.ForeignKey("warehouses.Warehouse", on_delete=models.PROTECT, related_name="stocktakes")
+    warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="stocktakes"
+    )
+    station = models.ForeignKey(
+        "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="stocktakes"
+    )
     started_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open")
 
+    class Meta:
+        ordering = ["-started_at"]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(warehouse__isnull=False, station__isnull=True)
+                    | models.Q(warehouse__isnull=True, station__isnull=False)
+                ),
+                name="stocktake_exactly_one_site",
+            )
+        ]
+
+    @property
+    def site(self):
+        return self.warehouse or self.station
+
     def __str__(self):
-        return f"Stocktake #{self.pk} @ {self.warehouse} ({self.status})"
+        return f"Stocktake #{self.pk} @ {self.site} ({self.status})"
 
 
 class StocktakeLine(models.Model):

@@ -7,6 +7,7 @@
   <div class="desc">{{ station.address|default:"No address on file" }}</div>
   <div class="actions-row">
     {% if is_admin %}<a class="btn btn-secondary" href="{% url 'warehouses_web:station-edit' station.pk %}">Edit</a>{% endif %}
+    {% if can_manage_stocktake %}<a class="btn btn-primary" href="{% url 'inventory_web:stocktake-new' %}?site_type=station&site_id={{ station.pk }}">Start weekly stock audit</a>{% endif %}
     {% if can_create_requests %}<a class="btn btn-primary" href="{% url 'stock_requests_web:create' station.pk %}">Request stock</a>{% endif %}
   </div>
 </div>
@@ -54,6 +55,29 @@
         </table>
         {% else %}
         <div class="empty-state">No usage recorded this month yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Recent stocktakes</h2></div>
+      <div class="panel-body flush">
+        {% if recent_stocktakes %}
+        <table class="data">
+          <thead><tr><th>Date</th><th>By</th><th class="num">Lines</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for st in recent_stocktakes %}
+            <tr>
+              <td class="mono"><a href="{% url 'inventory_web:stocktake-detail' st.pk %}">{{ st.started_at|date:"d M Y" }}</a></td>
+              <td class="muted">{{ st.started_by.username }}</td>
+              <td class="num mono">{{ st.lines.count }}</td>
+              <td>{% if st.status == "completed" %}<span class="status-rail good">Completed</span>{% else %}<span class="status-rail pending">Open</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No stock audits recorded yet.</div>
         {% endif %}
       </div>
     </div>

@@ -1,9 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
-from apps.core.permissions import assigned_site_ids, has_capability
-
-SITE_SCOPE_EXEMPT_ROLES = {"admin", "management"}
+from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids, has_capability
 
 
 class CapabilityRequiredMixin(LoginRequiredMixin):

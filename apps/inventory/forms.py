@@ -110,3 +110,25 @@ class StationUsageForm(forms.Form):
     product_id = forms.IntegerField(widget=forms.HiddenInput)
     quantity = forms.DecimalField(min_value=Decimal("0.01"), decimal_places=2, max_digits=12)
     comment = forms.CharField(required=False)
+
+
+class StocktakeCountForm(forms.Form):
+    """One optional field per product -- left blank means 'not checked
+    this time', not 'zero on hand' (SRS: not every product gets counted
+    on every weekly stocktake)."""
+
+    def __init__(self, *args, products=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        for product in products:
+            self.fields[f"qty_{product.id}"] = forms.DecimalField(
+                required=False, min_value=Decimal("0"), decimal_places=2, max_digits=12, label=product.name,
+            )
+
+    def counted_lines(self):
+        lines = []
+        for name, value in self.cleaned_data.items():
+            if value is None:
+                continue
+            product_id = int(name.split("_", 1)[1])
+            lines.append({"product_id": product_id, "counted_quantity": value})
+        return lines

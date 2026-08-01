@@ -12,6 +12,7 @@ from apps.employees.models import Employee
 from apps.equipment.models import Equipment, EquipmentStatus, TestResult, TestTag
 from apps.equipment.services import provision_qr_code
 from apps.inventory import services as inv_services
+from apps.inventory.models import InventoryTransaction
 from apps.projects import services as project_services
 from apps.projects.models import DeepCleanProject, ProjectStatus, Shift
 from apps.purchasing import services as po_services
@@ -30,10 +31,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.today = timezone.now().date()
 
+        # Role.MANAGEMENT retired (folded into wh_supervisor) and Role.WH_STAFF
+        # stays defined but unused for now -- one person runs the warehouse.
         admin = self._ensure_user("admin", "admin@ims.local", "AdminPass123!", Role.ADMIN, is_superuser=True)
-        management = self._ensure_user("manager1", "manager1@ims.local", "ManagerPass123!", Role.MANAGEMENT)
         wh_sup = self._ensure_user("whsup1", "whsup1@ims.local", "SupPass123!", Role.WH_SUPERVISOR)
-        wh_staff = self._ensure_user("whstaff1", "whstaff1@ims.local", "StaffPass123!", Role.WH_STAFF)
         st_sup = self._ensure_user("stationsup1", "stationsup1@ims.local", "SupPass123!", Role.STATION_SUPERVISOR)
         st_staff = self._ensure_user("stationstaff1", "stationstaff1@ims.local", "StaffPass123!", Role.STATION_STAFF)
         dc_sup = self._ensure_user("dcsup1", "dcsup1@ims.local", "SupPass123!", Role.DEEPCLEAN_SUPERVISOR)
@@ -45,8 +46,8 @@ class Command(BaseCommand):
         st3, _ = Station.objects.get_or_create(name="Hillcrest Station", defaults={"address": "Hillcrest Road"})
 
         SiteAssignment.objects.get_or_create(user=wh_sup, warehouse=wh1)
-        SiteAssignment.objects.get_or_create(user=wh_staff, warehouse=wh1)
         SiteAssignment.objects.get_or_create(user=st_sup, station=st1)
+        SiteAssignment.objects.get_or_create(user=st_sup, station=st2)  # supervisors can cover multiple stations
         SiteAssignment.objects.get_or_create(user=st_staff, station=st1)
 
         chemicals, _ = Category.objects.get_or_create(name="Chemicals")
@@ -99,22 +100,19 @@ class Command(BaseCommand):
 
         # Issue some stock to stations so station stock/usage has data
         for barcode, qty, station in [("IMS-0001", 15, st1), ("IMS-0008", 30, st1), ("IMS-0016", 3, st1)]:
-            try:
-                inv_services.stock_out(
-                    product_id=products[barcode].id, warehouse_id=wh1.id, quantity=Decimal(qty),
-                    performed_by=wh_sup, station_id=station.id, reason_code="initial_issue",
-                )
-            except Exception:  # noqa: BLE001 -- already issued on a prior run, ignore
-                pass
+            self._ensure_stock_out_to_station(products[barcode].id, wh1.id, station.id, qty, wh_sup)
 
         # A little station usage history
-        try:
-            inv_services.station_stock_usage(
-                product_id=products["IMS-0001"].id, station_id=st1.id, quantity=Decimal("3"),
-                performed_by=st_staff, comment="Daily platform clean",
-            )
-        except Exception:  # noqa: BLE001
-            pass
+        if not InventoryTransaction.objects.filter(
+            type="station_usage", product=products["IMS-0001"], station=st1
+        ).exists():
+            try:
+                inv_services.station_stock_usage(
+                    product_id=products["IMS-0001"].id, station_id=st1.id, quantity=Decimal("3"),
+                    performed_by=st_staff, comment="Daily platform clean",
+                )
+            except Exception:  # noqa: BLE001
+                pass
 
         # Stock requests in various states
         if not st1.stock_requests.filter(status="pending").exists():
@@ -146,14 +144,15 @@ class Command(BaseCommand):
         equipment = self._seed_equipment(wh1, st1, admin)
         vehicles = self._seed_vehicles(wh_sup, admin)
         self._seed_test_tags(wh1, st1, st2, st3, admin)
+        self._seed_stocktakes(st1, st_staff, products)
         employees = self._seed_employees(admin, dc_sup)
         self._seed_projects(st1, st2, st3, dc_sup, wh1, equipment, vehicles, products, employees, admin)
-        self._seed_purchase_orders(suppliers, wh1, products, wh_sup, wh_staff)
+        self._seed_purchase_orders(suppliers, wh1, products, wh_sup)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         self.stdout.write(
-            "Log in as: admin/AdminPass123! manager1/ManagerPass123! whsup1/SupPass123! "
-            "whstaff1/StaffPass123! stationsup1/SupPass123! stationstaff1/StaffPass123! dcsup1/SupPass123!"
+            "Log in as: admin/AdminPass123! whsup1/SupPass123! "
+            "stationsup1/SupPass123! stationstaff1/StaffPass123! dcsup1/SupPass123!"
         )
 
     def _ensure_user(self, username, email, password, role, is_superuser=False):
@@ -181,6 +180,20 @@ class Command(BaseCommand):
             product_id=product_id, warehouse_id=warehouse_id, quantity=Decimal(quantity),
             performed_by=performed_by, reason_code="initial_stock",
         )
+
+    def _ensure_stock_out_to_station(self, product_id, warehouse_id, station_id, quantity, performed_by):
+        from apps.inventory.models import StockLevel
+
+        existing = StockLevel.objects.filter(product_id=product_id, station_id=station_id, batch=None).first()
+        if existing and existing.quantity > 0:
+            return
+        try:
+            inv_services.stock_out(
+                product_id=product_id, warehouse_id=warehouse_id, quantity=Decimal(quantity),
+                performed_by=performed_by, station_id=station_id, reason_code="initial_issue",
+            )
+        except Exception:  # noqa: BLE001 -- insufficient warehouse stock on a prior run, ignore
+            pass
 
     # ------------------------------------------------------------ Suppliers
 
@@ -316,6 +329,22 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------- Projects
 
+    def _seed_stocktakes(self, st1, st_staff, products):
+        from apps.inventory.models import Stocktake
+
+        if Stocktake.objects.filter(station=st1, status="completed").exists():
+            return
+        inv_services.create_stocktake(
+            started_by=st_staff, station_id=st1.id,
+            lines=[
+                {"product_id": products["IMS-0001"].id, "counted_quantity": Decimal("10")},  # 2 short of system
+                {"product_id": products["IMS-0008"].id, "counted_quantity": Decimal("30")},
+                {"product_id": products["IMS-0016"].id, "counted_quantity": Decimal("3")},
+            ],
+        )
+        # Riverside/Hillcrest deliberately left with no stocktake -- demonstrates the
+        # "overdue / never done" reminder check_notifications sweeps for weekly-count staleness.
+
     def _seed_employees(self, admin, dc_sup):
         # (first, last, email, phone, position, profile_complete, riw_offset_days)
         specs = [
@@ -440,7 +469,7 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------ Purchase orders
 
-    def _seed_purchase_orders(self, suppliers, wh1, products, wh_sup, wh_staff):
+    def _seed_purchase_orders(self, suppliers, wh1, products, wh_sup):
         supplier_list = list(suppliers.values())
 
         def make(idx, supplier, warehouse, creator, lines, expected_offset):
@@ -456,13 +485,13 @@ class Command(BaseCommand):
 
         # 3 drafts
         make(1, supplier_list[0], wh1, wh_sup, [("IMS-0001", 50, "14.50")], 10)
-        make(2, supplier_list[4], wh1, wh_staff, [("IMS-0016", 20, "18.90")], 14)
+        make(2, supplier_list[4], wh1, wh_sup, [("IMS-0016", 20, "18.90")], 14)
         make(3, supplier_list[2], wh1, wh_sup, [("IMS-0008", 100, "2.20"), ("IMS-0011", 80, "0.95")], 7)
 
         # 2 sent
         for idx, supplier, warehouse, creator, lines in [
             (4, supplier_list[1], wh1, wh_sup, [("IMS-0006", 30, "15.40")]),
-            (5, supplier_list[0], wh1, wh_staff, [("IMS-0002", 25, "16.80")]),
+            (5, supplier_list[0], wh1, wh_sup, [("IMS-0002", 25, "16.80")]),
         ]:
             po = make(idx, supplier, warehouse, creator, lines, 5)
             if po.status == POStatus.DRAFT:
@@ -471,7 +500,7 @@ class Command(BaseCommand):
         # 2 partially received
         for idx, supplier, warehouse, creator, lines in [
             (6, supplier_list[2], wh1, wh_sup, [("IMS-0009", 80, "1.10")]),
-            (7, supplier_list[4], wh1, wh_staff, [("IMS-0017", 30, "12.50")]),
+            (7, supplier_list[4], wh1, wh_sup, [("IMS-0017", 30, "12.50")]),
         ]:
             po = make(idx, supplier, warehouse, creator, lines, -2)
             if po.status == POStatus.DRAFT:
@@ -484,7 +513,7 @@ class Command(BaseCommand):
         # 2 fully received
         for idx, supplier, warehouse, creator, lines in [
             (8, supplier_list[1], wh1, wh_sup, [("IMS-0007", 40, "8.90")]),
-            (9, supplier_list[3], wh1, wh_staff, [("IMS-0014", 15, "85.00")]),
+            (9, supplier_list[3], wh1, wh_sup, [("IMS-0014", 15, "85.00")]),
         ]:
             po = make(idx, supplier, warehouse, creator, lines, -5)
             if po.status == POStatus.DRAFT:

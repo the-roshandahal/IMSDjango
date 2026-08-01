@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{% if site %}Stocktake - {{ site }}{% else %}Start a stocktake{% endif %} - IMS{% endblock %}
+{% block crumb %}Inventory / Stocktakes{% endblock %}
+{% block page_title %}{% if site %}Count sheet -- {{ site }}{% else %}Start a stocktake{% endif %}{% endblock %}
+{% block content %}
+
+{% if not site %}
+<p class="hint" style="margin-top:0;">Pick where you're counting. This is usually the weekly station count -- not every product needs checking every time.</p>
+
+{% if stations %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-head"><h2>Stations</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <tbody>
+        {% for s in stations %}
+        <tr><td><a href="?site_type=station&amp;site_id={{ s.pk }}">{{ s.name }}</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if warehouses %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-head"><h2>Warehouses</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <tbody>
+        {% for w in warehouses %}
+        <tr><td><a href="?site_type=warehouse&amp;site_id={{ w.pk }}">{{ w.name }}</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not stations and not warehouses %}
+<div class="empty-state">You're not assigned to a warehouse or station -- ask your supervisor to add a site assignment.</div>
+{% endif %}
+
+{% else %}
+<p class="hint" style="margin-top:0;">Leave anything you didn't check blank -- only entered quantities get recorded and corrected. "On system" is what IMS currently shows for reference.</p>
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="site_type" value="{{ site_type }}">
+  <input type="hidden" name="site_id" value="{{ site.pk }}">
+  {% for group in rows %}
+  <div class="panel">
+    <div class="panel-head"><h2>{{ group.category }}</h2></div>
+    <div class="panel-body flush">
+      <table class="data">
+        <thead><tr><th>Product</th><th class="num">On system</th><th class="num">Counted</th></tr></thead>
+        <tbody>
+          {% for item in group.items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td class="num mono muted">{{ item.current }}</td>
+            <td class="num">{{ item.field }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+  {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Submit count</button>
+    <a class="btn btn-secondary" href="{% url 'inventory_web:stocktake-new' %}">Change site</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
