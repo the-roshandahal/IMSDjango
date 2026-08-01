@@ -1,0 +1,110 @@
+{% extends "auth_base.html" %}
+{% block title %}{% if talk %}{{ talk.topic }}{% else %}Toolbox talk{% endif %} - Cleantech1{% endblock %}
+{% block auth_sub %}{% if attendee %}Hi {{ attendee.employee.first_name }}{% else %}Toolbox talk{% endif %}{% endblock %}
+{% block content %}
+
+{% if invalid %}
+<div class="empty-state">
+  <div class="big">This link isn't active.</div>
+  <p class="muted">Ask your supervisor to resend your toolbox talk link.</p>
+</div>
+
+{% elif submitted %}
+<div class="empty-state">
+  <div class="big">Thanks, {{ attendee.employee.first_name }}!</div>
+  <p class="muted">Your signature has been recorded for &ldquo;{{ talk.topic }}&rdquo;.</p>
+</div>
+
+{% else %}
+<p class="hint" style="margin-top:0;">{{ talk.project.name }} &middot; {{ talk.work_date }}</p>
+
+<div class="panel" style="text-align:left;">
+  <div class="panel-head"><h2>{{ talk.topic }}</h2></div>
+  <div class="panel-body">
+    {% if talk.content %}<p style="white-space:pre-wrap;margin:0 0 12px;">{{ talk.content }}</p>{% endif %}
+    {% if talk.attachment %}
+    <a class="btn btn-secondary" href="{{ talk.attachment.url }}" target="_blank" rel="noopener">View attached file</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if attendee.is_signed %}
+<div class="empty-state">
+  <div class="big">Already signed</div>
+  <p class="muted">You signed this on {{ attendee.signed_at|date:"d M Y, H:i" }}.</p>
+</div>
+{% else %}
+{% if error %}<p class="errors">{{ error }}</p>{% endif %}
+<p class="hint">Please read the briefing above, then sign below to confirm you've read and understood it.</p>
+<div class="signature-pad-wrap"><canvas id="sigCanvas"></canvas></div>
+<div class="signature-actions">
+  <button type="button" id="sigClear" class="btn btn-secondary">Clear</button>
+</div>
+<form method="post" id="sigForm" style="margin-top:12px;">
+  {% csrf_token %}
+  <input type="hidden" name="signature_data" id="sigData">
+  <button type="submit" id="sigSubmit" class="btn btn-primary" style="width:100%;justify-content:center;">I've read this &amp; I confirm my signature</button>
+</form>
+
+<script>
+(function () {
+  var canvas = document.getElementById("sigCanvas");
+  var ctx = canvas.getContext("2d");
+  var form = document.getElementById("sigForm");
+  var dataInput = document.getElementById("sigData");
+  var hasDrawn = false, drawing = false;
+
+  function resizeCanvas() {
+    var ratio = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * ratio;
+    canvas.height = 160 * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#101828";
+  }
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
+  function pos(evt) {
+    var rect = canvas.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+  }
+
+  canvas.addEventListener("pointerdown", function (evt) {
+    drawing = true; hasDrawn = true;
+    var p = pos(evt);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    evt.preventDefault();
+  });
+  canvas.addEventListener("pointermove", function (evt) {
+    if (!drawing) return;
+    var p = pos(evt);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    evt.preventDefault();
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
+    canvas.addEventListener(ev, function () { drawing = false; });
+  });
+
+  document.getElementById("sigClear").addEventListener("click", function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawn = false;
+  });
+
+  form.addEventListener("submit", function (evt) {
+    if (!hasDrawn) {
+      evt.preventDefault();
+      alert("Please sign before submitting.");
+      return;
+    }
+    dataInput.value = canvas.toDataURL("image/png");
+  });
+})();
+</script>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -3,8 +3,7 @@ from decimal import Decimal
 from django import forms
 
 from apps.accounts.models import User
-from apps.vehicles.models import CostType, Vehicle
-from apps.warehouses.models import Station
+from apps.vehicles.models import CostType, Vehicle, VehicleLocation
 
 
 class VehicleForm(forms.ModelForm):
@@ -18,7 +17,7 @@ class VehicleForm(forms.ModelForm):
 
 
 class VehicleAssignForm(forms.Form):
-    station = forms.ModelChoiceField(queryset=Station.objects.filter(is_active=True))
+    location = forms.ChoiceField(choices=VehicleLocation.choices, label="Assign to")
     driver = forms.ModelChoiceField(queryset=User.objects.filter(is_active=True), required=False)
     comment = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     override = forms.BooleanField(required=False, label="Override compliance block")

@@ -17,19 +17,25 @@ class CostType(models.TextChoices):
     OTHER = "other", "Other"
 
 
+class VehicleLocation(models.TextChoices):
+    DEEP_CLEAN = "deep_clean", "Deep Clean"
+    CAR_PARK = "car_park", "Car Park"
+    OTHER = "other", "Other"
+
+
 class Vehicle(models.Model):
-    """SRS Section 5.9. `current_project` mirrors `current_station` -- a
-    vehicle can be checked out to a deep clean project the same way it can
-    be checked out to a station; running cost entries record whichever the
-    vehicle was at when the cost was incurred."""
+    """SRS Section 5.9. `current_project` mirrors `current_location` -- a
+    vehicle can be checked out to a specific deep clean project (precise,
+    used for cost tracking) or just marked with a general `current_location`
+    (Deep Clean / Car Park / Other) when it isn't tied to one particular
+    project; running cost entries record whichever the vehicle was at when
+    the cost was incurred."""
 
     registration = models.CharField(max_length=32, unique=True, db_index=True)
     make_model = models.CharField(max_length=200, blank=True)
 
     status = models.CharField(max_length=20, choices=VehicleStatus.choices, default=VehicleStatus.AVAILABLE)
-    current_station = models.ForeignKey(
-        "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="vehicles"
-    )
+    current_location = models.CharField(max_length=20, choices=VehicleLocation.choices, blank=True)
     current_project = models.ForeignKey(
         "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="vehicles"
     )
@@ -78,7 +84,7 @@ class VehicleLog(models.Model):
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="logs")
     action = models.CharField(max_length=24, choices=ACTION_CHOICES)
-    station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    location = models.CharField(max_length=20, choices=VehicleLocation.choices, blank=True)
     project = models.ForeignKey(
         "projects.DeepCleanProject", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -102,8 +108,8 @@ class VehicleCostLog(models.Model):
     cost_type = models.CharField(max_length=10, choices=CostType.choices)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     incurred_at = models.DateField()
-    station = models.ForeignKey(
-        "warehouses.Station", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+    location = models.CharField(
+        max_length=20, choices=VehicleLocation.choices, blank=True,
         help_text="Where the vehicle was assigned at the time of the cost.",
     )
     project = models.ForeignKey(

@@ -4,25 +4,27 @@ from django import forms
 
 from apps.accounts.models import Role, User
 from apps.catalogue.models import Product
+from apps.employees.models import Employee
 from apps.equipment.models import Equipment, EquipmentStatus
 from apps.projects.models import DeepCleanProject, Shift
 from apps.vehicles.models import Vehicle, VehicleStatus
-from apps.warehouses.models import Station, Warehouse
+from apps.warehouses.models import Warehouse
 
 
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = DeepCleanProject
-        fields = ["reference", "name", "station", "supervisor", "start_date", "end_date"]
+        fields = ["reference", "name", "location", "supervisor", "start_date", "end_date"]
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "date"}),
             "end_date": forms.DateInput(attrs={"type": "date"}),
         }
         help_texts = {"end_date": "Leave blank if not yet known -- can run a single day up to several weeks."}
+        labels = {"location": "Location"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["station"].queryset = Station.objects.filter(is_active=True)
+        self.fields["location"].required = True
         self.fields["supervisor"].queryset = User.objects.filter(role=Role.DEEPCLEAN_SUPERVISOR, is_active=True)
 
 
@@ -60,10 +62,33 @@ class ShiftLogForm(forms.Form):
     shift = forms.ChoiceField(choices=Shift.choices)
     start_time = forms.TimeField(widget=forms.TimeInput(attrs={"type": "time"}))
     end_time = forms.TimeField(widget=forms.TimeInput(attrs={"type": "time"}))
-    workers = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True), required=False, widget=forms.SelectMultiple(attrs={"size": 6}),
+    employees = forms.ModelMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True), required=False, label="Crew",
+        widget=forms.CheckboxSelectMultiple,
     )
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+
+
+class ToolboxTalkForm(forms.Form):
+    work_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    topic = forms.CharField(max_length=200, help_text="e.g. 'Wet floors & chemical handling'")
+    content = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={"rows": 4}), help_text="Hazards discussed, controls, PPE required.",
+    )
+    attachment = forms.FileField(
+        required=False, label="Attach a file (optional)",
+        help_text="The toolbox talk paper/form, if you have one -- PDF, image, Word or Excel.",
+    )
+    employees = forms.ModelMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True), label="Attendees",
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("content") and not cleaned.get("attachment"):
+            raise forms.ValidationError("Add some briefing content, attach a file, or both.")
+        return cleaned
 
 
 class ProjectCloseForm(forms.Form):

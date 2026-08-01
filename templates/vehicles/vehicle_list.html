@@ -11,13 +11,13 @@
   <div class="panel-body flush">
     {% if vehicles %}
     <table class="data">
-      <thead><tr><th>Registration</th><th>Make/model</th><th>Station</th><th>Driver</th><th>Status</th><th>Service due</th><th>Insurance</th></tr></thead>
+      <thead><tr><th>Registration</th><th>Make/model</th><th>Location</th><th>Driver</th><th>Status</th><th>Service due</th><th>Insurance</th></tr></thead>
       <tbody>
         {% for v in vehicles %}
         <tr class="rail-row {% if v.compliance_blockers %}warn{% elif v.status == 'available' %}good{% elif v.status == 'assigned' %}info{% else %}pending{% endif %}">
           <td><a href="{% url 'vehicles_web:detail' v.pk %}" class="mono">{{ v.registration }}</a></td>
           <td>{{ v.make_model|default:"—" }}</td>
-          <td>{% if v.current_station %}{{ v.current_station.name }}{% elif v.current_project %}{{ v.current_project.reference }}{% else %}—{% endif %}</td>
+          <td>{% if v.current_project %}{{ v.current_project.reference }}{% elif v.current_location %}{{ v.get_current_location_display }}{% else %}—{% endif %}</td>
           <td>{{ v.assigned_driver.username|default:"—" }}</td>
           <td>
             {% if v.status == "available" %}<span class="status-rail good">Available</span>

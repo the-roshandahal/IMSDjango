@@ -6,7 +6,7 @@
 
 <div class="page-head">
   <div class="desc">
-    {{ project.station.name }} &middot; {{ project.start_date }}{% if project.end_date %} to {{ project.end_date }}{% endif %}
+    {{ project.location|default:"No location set" }} &middot; {{ project.start_date }}{% if project.end_date %} to {{ project.end_date }}{% endif %}
     &middot; Supervisor: {{ project.supervisor.username }}
   </div>
   <div>
@@ -103,11 +103,11 @@
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>Shift log</h2><span class="sub">{{ total_hours }} hours total</span></div>
+      <div class="panel-head"><h2>Shift log</h2><span class="sub">{{ total_hours }} person-hours total</span></div>
       <div class="panel-body flush">
         {% if shift_logs %}
         <table class="data">
-          <thead><tr><th>Date</th><th>Shift</th><th>Start</th><th>End</th><th class="num">Hours</th><th>Workers</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Date</th><th>Shift</th><th>Start</th><th>End</th><th class="num">Hours</th><th>Crew</th><th>Notes</th></tr></thead>
           <tbody>
             {% for s in shift_logs %}
             <tr>
@@ -116,7 +116,7 @@
               <td class="mono">{{ s.start_time|time:"H:i" }}</td>
               <td class="mono">{{ s.end_time|time:"H:i" }}</td>
               <td class="num mono">{{ s.hours_worked }}</td>
-              <td class="muted">{% for w in s.workers.all %}{{ w.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+              <td class="muted">{% for e in s.employees.all %}{{ e.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}{% for w in s.workers.all %}{{ w.username }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endfor %}</td>
               <td class="muted">{{ s.notes }}</td>
             </tr>
             {% endfor %}
@@ -124,6 +124,28 @@
         </table>
         {% else %}
         <div class="empty-state">No shifts logged yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Toolbox talks</h2></div>
+      <div class="panel-body flush">
+        {% if toolbox_talks %}
+        <table class="data">
+          <thead><tr><th>Date</th><th>Topic</th><th class="num">Signed</th></tr></thead>
+          <tbody>
+            {% for t in toolbox_talks %}
+            <tr class="rail-row {% if t.signed_count == t.total_count %}good{% else %}warn{% endif %}">
+              <td class="mono">{{ t.work_date }}</td>
+              <td><a href="{% url 'projects_web:toolbox-talk-detail' project.pk t.pk %}">{{ t.topic }}</a></td>
+              <td class="num mono">{{ t.signed_count }} / {{ t.total_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No toolbox talks recorded yet.</div>
         {% endif %}
       </div>
     </div>
@@ -199,9 +221,34 @@
             <div class="field"><label>Start time</label>{{ shift_form.start_time }}</div>
             <div class="field"><label>End time</label>{{ shift_form.end_time }}</div>
           </div>
-          <div class="field"><label>Workers</label>{{ shift_form.workers }}</div>
+          <div class="field"><label>{{ shift_form.employees.label }}</label>
+            <div class="checkbox-list">{{ shift_form.employees }}</div>
+          </div>
           <div class="field"><label>Notes</label>{{ shift_form.notes }}</div>
           <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Log shift</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>New toolbox talk</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'projects_web:toolbox-talk-create' project.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if toolbox_talk_form.non_field_errors %}<div class="errors">{{ toolbox_talk_form.non_field_errors }}</div>{% endif %}
+          <div class="field"><label>Date</label>{{ toolbox_talk_form.work_date }}</div>
+          <div class="field"><label>Topic</label>{{ toolbox_talk_form.topic }}</div>
+          <div class="field"><label>Content</label>{{ toolbox_talk_form.content }}
+            <div class="hint">{{ toolbox_talk_form.content.help_text }}</div>
+          </div>
+          <div class="field"><label>{{ toolbox_talk_form.attachment.label }}</label>{{ toolbox_talk_form.attachment }}
+            <div class="hint">{{ toolbox_talk_form.attachment.help_text }}</div>
+          </div>
+          <div class="field"><label>{{ toolbox_talk_form.employees.label }}</label>
+            <div class="checkbox-list">{{ toolbox_talk_form.employees }}</div>
+            <div class="hint">Each attendee is emailed a personal link to read this and sign.</div>
+          </div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Create &amp; email for signing</button>
         </form>
       </div>
     </div>

@@ -29,6 +29,8 @@ ROLE_CAPABILITIES = {
     ("wh_supervisor", "purchase_request.create"): True,
     ("wh_supervisor", "supplier.view"): True,
     ("wh_supervisor", "purchase_order.manage"): True,
+    ("wh_supervisor", "employee.manage"): True,
+    ("wh_supervisor", "employee.view"): True,
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
@@ -39,6 +41,8 @@ ROLE_CAPABILITIES = {
     ("station_supervisor", "stocktake.manage"): True,
     ("station_supervisor", "reports.view_own_site"): True,
     ("station_supervisor", "purchase_request.create"): True,
+    ("station_supervisor", "employee.manage"): True,
+    ("station_supervisor", "employee.view"): True,
 
     ("deepclean_supervisor", "product.view"): True,
     ("deepclean_supervisor", "project.update_own"): True,
@@ -46,6 +50,8 @@ ROLE_CAPABILITIES = {
     ("deepclean_supervisor", "vehicle.request"): True,
     ("deepclean_supervisor", "reports.view_own_project"): True,
     ("deepclean_supervisor", "purchase_request.create"): True,
+    ("deepclean_supervisor", "employee.manage"): True,
+    ("deepclean_supervisor", "employee.view"): True,
 
     ("wh_staff", "product.view"): True,
     ("wh_staff", "equipment.view_own"): True,
@@ -68,6 +74,7 @@ ROLE_CAPABILITIES = {
     ("management", "project.view"): True,
     ("management", "supplier.view"): True,
     ("management", "purchase_order.view"): True,
+    ("management", "employee.view"): True,
 }
 
 # Roles that see everything regardless of SiteAssignment (still gated by capability).

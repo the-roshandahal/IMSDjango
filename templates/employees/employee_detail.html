@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} - IMS{% endblock %}
+{% block crumb %}Workforce / Employees{% endblock %}
+{% block page_title %}{{ employee.full_name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ employee.position|default:"No position set" }}</div>
+  {% if can_manage %}
+  <div class="actions-row">
+    <a class="btn btn-secondary" href="{% url 'employees_web:edit' employee.pk %}">Edit</a>
+    {% if employee.is_active %}
+    <form method="post" action="{% url 'employees_web:deactivate' employee.pk %}" style="display:inline;" onsubmit="return confirm('Deactivate this employee? Their onboarding link will stop working.');">
+      {% csrf_token %}<button type="submit" class="btn btn-danger">Deactivate</button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'employees_web:reactivate' employee.pk %}" style="display:inline;">
+      {% csrf_token %}<button type="submit" class="btn btn-good">Reactivate</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Contact</h2></div>
+      <div class="panel-body">
+        <dl class="detail-grid">
+          <div><dt>Email</dt><dd>{{ employee.email }}</dd></div>
+          <div><dt>Phone</dt><dd class="mono">{{ employee.phone|default:"—" }}</dd></div>
+          <div><dt>Position</dt><dd>{{ employee.position|default:"—" }}</dd></div>
+          <div><dt>Date started</dt><dd class="mono">{{ employee.date_started|default:"—" }}</dd></div>
+          <div><dt>Status</dt><dd>{% if employee.is_active %}<span class="status-rail good">Active</span>{% else %}<span class="status-rail pending">Inactive</span>{% endif %}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Self-service details</h2></div>
+      <div class="panel-body">
+        {% if employee.profile_complete %}
+        <dl class="detail-grid">
+          <div><dt>Date of birth</dt><dd class="mono">{{ employee.dob|default:"—" }}</dd></div>
+          <div><dt>Address</dt><dd>{{ employee.address|default:"—" }}</dd></div>
+          <div><dt>RIW number</dt><dd class="mono">{{ employee.riw_number|default:"—" }}</dd></div>
+          <div><dt>RIW card expiry</dt><dd class="mono">
+            {{ employee.riw_expiry_date|default:"—" }}
+            {% if employee.riw_is_expired %}<span class="status-rail critical">Expired</span>
+            {% elif employee.riw_is_expiring_soon %}<span class="status-rail warn">Expiring soon</span>
+            {% elif employee.riw_expiry_date %}<span class="status-rail good">Valid</span>{% endif %}
+          </dd></div>
+          <div><dt>Emergency contact</dt><dd>{{ employee.emergency_contact_name|default:"—" }}{% if employee.emergency_contact_relationship %} ({{ employee.emergency_contact_relationship }}){% endif %}</dd></div>
+          <div><dt>Emergency phone</dt><dd class="mono">{{ employee.emergency_contact_phone|default:"—" }}</dd></div>
+        </dl>
+        {% else %}
+        <div class="empty-state">Awaiting employee to complete their onboarding form.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if can_manage and employee.notes %}
+    <div class="panel">
+      <div class="panel-head"><h2>Internal notes</h2></div>
+      <div class="panel-body"><p style="white-space:pre-wrap;margin:0;">{{ employee.notes }}</p></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if can_manage %}
+    <div class="panel">
+      <div class="panel-head"><h2>Onboarding link</h2></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-top:0;">
+          {% if employee.profile_complete %}Completed {{ employee.profile_completed_at|date:"d M Y" }}. The employee can revisit this same link any time to update their details (e.g. after RIW renewal).{% else %}Not completed yet.{% endif %}
+        </p>
+        <div class="field">
+          <input type="text" readonly value="{{ invite_link }}" onclick="this.select();" class="mono" style="font-size:0.8rem;">
+        </div>
+        <form method="post" action="{% url 'employees_web:resend-invite' employee.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">
+            {% if employee.invited_at %}Resend invite email{% else %}Send invite email{% endif %}
+          </button>
+        </form>
+        {% if employee.invited_at %}<p class="hint">Last sent {{ employee.invited_at|date:"d M Y H:i" }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

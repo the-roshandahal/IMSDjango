@@ -1,0 +1,35 @@
+{% extends "auth_base.html" %}
+{% block title %}Your details - Cleantech1{% endblock %}
+{% block auth_sub %}{% if employee %}Hi {{ employee.first_name }} -- complete your details{% else %}Employee details{% endif %}{% endblock %}
+{% block content %}
+
+{% if invalid %}
+<div class="empty-state">
+  <div class="big">This link isn't active.</div>
+  <p class="muted">Ask your supervisor to resend your onboarding link.</p>
+</div>
+
+{% elif submitted %}
+<div class="empty-state">
+  <div class="big">Thanks, {{ employee.first_name }}!</div>
+  <p class="muted">Your details have been saved. Keep this link -- you can come back any time to update your RIW expiry or emergency contact.</p>
+</div>
+
+{% else %}
+<p class="hint" style="margin-top:0;">This information is used for site safety and emergency purposes only.</p>
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="field">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}
+      {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+    </div>
+  {% endfor %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Save my details</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

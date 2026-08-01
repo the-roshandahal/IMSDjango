@@ -449,6 +449,17 @@ input[type=date], input[type=search], select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 .checkbox-field { display: flex; align-items: center; gap: 8px; }
 .checkbox-field input { width: auto; }
+.checkbox-list {
+  list-style: none; margin: 0; padding: 8px; border: 1px solid var(--line-strong);
+  border-radius: var(--radius); max-height: 220px; overflow-y: auto; background: var(--surface-1);
+}
+.checkbox-list li { list-style: none; padding: 4px 0; }
+.checkbox-list label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 400; color: var(--ink-900); margin: 0; }
+.checkbox-list input { width: auto; }
+
+.signature-pad-wrap { border: 1px dashed var(--line-strong); border-radius: var(--radius); background: #fff; touch-action: none; }
+.signature-pad-wrap canvas { display: block; width: 100%; height: 160px; cursor: crosshair; }
+.signature-actions { display: flex; gap: 8px; margin-top: 8px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
 .form-actions { display: flex; gap: 10px; margin-top: 6px; }

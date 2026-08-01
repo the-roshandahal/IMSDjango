@@ -3,7 +3,7 @@ from rest_framework import status as http_status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import CapabilityPermission, ensure_site_access
+from apps.core.permissions import CapabilityPermission
 from apps.vehicles import services
 from apps.vehicles.models import Vehicle
 from apps.vehicles.serializers import (
@@ -18,7 +18,7 @@ from apps.vehicles.services import ComplianceBlockedError, VehicleUnavailableErr
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
-    queryset = Vehicle.objects.select_related("current_station", "assigned_driver")
+    queryset = Vehicle.objects.select_related("assigned_driver")
     serializer_class = VehicleSerializer
     permission_classes = [permissions.IsAuthenticated, CapabilityPermission]
     capability_map = {"GET": "vehicle.view_own", "POST": "vehicle.manage", "PUT": "vehicle.manage"}
@@ -29,10 +29,9 @@ class VehicleViewSet(viewsets.ModelViewSet):
         serializer = VehicleAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        ensure_site_access(request.user, station_id=data["station_id"])
         try:
-            vehicle = services.assign_to_station(
-                vehicle_id=pk, station_id=data["station_id"], driver_id=data.get("driver_id"),
+            vehicle = services.assign_to_location(
+                vehicle_id=pk, location=data["location"], driver_id=data.get("driver_id"),
                 performed_by=request.user, comment=data["comment"], override=data["override"],
                 override_reason=data["override_reason"],
             )
@@ -76,6 +75,6 @@ class VehicleViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         entry = services.log_cost(
             vehicle_id=pk, cost_type=data["cost_type"], amount=data["amount"], incurred_at=data["incurred_at"],
-            recorded_by=request.user, comment=data["comment"], station_id=data.get("station_id"),
+            recorded_by=request.user, comment=data["comment"], location=data.get("location"),
         )
         return Response(VehicleCostLogSerializer(entry).data, status=http_status.HTTP_201_CREATED)

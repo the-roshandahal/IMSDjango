@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit employee{% else %}Add employee{% endif %} - IMS{% endblock %}
+{% block crumb %}Workforce / Employees{% endblock %}
+{% block page_title %}{% if object %}Edit {{ object.full_name }}{% else %}Add employee{% endif %}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-body">
+    {% if not object %}
+    <p class="hint" style="margin-top:0;">Just the basics -- name, email, phone. Once saved, an onboarding link is emailed to the employee (and shown on their page) so they can fill in the rest themselves.</p>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{% if object %}Save changes{% else %}Add employee &amp; send invite{% endif %}</button>
+        <a class="btn btn-secondary" href="{% url 'employees_web:list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

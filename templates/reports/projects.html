@@ -17,7 +17,7 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Project</th><th>Station</th><th class="num">Chemical cost</th><th class="num">Vehicle cost</th>
+          <th>Project</th><th>Location</th><th class="num">Chemical cost</th><th class="num">Vehicle cost</th>
           <th class="num">Total cost</th><th>Timeline</th><th>Outstanding assets</th>
         </tr>
       </thead>
@@ -25,7 +25,7 @@
         {% for row in rows %}
         <tr>
           <td><a href="{% url 'projects_web:detail' row.project.pk %}" class="mono">{{ row.project.reference }}</a> &mdash; {{ row.project.name }}</td>
-          <td>{{ row.project.station.name }}</td>
+          <td>{{ row.project.location|default:"—" }}</td>
           <td class="num mono">{{ row.chemical_cost|floatformat:2 }}</td>
           <td class="num mono">{{ row.vehicle_cost|floatformat:2 }}</td>
           <td class="num mono">{{ row.total_cost|floatformat:2 }}</td>

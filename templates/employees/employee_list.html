@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Employees - IMS{% endblock %}
+{% block crumb %}Workforce{% endblock %}
+{% block page_title %}Employees{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="desc">{{ employees|length }} employee{{ employees|length|pluralize }}</div>
+  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;">
+    <input type="search" name="q" placeholder="Search name or email" value="{{ query }}">
+    <select name="status" onchange="this.form.submit()">
+      <option value="" {% if not active_status %}selected{% endif %}>All</option>
+      <option value="active" {% if active_status == "active" %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="btn btn-secondary">Filter</button>
+  </form>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'employees_web:create' %}">+ Add employee</a>{% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body flush">
+    {% if employees %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Position</th><th>Email</th><th>Phone</th><th>Profile</th><th>RIW card</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for e in employees %}
+        <tr class="rail-row {% if not e.is_active %}pending{% elif e.riw_is_expired %}critical{% elif e.riw_is_expiring_soon %}warn{% elif not e.profile_complete %}info{% else %}good{% endif %}">
+          <td><a href="{% url 'employees_web:detail' e.pk %}">{{ e.full_name }}</a></td>
+          <td>{{ e.position|default:"—" }}</td>
+          <td class="muted">{{ e.email }}</td>
+          <td class="mono">{{ e.phone|default:"—" }}</td>
+          <td>{% if e.profile_complete %}<span class="status-rail good">Complete</span>{% else %}<span class="status-rail info">Invited</span>{% endif %}</td>
+          <td>
+            {% if not e.riw_expiry_date %}<span class="muted">—</span>
+            {% elif e.riw_is_expired %}<span class="status-rail critical">Expired</span>
+            {% elif e.riw_is_expiring_soon %}<span class="status-rail warn">Expiring soon</span>
+            {% else %}<span class="status-rail good">Valid</span>{% endif %}
+          </td>
+          <td>{% if e.is_active %}<span class="status-rail good">Active</span>{% else %}<span class="status-rail pending">Inactive</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No employees yet.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,7 +1,14 @@
+import secrets
 from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import models
+
+from apps.documents.models import validate_file_extension, validate_file_size
+
+
+def _generate_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
 class ProjectStatus(models.TextChoices):
@@ -16,9 +23,11 @@ class Shift(models.TextChoices):
 
 
 class DeepCleanProject(models.Model):
-    """SRS Section 5.7, scoped to station-based projects for now -- a
-    standalone client-site location and a linked Client entity are
-    documented future extensions (SRS Gap #14), not built this pass.
+    """SRS Section 5.7. `location` is free text (not a Station FK) --
+    deep clean jobs can happen anywhere (a station, a client site, a yard),
+    and requiring every location to first exist as a registered Station
+    was more friction than the projects module needs. A standalone Client
+    entity is a documented future extension (SRS Gap #14), not built this pass.
 
     Chemicals/equipment/vehicles dispatched here become real stock/assets
     "at" this project the same way they can be at a warehouse or station
@@ -29,7 +38,7 @@ class DeepCleanProject(models.Model):
 
     reference = models.CharField(max_length=32, unique=True, db_index=True)
     name = models.CharField(max_length=200)
-    station = models.ForeignKey("warehouses.Station", on_delete=models.PROTECT, related_name="deep_clean_projects")
+    location = models.CharField(max_length=200, blank=True, default="", help_text="e.g. 'Auburn Station', a client site address, etc.")
     supervisor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="supervised_projects"
     )
@@ -69,7 +78,14 @@ class ShiftLog(models.Model):
     shift = models.CharField(max_length=10, choices=Shift.choices, default=Shift.DAY)
     start_time = models.TimeField()
     end_time = models.TimeField()
-    workers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="deep_clean_shifts", blank=True)
+    workers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name="deep_clean_shifts", blank=True,
+        help_text="System-account staff on this shift (rare -- most crew are Employees below).",
+    )
+    employees = models.ManyToManyField(
+        "employees.Employee", related_name="deep_clean_shifts", blank=True,
+        help_text="The crew that actually worked this shift.",
+    )
     notes = models.TextField(blank=True)
     logged_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -87,3 +103,60 @@ class ShiftLog(models.Model):
         if end <= start:
             end += timedelta(days=1)  # overnight shift crossing midnight
         return round((end - start).total_seconds() / 3600, 2)
+
+
+class ToolboxTalk(models.Model):
+    """A pre-work safety briefing (hazards + controls) for a deep clean
+    project on a given day -- SRS-adjacent, requested as a company-wide
+    workforce feature. Each attendee reads it (typed content and/or an
+    attached document) and acknowledges with a signature via a personal
+    link emailed to them -- no login required, same pattern as the
+    Employee onboarding link."""
+
+    project = models.ForeignKey(DeepCleanProject, on_delete=models.CASCADE, related_name="toolbox_talks")
+    work_date = models.DateField()
+    topic = models.CharField(max_length=200, help_text="e.g. 'Wet floors & chemical handling'")
+    content = models.TextField(blank=True, help_text="Hazards discussed, controls, PPE required.")
+    attachment = models.FileField(
+        upload_to="toolbox_talks/%Y/%m/", blank=True, null=True,
+        validators=[validate_file_extension, validate_file_size],
+        help_text="The toolbox talk paper/form, if you have one -- attendees can view it before signing.",
+    )
+    conducted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-work_date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.project} {self.work_date} - {self.topic}"
+
+    @property
+    def signed_count(self) -> int:
+        return self.attendees.filter(signed_at__isnull=False).count()
+
+    @property
+    def total_count(self) -> int:
+        return self.attendees.count()
+
+
+class ToolboxTalkAttendee(models.Model):
+    toolbox_talk = models.ForeignKey(ToolboxTalk, on_delete=models.CASCADE, related_name="attendees")
+    employee = models.ForeignKey("employees.Employee", on_delete=models.PROTECT, related_name="toolbox_talk_attendances")
+    signature = models.ImageField(upload_to="toolbox_signatures/", blank=True, null=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    sign_token = models.CharField(max_length=64, unique=True, default=_generate_token, editable=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["employee__first_name", "employee__last_name"]
+        constraints = [
+            models.UniqueConstraint(fields=["toolbox_talk", "employee"], name="uniq_toolboxtalk_employee")
+        ]
+
+    def __str__(self):
+        return f"{self.employee} - {self.toolbox_talk}"
+
+    @property
+    def is_signed(self) -> bool:
+        return self.signed_at is not None

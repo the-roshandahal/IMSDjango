@@ -181,7 +181,7 @@ def equipment_report(date_from, date_to):
 # ---------------------------------------------------------------- Projects
 
 def project_report(status=None, project_ids=None):
-    qs = DeepCleanProject.objects.select_related("station", "supervisor")
+    qs = DeepCleanProject.objects.select_related("supervisor")
     if status:
         qs = qs.filter(status=status)
     if project_ids is not None:

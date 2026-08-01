@@ -34,7 +34,7 @@
             {% elif vehicle.status == "in_maintenance" %}<span class="status-rail warn">In maintenance</span>
             {% else %}<span class="status-rail pending">Written off</span>{% endif %}
           </dd></div>
-          <div><dt>Location</dt><dd>{% if vehicle.current_station %}{{ vehicle.current_station.name }}{% elif vehicle.current_project %}{{ vehicle.current_project.reference }} <span class="status-rail info">Project</span>{% else %}—{% endif %}</dd></div>
+          <div><dt>Location</dt><dd>{% if vehicle.current_project %}{{ vehicle.current_project.reference }} <span class="status-rail info">Project</span>{% elif vehicle.current_location %}{{ vehicle.get_current_location_display }}{% else %}—{% endif %}</dd></div>
           <div><dt>Driver</dt><dd>{{ vehicle.assigned_driver.username|default:"—" }}</dd></div>
           <div><dt>Service due</dt><dd class="mono">{{ vehicle.service_due_date|default:"—" }}</dd></div>
           <div><dt>Insurance expiry</dt><dd class="mono">{{ vehicle.insurance_expiry|default:"—" }}</dd></div>
@@ -91,7 +91,7 @@
             <tr>
               <td class="mono muted">{{ l.timestamp|date:"d M H:i" }}</td>
               <td><span class="status-rail {% if l.override_used %}warn{% else %}info{% endif %}">{{ l.get_action_display }}{% if l.override_used %} (override){% endif %}</span></td>
-              <td class="muted">{{ l.station.name|default:"" }} {{ l.comment }}</td>
+              <td class="muted">{{ l.project.reference|default:l.get_location_display }} {{ l.comment }}</td>
               <td class="muted">{{ l.performed_by.username }}</td>
             </tr>
             {% endfor %}
@@ -112,7 +112,7 @@
       <div class="panel-body">
         <form method="post" action="{% url 'vehicles_web:assign' vehicle.pk %}">
           {% csrf_token %}
-          <div class="field"><label>Station</label>{{ assign_form.station }}</div>
+          <div class="field"><label>{{ assign_form.location.label }}</label>{{ assign_form.location }}</div>
           <div class="field"><label>Driver (optional)</label>{{ assign_form.driver }}</div>
           <div class="field"><label>Comment</label>{{ assign_form.comment }}</div>
           {% if vehicle.compliance_blockers %}

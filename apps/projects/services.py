@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from apps.projects.models import DeepCleanProject, ProjectStatus, ShiftLog
+from apps.projects.models import DeepCleanProject, ProjectStatus, ShiftLog, ToolboxTalk, ToolboxTalkAttendee
 
 
 def check_active_project_supervision(user) -> list[str]:
@@ -12,9 +12,9 @@ def check_active_project_supervision(user) -> list[str]:
     return [f"Deep clean project {ref} is still supervised by this user" for ref in refs]
 
 
-def create_project(*, reference, name, station_id, supervisor_id, start_date, end_date, created_by):
+def create_project(*, reference, name, location, supervisor_id, start_date, end_date, created_by):
     return DeepCleanProject.objects.create(
-        reference=reference, name=name, station_id=station_id, supervisor_id=supervisor_id,
+        reference=reference, name=name, location=location, supervisor_id=supervisor_id,
         start_date=start_date, end_date=end_date, created_by=created_by,
     )
 
@@ -62,11 +62,68 @@ def close_project(*, project_id, performed_by, override=False, override_reason="
     return project
 
 
-def log_shift(*, project_id, work_date, shift, start_time, end_time, worker_ids, logged_by, notes=""):
+def log_shift(*, project_id, work_date, shift, start_time, end_time, logged_by, worker_ids=None, employee_ids=None, notes=""):
     log = ShiftLog.objects.create(
         project_id=project_id, work_date=work_date, shift=shift, start_time=start_time, end_time=end_time,
         logged_by=logged_by, notes=notes,
     )
     if worker_ids:
         log.workers.set(worker_ids)
+    if employee_ids:
+        log.employees.set(employee_ids)
     return log
+
+
+def create_toolbox_talk(*, project_id, work_date, topic, content, attachment, conducted_by, employee_ids, request=None):
+    talk = ToolboxTalk.objects.create(
+        project_id=project_id, work_date=work_date, topic=topic, content=content, attachment=attachment,
+        conducted_by=conducted_by,
+    )
+    ToolboxTalkAttendee.objects.bulk_create(
+        [ToolboxTalkAttendee(toolbox_talk=talk, employee_id=eid) for eid in employee_ids]
+    )
+    if request is not None:
+        for attendee in talk.attendees.select_related("employee"):
+            send_toolbox_talk_email(attendee, request)
+    return talk
+
+
+def toolbox_talk_sign_url(request, attendee: ToolboxTalkAttendee) -> str:
+    from django.urls import reverse
+
+    path = reverse("projects_web:toolbox-talk-sign-public", args=[attendee.sign_token])
+    return request.build_absolute_uri(path)
+
+
+def send_toolbox_talk_email(attendee: ToolboxTalkAttendee, request) -> bool:
+    """Best-effort, same pattern as the employee onboarding invite -- the
+    caller always has toolbox_talk_sign_url() to share the link manually
+    (SMS/WhatsApp) regardless of whether the email actually lands."""
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    if not attendee.employee.email:
+        return False
+    talk = attendee.toolbox_talk
+    link = toolbox_talk_sign_url(request, attendee)
+    subject = f"Toolbox talk -- {talk.topic}"
+    message = (
+        f"Hi {attendee.employee.first_name},\n\n"
+        f"Please read the toolbox talk below for {talk.project.name} ({talk.work_date}) and sign to confirm "
+        f"you've read and understood it:\n\n{link}\n\nThanks,\nCleantech1"
+    )
+    attendee.email_sent_at = timezone.now()
+    attendee.save(update_fields=["email_sent_at"])
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [attendee.employee.email], fail_silently=False)
+        return True
+    except Exception:
+        return False
+
+
+def record_signature(*, attendee_id, signature_file):
+    attendee = ToolboxTalkAttendee.objects.select_related("toolbox_talk").get(pk=attendee_id)
+    attendee.signature = signature_file
+    attendee.signed_at = timezone.now()
+    attendee.save(update_fields=["signature", "signed_at"])
+    return attendee

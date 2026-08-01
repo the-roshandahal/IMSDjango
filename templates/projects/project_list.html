@@ -19,13 +19,13 @@
   <div class="panel-body flush">
     {% if projects %}
     <table class="data">
-      <thead><tr><th>Reference</th><th>Name</th><th>Station</th><th>Supervisor</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+      <thead><tr><th>Reference</th><th>Name</th><th>Location</th><th>Supervisor</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
       <tbody>
         {% for p in projects %}
         <tr class="rail-row {% if p.status == 'active' %}info{% elif p.status == 'planned' %}pending{% else %}good{% endif %}">
           <td><a href="{% url 'projects_web:detail' p.pk %}" class="mono">{{ p.reference }}</a></td>
           <td>{{ p.name }}</td>
-          <td>{{ p.station.name }}</td>
+          <td>{{ p.location|default:"—" }}</td>
           <td>{{ p.supervisor.username }}</td>
           <td class="mono">{{ p.start_date }}</td>
           <td class="mono">{{ p.end_date|default:"—" }}</td>

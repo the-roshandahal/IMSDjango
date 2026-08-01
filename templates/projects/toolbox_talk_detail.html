@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ talk.topic }} - IMS{% endblock %}
+{% block crumb %}Deep Clean / {{ project.reference }}{% endblock %}
+{% block page_title %}{{ talk.topic }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ project.reference }} &middot; {{ talk.work_date }} &middot; conducted by {{ talk.conducted_by.username }}</div>
+  <a class="btn btn-secondary" href="{% url 'projects_web:detail' project.pk %}">Back to project</a>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Briefing</h2></div>
+  <div class="panel-body">
+    {% if talk.content %}<p style="white-space:pre-wrap;margin:0 0 12px;">{{ talk.content }}</p>{% endif %}
+    {% if talk.attachment %}
+    <a class="btn btn-secondary" href="{{ talk.attachment.url }}" target="_blank" rel="noopener">View attached file</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if can_manage %}
+<div class="panel" id="padPanel" style="display:none;">
+  <div class="panel-head"><h2 id="padHeading">Sign (in person, backup)</h2></div>
+  <div class="panel-body">
+    <div class="signature-pad-wrap"><canvas id="sigCanvas"></canvas></div>
+    <div class="signature-actions">
+      <button type="button" id="sigClear" class="btn btn-secondary">Clear</button>
+      <button type="button" id="sigSave" class="btn btn-primary">Save signature</button>
+      <button type="button" id="sigCancel" class="btn btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+<form method="post" id="sigForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="signature_data" id="sigData">
+</form>
+{% endif %}
+
+<div class="panel">
+  <div class="panel-head"><h2>Attendees</h2><span class="sub">{{ talk.signed_count }} / {{ talk.total_count }} signed</span></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <thead><tr><th>Name</th><th>Status</th><th>Email</th><th>Signature</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for a in attendees %}
+        <tr class="rail-row {% if a.is_signed %}good{% else %}pending{% endif %}">
+          <td>{{ a.employee.full_name }}</td>
+          <td>
+            {% if a.is_signed %}<span class="status-rail good">Signed {{ a.signed_at|date:"d M H:i" }}</span>
+            {% else %}<span class="status-rail pending">Not signed</span>{% endif %}
+          </td>
+          <td class="muted">
+            {% if a.email_sent_at %}Sent {{ a.email_sent_at|date:"d M H:i" }}{% else %}Not sent{% endif %}
+          </td>
+          <td>{% if a.signature %}<img src="{{ a.signature.url }}" alt="Signature" style="height:36px;background:#fff;border-radius:4px;">{% else %}<span class="muted">—</span>{% endif %}</td>
+          {% if can_manage %}
+          <td class="actions-row" style="margin:0;flex-wrap:nowrap;">
+            {% if not a.is_signed %}
+            <form method="post" action="{% url 'projects_web:toolbox-talk-resend-email' project.pk talk.pk a.pk %}" style="display:inline;">
+              {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Resend email</button>
+            </form>
+            <button type="button" class="btn btn-secondary btn-sm sign-btn" data-attendee-id="{{ a.pk }}" data-attendee-name="{{ a.employee.full_name }}">Sign in person</button>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if can_manage %}
+<script>
+(function () {
+  var canvas = document.getElementById("sigCanvas");
+  var ctx = canvas.getContext("2d");
+  var padPanel = document.getElementById("padPanel");
+  var padHeading = document.getElementById("padHeading");
+  var form = document.getElementById("sigForm");
+  var dataInput = document.getElementById("sigData");
+  var signUrlTemplate = "{% url 'projects_web:toolbox-talk-sign' project.pk talk.pk 0 %}";
+  var drawing = false, hasDrawn = false;
+
+  function resizeCanvas() {
+    var ratio = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * ratio;
+    canvas.height = 160 * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#101828";
+  }
+
+  function pos(evt) {
+    var rect = canvas.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+  }
+
+  canvas.addEventListener("pointerdown", function (evt) {
+    drawing = true; hasDrawn = true;
+    var p = pos(evt);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    evt.preventDefault();
+  });
+  canvas.addEventListener("pointermove", function (evt) {
+    if (!drawing) return;
+    var p = pos(evt);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    evt.preventDefault();
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
+    canvas.addEventListener(ev, function () { drawing = false; });
+  });
+
+  document.querySelectorAll(".sign-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      padHeading.textContent = "Sign: " + btn.dataset.attendeeName;
+      form.action = signUrlTemplate.replace("/attendees/0/sign/", "/attendees/" + btn.dataset.attendeeId + "/sign/");
+      padPanel.style.display = "";
+      resizeCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasDrawn = false;
+      padPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+
+  document.getElementById("sigClear").addEventListener("click", function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawn = false;
+  });
+  document.getElementById("sigCancel").addEventListener("click", function () {
+    padPanel.style.display = "none";
+  });
+  document.getElementById("sigSave").addEventListener("click", function () {
+    if (!hasDrawn) { alert("Please sign before saving."); return; }
+    dataInput.value = canvas.toDataURL("image/png");
+    form.submit();
+  });
+
+  window.addEventListener("resize", function () {
+    if (padPanel.style.display !== "none") resizeCanvas();
+  });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

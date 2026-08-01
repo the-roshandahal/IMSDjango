@@ -81,6 +81,13 @@
         <span class="nav-dot"></span> Train Lookup
       </a>
 
+      {% if can_view_employees %}
+      <div class="nav-section">Workforce</div>
+      <a class="nav-link {% if 'employees_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'employees_web:list' %}">
+        <span class="nav-dot"></span> Employees
+      </a>
+      {% endif %}
+
       {% if can_view_equipment or can_view_vehicles %}
       <div class="nav-section">Fleet</div>
       {% if can_view_equipment %}

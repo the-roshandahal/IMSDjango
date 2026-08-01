@@ -30,7 +30,7 @@ class VehicleListView(CapabilityRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        qs = Vehicle.objects.select_related("current_station", "current_project", "assigned_driver").order_by("registration")
+        qs = Vehicle.objects.select_related("current_project", "assigned_driver").order_by("registration")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_driver=self.request.user)
@@ -48,7 +48,7 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
     context_object_name = "vehicle"
 
     def get_queryset(self):
-        qs = Vehicle.objects.select_related("current_station", "current_project", "assigned_driver")
+        qs = Vehicle.objects.select_related("current_project", "assigned_driver")
         if _can_manage_fleet(self.request.user):
             return qs
         return qs.filter(assigned_driver=self.request.user)
@@ -56,8 +56,8 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["can_manage_fleet"] = _can_manage_fleet(self.request.user)
-        ctx["logs"] = self.object.logs.select_related("station", "driver", "performed_by")[:20]
-        ctx["costs"] = self.object.cost_logs.select_related("station", "recorded_by")[:20]
+        ctx["logs"] = self.object.logs.select_related("driver", "performed_by")[:20]
+        ctx["costs"] = self.object.cost_logs.select_related("recorded_by")[:20]
         ctx["total_cost"] = sum((c.amount for c in ctx["costs"]), start=0)
         ctx["assign_form"] = VehicleAssignForm()
         ctx["release_form"] = VehicleReleaseForm()
@@ -108,8 +108,8 @@ class VehicleAssignView(CapabilityRequiredMixin, View):
             return redirect(reverse("vehicles_web:detail", args=[pk]))
         data = form.cleaned_data
         try:
-            services.assign_to_station(
-                vehicle_id=pk, station_id=data["station"].id, driver_id=data["driver"].id if data["driver"] else None,
+            services.assign_to_location(
+                vehicle_id=pk, location=data["location"], driver_id=data["driver"].id if data["driver"] else None,
                 performed_by=request.user, comment=data["comment"], override=data["override"],
                 override_reason=data["override_reason"],
             )
