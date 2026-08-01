@@ -119,7 +119,7 @@ class DashboardView(View):
 
     def get(self, request):
         if not request.user.is_authenticated:
-            return redirect(reverse_lazy("accounts:login"))
+            return render(request, "core/home.html")
 
         from apps.catalogue.models import Product
         from apps.inventory.models import InventoryTransaction
