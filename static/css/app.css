@@ -492,6 +492,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 .checkbox-list li { list-style: none; padding: 2px 0; }
 .checkbox-list label { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 400; color: var(--ink-900); margin: 0; padding: 7px 4px; min-height: 44px; box-sizing: border-box; }
 .checkbox-list input { width: 18px; height: 18px; flex-shrink: 0; }
+table.data input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; }
 
 .signature-pad-wrap { border: 1px dashed var(--line-strong); border-radius: var(--radius); background: #fff; touch-action: none; }
 .signature-pad-wrap canvas { display: block; width: 100%; height: 160px; cursor: crosshair; }

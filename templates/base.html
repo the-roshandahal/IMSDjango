@@ -41,9 +41,6 @@
       <a class="nav-link {% if 'catalogue_web:category' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'catalogue_web:category-list' %}">
         <span class="nav-dot"></span> Categories
       </a>
-      <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name and 'stocktake' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
-        <span class="nav-dot"></span> Transactions
-      </a>
       {% endif %}
       {% if can_view_requests or can_create_requests %}
       <a class="nav-link {% if 'stock_requests_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'stock_requests_web:list' %}">
@@ -66,8 +63,8 @@
       <a class="nav-link {% if 'warehouses_web:station' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'warehouses_web:station-list' %}">
         <span class="nav-dot"></span> Stations
       </a>
-      {% if is_station_role and can_view_transactions %}
-      <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
+      {% if can_view_transactions %}
+      <a class="nav-link {% if 'inventory_web:' in request.resolver_match.view_name and 'stocktake' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'inventory_web:transaction-list' %}">
         <span class="nav-dot"></span> Transactions
       </a>
       {% endif %}

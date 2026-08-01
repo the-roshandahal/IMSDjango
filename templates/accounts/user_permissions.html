@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ target_user.username }} permissions - IMS{% endblock %}
+{% block crumb %}Administration / Users / {{ target_user.username }}{% endblock %}
+{% block page_title %}Custom permissions &mdash; {{ target_user.username }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Role: {{ target_user.get_role_display }}. Tick or untick anything to override just for this person -- everything else keeps following the role.</div>
+  <a class="btn btn-secondary" href="{% url 'accounts:user-detail-page' target_user.pk %}">Back to {{ target_user.username }}</a>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="panel" style="max-width:520px;">
+    <div class="panel-head"><h2>Change details</h2></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ form.expires_at.id_for_label }}">{{ form.expires_at.label }}</label>
+          {{ form.expires_at }}
+          <div class="hint">{{ form.expires_at.help_text }}</div>
+        </div>
+        <div class="field">
+          <label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+          {{ form.reason }}
+          <div class="hint">e.g. "Covering for Sam while on leave"</div>
+        </div>
+      </div>
+      {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+    </div>
+  </div>
+
+  {% for group in groups %}
+  <div class="panel">
+    <div class="panel-head"><h2>{{ group.name }}</h2></div>
+    <div class="panel-body flush">
+      <table class="data">
+        <thead><tr><th style="width:44px;"></th><th>Permission</th><th>Role default</th></tr></thead>
+        <tbody>
+          {% for row in group.rows %}
+          <tr>
+            <td>{{ row.field }}</td>
+            <td>
+              {{ row.label }}
+              <div class="hint mono" style="margin-top:2px;">{{ row.capability }}</div>
+            </td>
+            <td>{% if row.role_default %}<span class="status-rail good">Has it</span>{% else %}<span class="status-rail pending">Doesn't</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save permissions</button>
+    <a class="btn btn-secondary" href="{% url 'accounts:user-detail-page' target_user.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -50,3 +50,29 @@ class SiteAssignmentForm(forms.ModelForm):
     class Meta:
         model = SiteAssignment
         fields = ["warehouse", "station"]
+
+
+class PermissionChecklistForm(forms.Form):
+    """One checkbox per capability in CAPABILITY_CATALOG, plus a shared
+    optional expiry applied to whatever changes in this save."""
+
+    expires_at = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"}),
+        label="Expires on (optional)", help_text="Leave blank for permanent. Applies to whatever you change below.",
+    )
+    reason = forms.CharField(required=False, label="Reason (optional)", widget=forms.TextInput())
+
+    def __init__(self, *args, capabilities=None, initial_state=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        initial_state = initial_state or {}
+        for capability, _label in capabilities or []:
+            self.fields[f"cap_{capability}"] = forms.BooleanField(
+                required=False, initial=initial_state.get(capability, False),
+            )
+
+    def capability_grants(self):
+        return {
+            name[len("cap_"):]: bool(value)
+            for name, value in self.cleaned_data.items()
+            if name.startswith("cap_")
+        }

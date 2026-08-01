@@ -82,6 +82,32 @@
       </div>
     </div>
 
+    {% if can_view_transactions %}
+    <div class="panel">
+      <div class="panel-head"><h2>Recent transactions</h2><a class="btn btn-secondary btn-sm" href="{% url 'inventory_web:transaction-list' %}">View all</a></div>
+      <div class="panel-body flush">
+        {% if recent_transactions %}
+        <table class="data">
+          <thead><tr><th>When</th><th>Type</th><th>Product</th><th class="num">Qty</th><th>By</th></tr></thead>
+          <tbody>
+            {% for t in recent_transactions %}
+            <tr>
+              <td class="mono muted">{{ t.timestamp|date:"d M, H:i" }}</td>
+              <td><span class="status-rail info">{{ t.get_type_display }}</span></td>
+              <td>{{ t.product.name }}</td>
+              <td class="num mono">{{ t.quantity }}</td>
+              <td class="muted">{{ t.performed_by.username }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No transactions recorded for this station yet.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="panel">
       <div class="panel-head"><h2>Recent stock requests</h2></div>
       <div class="panel-body flush">

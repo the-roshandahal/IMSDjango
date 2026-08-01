@@ -11,6 +11,8 @@ from apps.accounts.web_views import (
     UserDeactivateWebView,
     UserDetailView,
     UserListView,
+    UserPermissionOverrideDeleteWebView,
+    UserPermissionsView,
     UserReactivateWebView,
     UserRoleChangeWebView,
     UserSiteAssignmentCreateWebView,
@@ -51,6 +53,11 @@ web_urlpatterns = [
     path("users/<int:pk>/unlock/", UserUnlockWebView.as_view(), name="user-unlock-page"),
     path("users/<int:pk>/sites/", UserSiteAssignmentCreateWebView.as_view(), name="user-site-add-page"),
     path("users/<int:pk>/sites/<int:assignment_id>/delete/", UserSiteAssignmentDeleteWebView.as_view(), name="user-site-delete-page"),
+    path("users/<int:pk>/permissions/", UserPermissionsView.as_view(), name="user-permissions-page"),
+    path(
+        "users/<int:pk>/permissions/<int:override_id>/delete/",
+        UserPermissionOverrideDeleteWebView.as_view(), name="user-permission-delete-page",
+    ),
     path("", DashboardView.as_view(), name="dashboard"),
 ]
 

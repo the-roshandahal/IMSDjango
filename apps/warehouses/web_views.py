@@ -133,6 +133,11 @@ class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, Deta
         from apps.inventory.models import Stocktake
 
         ctx["recent_stocktakes"] = Stocktake.objects.filter(station=self.object).select_related("started_by")[:5]
+        ctx["recent_transactions"] = (
+            InventoryTransaction.objects.filter(station=self.object)
+            .select_related("product", "source_warehouse", "performed_by")
+            .order_by("-timestamp")[:10]
+        )
         return ctx
 
 

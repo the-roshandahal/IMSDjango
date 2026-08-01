@@ -74,6 +74,36 @@
         </form>
       </div>
     </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Custom permissions</h2><span class="sub">beyond the {{ target_user.get_role_display }} default</span></div>
+      <div class="panel-body flush">
+        {% if active_overrides %}
+        <table class="data">
+          <thead><tr><th>Permission</th><th>State</th><th>Expires</th><th></th></tr></thead>
+          <tbody>
+            {% for o in active_overrides %}
+            <tr class="rail-row {% if o.is_expired %}pending{% elif o.granted %}good{% else %}warn{% endif %}">
+              <td class="mono">{{ o.capability }}</td>
+              <td>{% if o.is_expired %}<span class="status-rail pending">Expired</span>{% elif o.granted %}<span class="status-rail good">Granted</span>{% else %}<span class="status-rail warn">Revoked</span>{% endif %}</td>
+              <td class="muted">{{ o.expires_at|date:"d M Y"|default:"—" }}</td>
+              <td>
+                <form method="post" action="{% url 'accounts:user-permission-delete-page' target_user.pk o.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Clear</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No custom permissions -- using the role default for everything.</div>
+        {% endif %}
+      </div>
+      <div class="panel-body" style="border-top:1px solid var(--line);">
+        <a class="btn btn-secondary" href="{% url 'accounts:user-permissions-page' target_user.pk %}" style="width:100%;justify-content:center;">Edit custom permissions</a>
+      </div>
+    </div>
   </div>
 
   <div>

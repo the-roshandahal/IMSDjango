@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.db.models import F, Q, Sum
@@ -11,16 +13,24 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from apps.accounts import services
 from apps.accounts.forms import (
     LoginForm,
+    PermissionChecklistForm,
     SiteAssignmentForm,
     TwoFactorForm,
     UserCreateForm,
     UserDeactivateForm,
     UserRoleForm,
 )
-from apps.accounts.models import Role, SiteAssignment, User
+from apps.accounts.models import Role, SiteAssignment, User, UserCapabilityOverride
 from apps.audit.models import AuditLog
 from apps.core.mixins import CapabilityRequiredMixin
-from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids
+from apps.core.permissions import (
+    CAPABILITY_CATALOG,
+    SITE_SCOPE_EXEMPT_ROLES,
+    assigned_site_ids,
+    effective_capabilities,
+    role_default_capability,
+    set_capability_overrides,
+)
 from apps.core.utils import get_client_ip
 
 
@@ -228,6 +238,7 @@ class UserDetailView(CapabilityRequiredMixin, DetailView):
         ctx["deactivate_form"] = UserDeactivateForm()
         ctx["site_form"] = SiteAssignmentForm()
         ctx["pending_blockers"] = services.check_pending_assets(self.object) if self.object.is_active else []
+        ctx["active_overrides"] = self.object.capability_overrides.all()
         return ctx
 
 
@@ -343,3 +354,71 @@ class UserSiteAssignmentDeleteWebView(CapabilityRequiredMixin, View):
         SiteAssignment.objects.filter(pk=assignment_id, user_id=pk).delete()
         messages.success(request, "Site assignment removed.")
         return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserPermissionsView(CapabilityRequiredMixin, View):
+    """Per-user custom permission checklist -- grant or revoke individual
+    capabilities beyond what the role normally gives, optionally with an
+    expiry date so it stops applying itself automatically."""
+
+    capability = "user.manage"
+    template_name = "accounts/user_permissions.html"
+
+    def get(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        state = effective_capabilities(user_obj)
+        form = PermissionChecklistForm(
+            capabilities=[(cap, label) for _group, items in CAPABILITY_CATALOG for cap, label in items],
+            initial_state=state,
+        )
+        return render(request, self.template_name, self._context(request, user_obj, form, state))
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        all_caps = [(cap, label) for _group, items in CAPABILITY_CATALOG for cap, label in items]
+        form = PermissionChecklistForm(request.POST, capabilities=all_caps)
+        if not form.is_valid():
+            messages.error(request, "Check the form and try again.")
+            return render(request, self.template_name, self._context(request, user_obj, form, effective_capabilities(user_obj)))
+
+        expires_at = form.cleaned_data.get("expires_at")
+        if expires_at:
+            expires_at = timezone.make_aware(datetime.datetime.combine(expires_at, datetime.time.max))
+        changed = set_capability_overrides(
+            user=user_obj, grants=form.capability_grants(), granted_by=request.user,
+            expires_at=expires_at, reason=form.cleaned_data.get("reason", ""),
+        )
+        if changed:
+            AuditLog.log(
+                actor=request.user, action="user.permissions_changed", entity_type="User", entity_id=user_obj.pk,
+                metadata={"changes": changed, "expires_at": expires_at.isoformat() if expires_at else None},
+                ip_address=get_client_ip(request),
+            )
+            messages.success(request, f"Updated {len(changed)} permission(s) for {user_obj.username}.")
+        else:
+            messages.info(request, "No changes to save.")
+        return redirect(reverse("accounts:user-permissions-page", args=[pk]))
+
+    def _context(self, request, user_obj, form, state):
+        groups = []
+        for group_name, items in CAPABILITY_CATALOG:
+            rows = []
+            for capability, label in items:
+                rows.append({
+                    "capability": capability, "label": label, "field": form[f"cap_{capability}"],
+                    "role_default": role_default_capability(user_obj.role, capability),
+                })
+            groups.append({"name": group_name, "rows": rows})
+        return {
+            "target_user": user_obj, "form": form, "groups": groups,
+            "active_overrides": user_obj.capability_overrides.all(),
+        }
+
+
+class UserPermissionOverrideDeleteWebView(CapabilityRequiredMixin, View):
+    capability = "user.manage"
+
+    def post(self, request, pk, override_id):
+        UserCapabilityOverride.objects.filter(pk=override_id, user_id=pk).delete()
+        messages.success(request, "Permission override removed -- back to the role default.")
+        return redirect(reverse("accounts:user-permissions-page", args=[pk]))

@@ -104,6 +104,40 @@ class SiteAssignment(models.Model):
         return f"{self.user} -> {site}"
 
 
+class UserCapabilityOverride(models.Model):
+    """A per-user exception to their role's default capabilities -- grants
+    something the role doesn't normally have, or revokes something it does.
+    An explicit override always wins over the role default. `expires_at`
+    left blank means it applies until someone removes it by hand; set it
+    for "give them this for two weeks" and it just stops applying itself
+    once the date passes (checked lazily in has_capability(), no cron
+    needed to "turn it off").
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="capability_overrides")
+    capability = models.CharField(max_length=64)
+    granted = models.BooleanField(help_text="Checked = grant this capability. Unchecked = revoke it, even if the role normally has it.")
+    reason = models.CharField(max_length=255, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    granted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "capability"], name="uniq_user_capability_override")
+        ]
+        ordering = ["capability"]
+
+    def __str__(self):
+        state = "grant" if self.granted else "revoke"
+        return f"{self.user}: {state} {self.capability}"
+
+    @property
+    def is_expired(self) -> bool:
+        return bool(self.expires_at and self.expires_at <= timezone.now())
+
+
 class PasswordResetToken(models.Model):
     """Explicit, time-limited, single-use reset tokens (SRS: 30 minutes).
     Only a hash of the token is stored; the raw token is emailed once and
