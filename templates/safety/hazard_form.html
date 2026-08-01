@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{% if site %}Report a hazard - {{ site }}{% else %}Report a hazard{% endif %} - IMS{% endblock %}
+{% block crumb %}Safety / Hazard &amp; Incident Reports{% endblock %}
+{% block page_title %}{% if site %}Report a hazard -- {{ site }}{% else %}Report a hazard{% endif %}{% endblock %}
+{% block content %}
+
+{% if not site %}
+<p class="hint" style="margin-top:0;">Pick where this happened.</p>
+
+{% if stations %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-head"><h2>Stations</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <tbody>
+        {% for s in stations %}
+        <tr><td><a href="?site_type=station&amp;site_id={{ s.pk }}">{{ s.name }}</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if projects %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-head"><h2>Deep clean projects</h2></div>
+  <div class="panel-body flush">
+    <table class="data">
+      <tbody>
+        {% for p in projects %}
+        <tr><td><a href="?site_type=project&amp;site_id={{ p.pk }}">{{ p.reference }} &mdash; {{ p.name }}</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not stations and not projects %}
+<div class="empty-state">You're not assigned to a station or deep clean project -- ask your supervisor to add a site assignment.</div>
+{% endif %}
+
+{% else %}
+<form method="post" enctype="multipart/form-data" style="max-width:640px;">
+  {% csrf_token %}
+  <input type="hidden" name="site_type" value="{{ site_type }}">
+  <input type="hidden" name="site_id" value="{{ site.pk }}">
+  <div class="panel">
+    <div class="panel-body">
+      {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ form.report_type.id_for_label }}">{{ form.report_type.label }}</label>
+          {{ form.report_type }}
+        </div>
+        <div class="field">
+          <label for="{{ form.severity.id_for_label }}">{{ form.severity.label }}</label>
+          {{ form.severity }}
+        </div>
+      </div>
+      <div class="field">
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% if form.title.errors %}<div class="errors">{{ form.title.errors }}</div>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+        {{ form.description }}
+        {% if form.description.errors %}<div class="errors">{{ form.description.errors }}</div>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.location_detail.id_for_label }}">{{ form.location_detail.label }}</label>
+        {{ form.location_detail }}
+        <div class="hint">{{ form.location_detail.help_text }}</div>
+      </div>
+      <div class="field">
+        <label for="{{ form.immediate_action_taken.id_for_label }}">{{ form.immediate_action_taken.label }}</label>
+        {{ form.immediate_action_taken }}
+      </div>
+      <div class="field checkbox-field">
+        {{ form.injury_involved }}
+        <label for="{{ form.injury_involved.id_for_label }}" style="margin:0;">{{ form.injury_involved.label }}</label>
+      </div>
+      <div class="field">
+        <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+        {{ form.photo }}
+      </div>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Submit report</button>
+    <a class="btn btn-secondary" href="{% url 'safety_web:new' %}">Change site</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

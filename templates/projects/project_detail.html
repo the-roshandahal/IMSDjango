@@ -9,7 +9,8 @@
     {{ project.location|default:"No location set" }} &middot; {{ project.start_date }}{% if project.end_date %} to {{ project.end_date }}{% endif %}
     &middot; Supervisor: {{ project.supervisor.username }}
   </div>
-  <div>
+  <div class="actions-row">
+    {% if can_report_hazards %}<a class="btn btn-secondary" href="{% url 'safety_web:new' %}?site_type=project&site_id={{ project.pk }}">Report a hazard</a>{% endif %}
     {% if project.status == "planned" %}<span class="status-rail pending">Planned</span>
     {% elif project.status == "active" %}<span class="status-rail info">Active</span>
     {% else %}<span class="status-rail good">Completed</span>{% endif %}
@@ -127,6 +128,37 @@
         {% endif %}
       </div>
     </div>
+
+    {% if can_report_hazards %}
+    <div class="panel">
+      <div class="panel-head"><h2>Recent hazard reports</h2><a class="btn btn-secondary btn-sm" href="{% url 'safety_web:list' %}">View all</a></div>
+      <div class="panel-body flush">
+        {% if recent_hazards %}
+        <table class="data">
+          <thead><tr><th>Reported</th><th>Type</th><th>Severity</th><th>Title</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for h in recent_hazards %}
+            <tr class="rail-row {% if h.severity == 'critical' %}critical{% elif h.severity == 'high' %}warn{% elif h.status == 'open' %}pending{% else %}good{% endif %}">
+              <td class="mono muted">{{ h.reported_at|date:"d M, H:i" }}</td>
+              <td>{{ h.get_report_type_display }}</td>
+              <td>
+                {% if h.severity == "critical" %}<span class="status-rail critical">Critical</span>
+                {% elif h.severity == "high" %}<span class="status-rail warn">High</span>
+                {% elif h.severity == "medium" %}<span class="status-rail pending">Medium</span>
+                {% else %}<span class="status-rail good">Low</span>{% endif %}
+              </td>
+              <td><a href="{% url 'safety_web:detail' h.pk %}">{{ h.title }}</a></td>
+              <td>{% if h.status == "open" %}<span class="status-rail pending">Open</span>{% else %}<span class="status-rail good">Closed</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No hazard reports for this project yet.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     <div class="panel">
       <div class="panel-head"><h2>Toolbox talks</h2></div>

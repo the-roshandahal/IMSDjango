@@ -28,6 +28,7 @@ urlpatterns = [
     path("", include("apps.core.urls_web")),
     path("", include("apps.trains.urls_web")),
     path("", include("apps.employees.urls_web")),
+    path("", include("apps.safety.urls_web")),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Hazard &amp; Incident Reports - IMS{% endblock %}
+{% block crumb %}Safety{% endblock %}
+{% block page_title %}Hazard &amp; Incident Reports{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ open_count }} open report{{ open_count|pluralize }} in your view.</div>
+  <div class="actions-row">
+    <form method="get" style="display:flex;gap:8px;">
+      <select name="status" onchange="this.form.submit()">
+        <option value="">All statuses</option>
+        <option value="open" {% if active_status == "open" %}selected{% endif %}>Open</option>
+        <option value="closed" {% if active_status == "closed" %}selected{% endif %}>Closed</option>
+      </select>
+      <select name="severity" onchange="this.form.submit()">
+        <option value="">All severities</option>
+        <option value="low" {% if active_severity == "low" %}selected{% endif %}>Low</option>
+        <option value="medium" {% if active_severity == "medium" %}selected{% endif %}>Medium</option>
+        <option value="high" {% if active_severity == "high" %}selected{% endif %}>High</option>
+        <option value="critical" {% if active_severity == "critical" %}selected{% endif %}>Critical</option>
+      </select>
+    </form>
+    <a class="btn btn-primary" href="{% url 'safety_web:new' %}">Report a hazard</a>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if reports %}
+    <table class="data">
+      <thead>
+        <tr><th>Reported</th><th>Type</th><th>Severity</th><th>Title</th><th>Site</th><th>By</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr class="rail-row {% if r.severity == 'critical' %}critical{% elif r.severity == 'high' %}warn{% elif r.status == 'open' %}pending{% else %}good{% endif %}">
+          <td class="mono muted">{{ r.reported_at|date:"d M Y, H:i" }}</td>
+          <td>{{ r.get_report_type_display }}</td>
+          <td>
+            {% if r.severity == "critical" %}<span class="status-rail critical">Critical</span>
+            {% elif r.severity == "high" %}<span class="status-rail warn">High</span>
+            {% elif r.severity == "medium" %}<span class="status-rail pending">Medium</span>
+            {% else %}<span class="status-rail good">Low</span>{% endif %}
+          </td>
+          <td><a href="{% url 'safety_web:detail' r.pk %}">{{ r.title }}</a></td>
+          <td class="muted">{{ r.site }}</td>
+          <td class="muted">{{ r.reported_by.username }}</td>
+          <td>{% if r.status == "open" %}<span class="status-rail pending">Open</span>{% else %}<span class="status-rail good">Closed</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No hazard or incident reports yet</div></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="actions-row">
+  {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if active_severity %}&severity={{ active_severity }}{% endif %}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

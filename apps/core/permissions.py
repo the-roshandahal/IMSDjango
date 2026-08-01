@@ -39,6 +39,9 @@ ROLE_CAPABILITIES = {
     ("wh_supervisor", "warehouse.stock.view"): True,
     ("wh_supervisor", "project.view"): True,
     ("wh_supervisor", "stocktake.participate"): True,
+    ("wh_supervisor", "hazard.report"): True,
+    ("wh_supervisor", "hazard.view"): True,
+    ("wh_supervisor", "hazard.manage"): True,
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
@@ -51,6 +54,9 @@ ROLE_CAPABILITIES = {
     ("station_supervisor", "reports.view_own_site"): True,
     ("station_supervisor", "purchase_request.create"): True,
     ("station_supervisor", "transaction.view"): True,
+    ("station_supervisor", "hazard.report"): True,
+    ("station_supervisor", "hazard.view"): True,
+    ("station_supervisor", "hazard.manage"): True,
 
     ("deepclean_supervisor", "product.view"): True,
     ("deepclean_supervisor", "project.update_own"): True,
@@ -60,6 +66,9 @@ ROLE_CAPABILITIES = {
     ("deepclean_supervisor", "purchase_request.create"): True,
     ("deepclean_supervisor", "employee.manage"): True,
     ("deepclean_supervisor", "employee.view"): True,
+    ("deepclean_supervisor", "hazard.report"): True,
+    ("deepclean_supervisor", "hazard.view"): True,
+    ("deepclean_supervisor", "hazard.manage"): True,
 
     ("wh_staff", "product.view"): True,
     ("wh_staff", "warehouse.view"): True,
@@ -68,6 +77,8 @@ ROLE_CAPABILITIES = {
     ("wh_staff", "stocktake.participate"): True,
     ("wh_staff", "stocktake.manage"): True,
     ("wh_staff", "purchase_order.manage"): True,
+    ("wh_staff", "hazard.report"): True,
+    ("wh_staff", "hazard.view"): True,
 
     ("station_staff", "product.view"): True,
     ("station_staff", "station_request.create"): True,
@@ -75,6 +86,8 @@ ROLE_CAPABILITIES = {
     ("station_staff", "equipment.view_own"): True,
     ("station_staff", "stocktake.manage"): True,
     ("station_staff", "transaction.view"): True,
+    ("station_staff", "hazard.report"): True,
+    ("station_staff", "hazard.view"): True,
 }
 
 # Roles that see everything regardless of SiteAssignment (still gated by capability).
@@ -131,6 +144,11 @@ CAPABILITY_CATALOG = [
     ("Employees", [
         ("employee.view", "View the employee directory"),
         ("employee.manage", "Add/edit employees, toolbox talks"),
+    ]),
+    ("Hazard & Incident Reports", [
+        ("hazard.report", "Report a hazard, near miss or incident"),
+        ("hazard.view", "View hazard/incident reports for your site"),
+        ("hazard.manage", "Investigate, assign and close out reports"),
     ]),
     ("Suppliers & Purchasing", [
         ("supplier.view", "View suppliers"),

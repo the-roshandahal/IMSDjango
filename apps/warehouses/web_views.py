@@ -130,7 +130,9 @@ class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, Deta
         )
         ctx["recent_requests"] = self.object.stock_requests.select_related("warehouse").order_by("-requested_at")[:5]
 
+        from apps.core.permissions import has_capability
         from apps.inventory.models import Stocktake
+        from apps.safety.models import HazardReport
 
         ctx["recent_stocktakes"] = Stocktake.objects.filter(station=self.object).select_related("started_by")[:5]
         ctx["recent_transactions"] = (
@@ -138,6 +140,10 @@ class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, Deta
             .select_related("product", "source_warehouse", "performed_by")
             .order_by("-timestamp")[:10]
         )
+        ctx["can_report_hazards"] = has_capability(self.request.user, "hazard.report") or has_capability(
+            self.request.user, "hazard.view"
+        )
+        ctx["recent_hazards"] = HazardReport.objects.filter(station=self.object).select_related("reported_by")[:5]
         return ctx
 
 

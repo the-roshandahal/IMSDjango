@@ -32,6 +32,13 @@
         <span class="nav-dot"></span> Live Sydney Trains
       </a>
 
+      {% if can_view_hazards %}
+      <div class="nav-section">Safety</div>
+      <a class="nav-link {% if 'safety_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'safety_web:list' %}">
+        <span class="nav-dot"></span> Hazard &amp; Incident Reports
+      </a>
+      {% endif %}
+
       {% if show_inventory_nav %}
       <div class="nav-section">Inventory</div>
       {% if can_view_products %}

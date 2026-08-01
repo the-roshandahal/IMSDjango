@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ report.title }} - IMS{% endblock %}
+{% block crumb %}Safety / Hazard &amp; Incident Reports{% endblock %}
+{% block page_title %}{{ report.title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">
+    {{ report.get_report_type_display }} at {{ report.site }} &middot; reported by {{ report.reported_by.get_full_name|default:report.reported_by.username }} on {{ report.reported_at|date:"d M Y, H:i" }}
+  </div>
+  <div class="actions-row">
+    {% if report.severity == "critical" %}<span class="status-rail critical">Critical</span>
+    {% elif report.severity == "high" %}<span class="status-rail warn">High</span>
+    {% elif report.severity == "medium" %}<span class="status-rail pending">Medium</span>
+    {% else %}<span class="status-rail good">Low</span>{% endif %}
+    {% if report.status == "open" %}<span class="status-rail pending">Open</span>{% else %}<span class="status-rail good">Closed</span>{% endif %}
+    {% if report.injury_involved %}<span class="status-rail critical">Injury involved</span>{% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Details</h2></div>
+      <div class="panel-body">
+        <p style="margin-top:0;">{{ report.description|linebreaksbr }}</p>
+        {% if report.location_detail %}<p class="muted"><strong>Location:</strong> {{ report.location_detail }}</p>{% endif %}
+        {% if report.immediate_action_taken %}<p class="muted"><strong>Immediate action taken:</strong> {{ report.immediate_action_taken|linebreaksbr }}</p>{% endif %}
+        {% if report.photo %}
+        <div style="margin-top:14px;">
+          <a href="{{ report.photo.url }}" target="_blank"><img src="{{ report.photo.url }}" alt="Hazard photo" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid var(--line);"></a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if report.status == "closed" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Resolution</h2></div>
+      <div class="panel-body">
+        <p style="margin-top:0;">{{ report.corrective_action|linebreaksbr }}</p>
+        <p class="muted">Closed by {{ report.resolved_by.username|default:"—" }} on {{ report.resolved_at|date:"d M Y, H:i" }}.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if can_manage and report.status == "open" %}
+    <div class="panel">
+      <div class="panel-head"><h2>Close out</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'safety_web:resolve' report.pk %}">
+          {% csrf_token %}
+          <div class="field">
+            <label for="{{ resolve_form.corrective_action.id_for_label }}">{{ resolve_form.corrective_action.label }}</label>
+            {{ resolve_form.corrective_action }}
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Close report</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head"><h2>Where</h2></div>
+      <div class="panel-body">
+        {% if report.station %}
+        <p style="margin-top:0;"><a href="{% url 'warehouses_web:station-detail' report.station.pk %}">{{ report.station.name }}</a></p>
+        {% elif report.project %}
+        <p style="margin-top:0;"><a href="{% url 'projects_web:detail' report.project.pk %}">{{ report.project.reference }} &mdash; {{ report.project.name }}</a></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -101,6 +101,14 @@ class ProjectDetailView(ProjectAccessMixin, DetailView):
         ctx["shift_logs"] = project.shift_logs.prefetch_related("workers", "employees").select_related("logged_by")[:30]
         ctx["total_hours"] = sum((s.hours_worked * s.employees.count() for s in ctx["shift_logs"]), start=0)
         ctx["toolbox_talks"] = project.toolbox_talks.select_related("conducted_by").prefetch_related("attendees")[:30]
+
+        from apps.safety.models import HazardReport
+
+        ctx["can_report_hazards"] = has_capability(self.request.user, "hazard.report") or has_capability(
+            self.request.user, "hazard.view"
+        )
+        ctx["recent_hazards"] = HazardReport.objects.filter(project=project).select_related("reported_by")[:5]
+
         if can_manage and project.is_open:
             ctx["dispatch_form"] = ProjectDispatchForm()
             ctx["return_form"] = ProjectReturnForm()

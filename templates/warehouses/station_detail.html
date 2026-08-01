@@ -9,6 +9,7 @@
     {% if is_admin %}<a class="btn btn-secondary" href="{% url 'warehouses_web:station-edit' station.pk %}">Edit</a>{% endif %}
     {% if can_manage_stocktake %}<a class="btn btn-primary" href="{% url 'inventory_web:stocktake-new' %}?site_type=station&site_id={{ station.pk }}">Start weekly stock audit</a>{% endif %}
     {% if can_create_requests %}<a class="btn btn-primary" href="{% url 'stock_requests_web:create' station.pk %}">Request stock</a>{% endif %}
+    {% if can_report_hazards %}<a class="btn btn-secondary" href="{% url 'safety_web:new' %}?site_type=station&site_id={{ station.pk }}">Report a hazard</a>{% endif %}
   </div>
 </div>
 
@@ -81,6 +82,37 @@
         {% endif %}
       </div>
     </div>
+
+    {% if can_report_hazards %}
+    <div class="panel">
+      <div class="panel-head"><h2>Recent hazard reports</h2><a class="btn btn-secondary btn-sm" href="{% url 'safety_web:list' %}">View all</a></div>
+      <div class="panel-body flush">
+        {% if recent_hazards %}
+        <table class="data">
+          <thead><tr><th>Reported</th><th>Type</th><th>Severity</th><th>Title</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for h in recent_hazards %}
+            <tr class="rail-row {% if h.severity == 'critical' %}critical{% elif h.severity == 'high' %}warn{% elif h.status == 'open' %}pending{% else %}good{% endif %}">
+              <td class="mono muted">{{ h.reported_at|date:"d M, H:i" }}</td>
+              <td>{{ h.get_report_type_display }}</td>
+              <td>
+                {% if h.severity == "critical" %}<span class="status-rail critical">Critical</span>
+                {% elif h.severity == "high" %}<span class="status-rail warn">High</span>
+                {% elif h.severity == "medium" %}<span class="status-rail pending">Medium</span>
+                {% else %}<span class="status-rail good">Low</span>{% endif %}
+              </td>
+              <td><a href="{% url 'safety_web:detail' h.pk %}">{{ h.title }}</a></td>
+              <td>{% if h.status == "open" %}<span class="status-rail pending">Open</span>{% else %}<span class="status-rail good">Closed</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No hazard reports for this station yet.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     {% if can_view_transactions %}
     <div class="panel">

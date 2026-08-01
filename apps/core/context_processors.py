@@ -50,6 +50,7 @@ def nav_capabilities(request):
         "can_view_purchase_orders": has_capability(user, "purchase_order.view")
         or has_capability(user, "purchase_order.manage"),
         "can_view_employees": has_capability(user, "employee.manage") or has_capability(user, "employee.view"),
+        "can_view_hazards": has_capability(user, "hazard.view") or has_capability(user, "hazard.report"),
         "can_view_reports": has_capability(user, "reports.view")
         or has_capability(user, "reports.view_own_site")
         or has_capability(user, "reports.view_own_project"),

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" height="447" width="447">
+<title>Syd Trains Logo</title>
+<g stroke="white" fill="#ffbc05">
+ <circle cx="223.5" cy="223.5" r="206" stroke-width="34" />
+ <path d="M 121,142 H 326" stroke-width="43" />
+ <path d="M 223.5,141.5 V 353" stroke-width="57" />
+</g>
+</svg>

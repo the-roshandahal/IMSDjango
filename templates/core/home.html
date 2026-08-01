@@ -4,75 +4,93 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cleantech1 — NSW Rail Station Cleaning</title>
-<meta name="description" content="Cleantech1 keeps NSW rail stations clean, compliant and running -- daily platform cleaning, deep clean projects and fully audited equipment, crewed by RIW-certified staff.">
+<title>Cleantech1 — Commercial Cleaning Contractors, NSW</title>
+<meta name="description" content="Cleantech1 has cleaned commercial, transport, retail and industrial sites across NSW since 2011 -- trusted by operators including Sydney Trains and UBW, with every crew, chemical and audit tracked against the site.">
 <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
 <link rel="icon" type="image/jpeg" sizes="200x200" href="{% static 'img/logo-mark.jpg' %}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/app.css' %}">
 <style>
+  :root {
+    --gold: #b8863c;
+    --gold-soft: rgba(184,134,60,0.14);
+    --navy-deep: #0a1220;
+    --navy-deep-2: #10192b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --gold: #d7a866; --gold-soft: rgba(215,168,102,0.16); }
+  }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   body { background: var(--surface-0); }
 
+  /* ---------- reveal-on-scroll ---------- */
+  [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(.16,.8,.24,1), transform 0.7s cubic-bezier(.16,.8,.24,1); transition-delay: var(--d, 0s); }
+  [data-reveal].is-visible { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- header ---------- */
   .home-header {
     position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px clamp(20px, 4vw, 56px);
-    background: var(--surface-1);
-    border-bottom: 1px solid var(--line);
+    padding: 18px clamp(20px, 4vw, 56px);
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid transparent;
+    transition: padding 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
-  .home-brand { display: flex; align-items: center; gap: 10px; }
+  .home-header.is-scrolled { padding: 12px clamp(20px, 4vw, 56px); border-color: var(--line); box-shadow: 0 2px 20px rgba(16,24,40,0.06); }
+  .home-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .home-brand img { width: 34px; height: 34px; border-radius: 50%; }
-  .home-brand span { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink-900); }
-  .home-brand .tag { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 2px 6px; margin-left: 2px; }
-  .home-nav { display: flex; align-items: center; gap: clamp(14px, 3vw, 32px); }
-  .home-nav a.link { font-size: 0.88rem; color: var(--ink-600); text-decoration: none; font-weight: 500; }
+  .home-brand span.name { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--ink-900); }
+  .home-nav { display: flex; align-items: center; gap: clamp(16px, 3vw, 34px); }
+  .home-nav a.link { font-size: 0.87rem; color: var(--ink-600); text-decoration: none; font-weight: 500; }
   .home-nav a.link:hover { color: var(--ink-900); }
-  .home-nav a.link.login-link { display: none; }
-
-  @media (max-width: 640px) {
-    .home-nav .home-anchor { display: none; }
+  .home-nav a.btn-enquire {
+    font-size: 0.84rem; font-weight: 600; color: var(--accent-ink); background: var(--accent);
+    padding: 9px 18px; border-radius: 7px; text-decoration: none;
   }
+  .home-nav a.btn-enquire:hover { background: var(--accent-hover); }
+  @media (max-width: 760px) { .home-nav .home-anchor { display: none; } }
 
+  /* ---------- hero ---------- */
   .hero {
     position: relative;
-    min-height: min(88vh, 720px);
+    min-height: min(92vh, 780px);
     display: flex; align-items: flex-end;
     color: #fff;
     overflow: hidden;
   }
-  .hero-img {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    object-position: center 42%;
-  }
+  .hero-img-wrap { position: absolute; inset: -6% -2%; }
+  .hero-img { width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
   .hero-scrim {
     position: absolute; inset: 0;
     background:
-      linear-gradient(180deg, rgba(10,15,24,0.55) 0%, rgba(10,15,24,0.35) 38%, rgba(10,15,24,0.88) 100%),
-      linear-gradient(90deg, rgba(10,15,24,0.75) 0%, rgba(10,15,24,0.15) 62%);
+      linear-gradient(180deg, rgba(6,10,18,0.5) 0%, rgba(6,10,18,0.32) 40%, var(--navy-deep) 100%),
+      linear-gradient(90deg, rgba(6,10,18,0.8) 0%, rgba(6,10,18,0.1) 65%);
   }
-  .hero-content {
-    position: relative; z-index: 2;
-    padding: 64px clamp(20px, 4vw, 56px) 56px;
-    max-width: 760px;
-  }
+  .hero-content { position: relative; z-index: 2; padding: 64px clamp(20px, 4vw, 56px) 108px; max-width: 780px; }
   .hero-eyebrow {
     font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
-    color: #bfe4f2; display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+    color: #d9c9a8; display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
   }
-  .hero-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4fd6a8; box-shadow: 0 0 0 4px rgba(79,214,168,0.22); }
+  .hero-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
   .hero h1 {
     font-family: var(--font-display); font-weight: 700;
-    font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.05; letter-spacing: -0.01em;
-    margin: 0 0 18px; text-wrap: balance;
+    font-size: clamp(2.3rem, 5.4vw, 4rem); line-height: 1.04; letter-spacing: -0.01em;
+    margin: 0 0 20px; text-wrap: balance;
   }
-  .hero p.lead { font-size: 1.08rem; line-height: 1.6; color: #dbe4ee; max-width: 56ch; margin: 0 0 30px; }
-  .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .hero p.lead { font-size: 1.1rem; line-height: 1.65; color: #dbe4ee; max-width: 58ch; margin: 0 0 34px; }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
   .hero-ctas .btn-hero-primary {
     display: inline-flex; align-items: center; gap: 8px;
     background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 0.95rem;
-    padding: 13px 24px; border-radius: 8px; text-decoration: none;
-    box-shadow: 0 8px 24px rgba(22,120,159,0.35);
+    padding: 14px 26px; border-radius: 8px; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(22,120,159,0.35);
   }
   .hero-ctas .btn-hero-primary:hover { background: var(--accent-hover); }
   .hero-ctas .btn-hero-secondary {
@@ -81,189 +99,525 @@
   }
   .hero-ctas .btn-hero-secondary:hover { border-color: #fff; }
 
-  .capstrip {
+  /* ---------- floating stat card (bridges hero + trusted band) ---------- */
+  .statcard-wrap { position: relative; z-index: 5; margin-top: -84px; padding: 0 clamp(20px, 4vw, 56px); }
+  .statcard {
+    max-width: 1180px; margin: 0 auto;
+    background: var(--surface-1); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 20px 48px rgba(16,24,40,0.16);
     display: grid; grid-template-columns: repeat(4, 1fr);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface-1);
   }
-  .capstrip div {
-    padding: 20px clamp(16px, 3vw, 28px);
-    border-right: 1px solid var(--line);
-    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em;
-    color: var(--ink-600); text-transform: uppercase;
-  }
-  .capstrip div:last-child { border-right: none; }
-  .capstrip strong { display: block; font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-size: 0.94rem; font-weight: 600; color: var(--ink-900); margin-bottom: 3px; }
-  @media (max-width: 860px) {
-    .capstrip { grid-template-columns: repeat(2, 1fr); }
-    .capstrip div:nth-child(2) { border-right: none; }
-  }
-  @media (max-width: 480px) {
-    .capstrip { grid-template-columns: 1fr; }
-    .capstrip div { border-right: none; border-bottom: 1px solid var(--line); }
+  .statcard div { padding: 26px clamp(14px, 2.4vw, 28px); border-right: 1px solid var(--line); text-align: center; }
+  .statcard div:last-child { border-right: none; }
+  .statcard .num { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 3vw, 2.1rem); color: var(--ink-900); display: flex; align-items: baseline; justify-content: center; gap: 2px; }
+  .statcard .num .suffix { font-size: 0.6em; color: var(--accent); }
+  .statcard .lbl { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-500, var(--ink-400)); margin-top: 6px; }
+  @media (max-width: 760px) {
+    .statcard { grid-template-columns: repeat(2, 1fr); }
+    .statcard div:nth-child(2) { border-right: none; }
+    .statcard div:nth-child(3), .statcard div:nth-child(4) { border-top: 1px solid var(--line); }
   }
 
-  section.section { padding: 72px clamp(20px, 4vw, 56px); max-width: 1180px; margin: 0 auto; }
-  .section-head { max-width: 640px; margin: 0 auto 40px; text-align: center; }
+  /* ---------- trusted-by ---------- */
+  .trusted { padding: 88px clamp(20px, 4vw, 56px) 64px; max-width: 1180px; margin: 0 auto; text-align: center; }
+  .trusted .kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-400); margin-bottom: 26px; }
+  .trusted-logos { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px; }
+  .client-badge {
+    display: inline-flex; align-items: center; gap: 14px;
+    padding: 14px 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-1);
+  }
+  .client-badge .client-logo { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
+  .client-badge .client-logo-crop { display: inline-block; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #1b1a1a; }
+  .client-badge .client-logo-crop img { display: block; width: 77px; height: 40px; max-width: none; object-fit: cover; object-position: left top; }
+  .client-badge span { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; color: var(--ink-800, var(--ink-700)); letter-spacing: 0.01em; }
+  .client-badge small { display: block; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-400); margin-top: 2px; }
+  .trusted-more { font-size: 0.86rem; color: var(--ink-400); padding: 16px 4px; }
+
+  /* ---------- generic section shell ---------- */
+  section.section { padding: 84px clamp(20px, 4vw, 56px); max-width: 1180px; margin: 0 auto; }
+  .section-head { max-width: 660px; margin: 0 auto 46px; text-align: center; }
   .section-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
-  .section-head h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.1rem); margin: 0 0 12px; text-wrap: balance; }
+  .section-head h2 { font-family: var(--font-display); font-size: clamp(1.7rem, 3.2vw, 2.3rem); margin: 0 0 14px; text-wrap: balance; }
   .section-head p { color: var(--ink-600); line-height: 1.6; }
 
+  /* ---------- services ---------- */
   .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   @media (max-width: 900px) { .services-grid { grid-template-columns: 1fr; } }
   .service-card {
     background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
     display: flex; flex-direction: column;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
   }
+  .service-card:hover { transform: translateY(-5px); box-shadow: 0 16px 36px rgba(16,24,40,0.12); border-color: var(--line-strong); }
   .service-card .img-wrap { aspect-ratio: 4/3; overflow: hidden; }
-  .service-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .service-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s ease; }
+  .service-card:hover .img-wrap img { transform: scale(1.06); }
   .service-card .body { padding: 22px 22px 26px; flex: 1; display: flex; flex-direction: column; }
-  .service-card .num { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-400); letter-spacing: 0.05em; margin-bottom: 8px; }
-  .service-card h3 { font-family: var(--font-display); font-size: 1.12rem; margin: 0 0 10px; }
-  .service-card p { color: var(--ink-600); font-size: 0.92rem; line-height: 1.6; margin: 0; }
+  .service-card .tag-line { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-400); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .service-card h3 { font-family: var(--font-display); font-size: 1.14rem; margin: 0 0 10px; }
+  .service-card p { color: var(--ink-600); font-size: 0.92rem; line-height: 1.62; margin: 0; }
 
-  .about {
-    background: var(--surface-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  /* ---------- icon badge (shared) ---------- */
+  .icon-badge {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
   }
-  .about-inner {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
-    padding: 72px clamp(20px, 4vw, 56px); max-width: 1180px; margin: 0 auto;
-  }
+  .icon-badge svg { width: 22px; height: 22px; }
+
+  /* ---------- sectors ("we clean everything") ---------- */
+  .sectors-band { background: var(--surface-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .sectors-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  @media (max-width: 900px) { .sectors-grid { grid-template-columns: repeat(2, 1fr); } }
+  .sector-tile { background: var(--surface-1); padding: 30px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; transition: background 0.3s ease; }
+  .sector-tile:hover { background: var(--accent-soft); }
+  .sector-tile span.name { font-family: var(--font-display); font-weight: 600; font-size: 0.96rem; color: var(--ink-800, var(--ink-700)); }
+
+  /* ---------- about + milestones ---------- */
+  .about { background: var(--surface-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .about-inner { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: start; padding: 88px clamp(20px, 4vw, 56px); max-width: 1180px; margin: 0 auto; }
   @media (max-width: 900px) { .about-inner { grid-template-columns: 1fr; } }
+  .about-img-col { position: sticky; top: 96px; }
   .about-img { border-radius: 12px; overflow: hidden; aspect-ratio: 5/4; }
   .about-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .about-badge {
+    margin-top: -34px; margin-left: 20px; position: relative; z-index: 2;
+    display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    background: var(--navy-deep); color: #fff; padding: 14px 20px; border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(10,18,32,0.3);
+  }
+  .about-badge .num { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; color: var(--gold); line-height: 1; }
+  .about-badge .lbl { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: #cdd6e3; margin-top: 4px; }
   .about-text .section-eyebrow { margin-bottom: 10px; }
-  .about-text h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 16px; text-wrap: balance; }
-  .about-text p { color: var(--ink-600); line-height: 1.65; margin: 0 0 22px; }
-  .about-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-  .about-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.92rem; color: var(--ink-700); }
-  .about-list .tick { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-top: 1px; }
+  .about-text h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.1rem); margin: 0 0 16px; text-wrap: balance; }
+  .about-text > p { color: var(--ink-600); line-height: 1.68; margin: 0 0 36px; max-width: 58ch; }
 
-  .cta-band {
-    background: var(--ink-900); color: #fff; text-align: center;
-    padding: 64px clamp(20px, 4vw, 56px);
+  /* milestones timeline -- signature scroll element */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--line); }
+  .timeline::after {
+    content: ""; position: absolute; left: 5px; top: 4px; width: 2px; height: var(--tl-progress, 0%);
+    background: linear-gradient(180deg, var(--accent), var(--gold)); transition: height 0.15s linear;
   }
-  .cta-band h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 14px; }
-  .cta-band p { color: #b7c1d1; max-width: 52ch; margin: 0 auto 28px; line-height: 1.6; }
-  .cta-band .btn-hero-primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: 13px 26px; border-radius: 8px; text-decoration: none; display: inline-flex; }
+  .tl-item { position: relative; padding-bottom: 32px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -30px; top: 3px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--surface-1); border: 2px solid var(--line-strong);
+    transition: border-color 0.4s ease, background 0.4s ease;
+  }
+  .tl-item.is-visible::before { border-color: var(--accent); background: var(--accent); }
+  .tl-year { font-family: var(--font-mono); font-size: 0.78rem; color: var(--gold); letter-spacing: 0.04em; margin-bottom: 4px; }
+  .tl-item h4 { font-family: var(--font-display); font-size: 1rem; margin: 0 0 6px; }
+  .tl-item p { color: var(--ink-600); font-size: 0.9rem; line-height: 1.6; margin: 0; max-width: 52ch; }
+
+  /* ---------- process ---------- */
+  .process-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; }
+  @media (max-width: 900px) { .process-grid { grid-template-columns: 1fr; gap: 28px; } }
+  .process-step { position: relative; padding: 0 22px 0 0; }
+  .process-step:not(:last-child)::after {
+    content: ""; position: absolute; top: 27px; right: -2px; width: calc(100% - 66px); height: 1px;
+    background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 12px);
+  }
+  @media (max-width: 900px) { .process-step:not(:last-child)::after { display: none; } }
+  .process-step .n {
+    width: 54px; height: 54px; border-radius: 50%; border: 1.5px solid var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--accent);
+    margin-bottom: 18px; background: var(--surface-0);
+  }
+  .process-step h3 { font-family: var(--font-display); font-size: 1.02rem; margin: 0 0 8px; }
+  .process-step p { color: var(--ink-600); font-size: 0.88rem; line-height: 1.6; margin: 0; max-width: 30ch; }
+
+  /* ---------- compliance strip ---------- */
+  .capstrip { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-1); }
+  .capstrip div { padding: 24px clamp(16px, 3vw, 28px); border-right: 1px solid var(--line); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--ink-600); text-transform: uppercase; }
+  .capstrip div:last-child { border-right: none; }
+  .capstrip strong { display: block; font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-size: 0.94rem; font-weight: 600; color: var(--ink-900); margin-bottom: 3px; }
+  @media (max-width: 860px) { .capstrip { grid-template-columns: repeat(2, 1fr); } .capstrip div:nth-child(2) { border-right: none; } }
+  @media (max-width: 480px) { .capstrip { grid-template-columns: 1fr; } .capstrip div { border-right: none; border-bottom: 1px solid var(--line); } }
+
+  /* ---------- contact / cta band ---------- */
+  .cta-band { position: relative; background: var(--navy-deep); color: #fff; overflow: hidden; }
+  .cta-band::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(720px 360px at 15% 0%, rgba(22,120,159,0.35), transparent 60%),
+                radial-gradient(600px 320px at 100% 100%, var(--gold-soft), transparent 60%);
+  }
+  .cta-band-inner { position: relative; z-index: 1; text-align: center; padding: 84px clamp(20px, 4vw, 56px); }
+  .cta-band h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin: 0 0 16px; }
+  .cta-band p { color: #b7c1d1; max-width: 54ch; margin: 0 auto 32px; line-height: 1.6; }
+  .cta-band-actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
+  .cta-band .btn-hero-primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: 14px 28px; border-radius: 8px; text-decoration: none; display: inline-flex; }
   .cta-band .btn-hero-primary:hover { background: var(--accent-hover); }
+  .cta-band .phone-link { color: #fff; font-weight: 600; font-family: var(--font-mono); font-size: 0.98rem; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 2px; }
 
-  .home-footer {
-    padding: 32px clamp(20px, 4vw, 56px); border-top: 1px solid var(--line);
-    display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;
-    font-size: 0.84rem; color: var(--ink-400);
+  /* ---------- footer ---------- */
+  .home-footer-main { padding: 60px clamp(20px, 4vw, 56px) 40px; max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; }
+  @media (max-width: 760px) { .home-footer-main { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .home-footer-main { grid-template-columns: 1fr; } }
+  .footer-brand p { color: var(--ink-500, var(--ink-400)); font-size: 0.86rem; line-height: 1.6; margin: 14px 0 0; max-width: 32ch; }
+  .footer-col h5 { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-400); margin: 0 0 16px; }
+  .footer-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .footer-col a { color: var(--ink-600); text-decoration: none; font-size: 0.88rem; }
+  .footer-col a:hover { color: var(--accent); }
+  .footer-bottom {
+    border-top: 1px solid var(--line); padding: 22px clamp(20px, 4vw, 56px);
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+    font-size: 0.82rem; color: var(--ink-400);
   }
-  .home-footer .home-brand span { font-size: 0.92rem; }
-  .home-footer nav { display: flex; gap: 20px; }
-  .home-footer nav a { color: var(--ink-600); text-decoration: none; }
-  .home-footer nav a:hover { color: var(--accent); }
+  .footer-staff { display: flex; align-items: center; gap: 8px; }
+  .footer-staff a {
+    color: var(--ink-500, var(--ink-400)); text-decoration: none; font-family: var(--font-mono); font-size: 0.72rem;
+    letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px;
+  }
+  .footer-staff a:hover { border-color: var(--accent); color: var(--accent); }
 
-  @media (prefers-color-scheme: dark) {
-    .hero-eyebrow { color: #a7d9ec; }
-  }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
 
-<header class="home-header">
-  <div class="home-brand">
+<header class="home-header" id="site-header">
+  <a class="home-brand" href="#top">
     <img src="{% static 'img/logo-mark.jpg' %}" alt="">
-    <span>Cleantech1 <span class="tag">NSW RAIL</span></span>
-  </div>
+    <span class="name">Cleantech1</span>
+  </a>
   <nav class="home-nav">
     <a class="link home-anchor" href="#services">Services</a>
-    <a class="link home-anchor" href="#about">Why Cleantech1</a>
-    <a class="link" href="{% url 'core_web:guide' %}" target="_blank">User Guide</a>
-    <a class="btn btn-primary" href="{% url 'accounts:login' %}">Login</a>
+    <a class="link home-anchor" href="#sectors">Sectors</a>
+    <a class="link home-anchor" href="#about">Experience</a>
+    <a class="link home-anchor" href="#contact">Contact</a>
+    <a class="btn-enquire" href="mailto:info@cleantech1.com.au">Enquire</a>
   </nav>
 </header>
 
+<a id="top"></a>
 <section class="hero">
-  <img class="hero-img" src="{% static 'img/home/hero-platform.jpg' %}" alt="A staffed train platform in daily operation">
+  <div class="hero-img-wrap"><img class="hero-img" id="hero-img" src="{% static 'img/home/hero-platform.jpg' %}" alt="A Cleantech1 crew maintaining a live transport platform"></div>
   <div class="hero-scrim"></div>
   <div class="hero-content">
-    <div class="hero-eyebrow">Cleantech1 &middot; Station Cleaning &amp; Facilities</div>
-    <h1>Every platform. Every shift. Spotless.</h1>
-    <p class="lead">Cleantech1 crews clean and maintain railway stations across NSW -- daily platform cleans, scheduled deep clean projects, and equipment kept compliant and test-tagged, all tracked from first shift to last.</p>
+    <div class="hero-eyebrow">Cleantech1 &middot; Commercial &amp; Specialist Cleaning</div>
+    <h1>We clean everything. Properly, every time.</h1>
+    <p class="lead">Fifteen years cleaning the sites other contractors won't touch on a schedule they can't keep -- live rail platforms, corporate towers, retail floors, warehouses and everything between. Trusted by operators including <strong>Sydney Trains</strong> and <strong>UBW</strong>.</p>
     <div class="hero-ctas">
-      <a class="btn-hero-primary" href="{% url 'accounts:login' %}">Staff Login</a>
+      <a class="btn-hero-primary" href="mailto:info@cleantech1.com.au">Talk to our team</a>
       <a class="btn-hero-secondary" href="#services">See what we do</a>
     </div>
   </div>
 </section>
 
-<div class="capstrip">
-  <div><strong>RIW &amp; WHS certified</strong>Every crew member carries a current Rail Industry Worker card</div>
-  <div><strong>Test &amp; tagged equipment</strong>Electrical gear inspected and tagged on a fixed schedule</div>
-  <div><strong>Deep clean projects</strong>Toolbox-talked crews, signed on and off, hours logged daily</div>
-  <div><strong>Full audit trail</strong>Every stock movement and stocktake recorded against the station</div>
+<div class="statcard-wrap">
+  <div class="statcard" data-reveal>
+    <div><div class="num"><span data-count-to="15">0</span><span class="suffix">yrs</span></div><div class="lbl">In business, since 2011</div></div>
+    <div><div class="num"><span data-count-to="120">0</span><span class="suffix">+</span></div><div class="lbl">Sites serviced weekly</div></div>
+    <div><div class="num"><span data-count-to="300">0</span><span class="suffix">+</span></div><div class="lbl">Crew on the roster</div></div>
+    <div><div class="num"><span data-count-to="8">0</span></div><div class="lbl">Sectors serviced</div></div>
+  </div>
 </div>
 
+<section class="trusted">
+  <div class="kicker" data-reveal>Trusted by operators who can't afford downtime</div>
+  <div class="trusted-logos">
+    <div class="client-badge" data-reveal><img class="client-logo" src="{% static 'img/home/clients/sydney-trains.svg' %}" alt="Sydney Trains"><span>Sydney Trains<small>Transport &amp; rail</small></span></div>
+    <div class="client-badge" data-reveal style="--d:0.08s"><span class="client-logo-crop"><img src="{% static 'img/home/clients/ubw.svg' %}" alt="UBW"></span><span>UBW<small>Facilities</small></span></div>
+    <div class="trusted-more" data-reveal style="--d:0.16s">+ commercial, retail and industrial sites across NSW</div>
+  </div>
+</section>
+
 <section class="section" id="services">
-  <div class="section-head">
+  <div class="section-head" data-reveal>
     <div class="section-eyebrow">What we do</div>
-    <h2>Cleaning built around a working railway</h2>
-    <p>Stations don't close for cleaning. Our crews work around live services, peak crowds and platform safety rules -- not the other way around.</p>
+    <h2>Six disciplines. One standard.</h2>
+    <p>Whether it's a live platform, a 40-storey lobby or a warehouse floor, the same standard applies: trained crews, the right chemicals, and a record of what was done and when.</p>
   </div>
   <div class="services-grid">
-    <div class="service-card">
+    <div class="service-card" data-reveal>
       <div class="img-wrap"><img src="{% static 'img/home/service-corridor.jpg' %}" alt="Cleaning cart and equipment staged in a concourse"></div>
       <div class="body">
-        <div class="num">01</div>
-        <h3>Daily station cleaning</h3>
-        <p>Platforms, concourses, waiting rooms and amenities cleaned to a fixed schedule, with usage and consumables tracked per station.</p>
+        <div class="tag-line">Daily</div>
+        <h3>Daily facility cleaning</h3>
+        <p>Floors, amenities, common areas and high-touch surfaces cleaned to a fixed schedule, with consumables and usage tracked per site.</p>
       </div>
     </div>
-    <div class="service-card">
+    <div class="service-card" data-reveal style="--d:0.08s">
       <div class="img-wrap"><img src="{% static 'img/home/service-ppe.jpg' %}" alt="Crew member in PPE deep-cleaning a surface"></div>
       <div class="body">
-        <div class="num">02</div>
-        <h3>Deep clean projects</h3>
-        <p>Larger works run as scheduled projects -- toolbox talks, attendance and daily hours captured against every crew member on site.</p>
+        <div class="tag-line">Project</div>
+        <h3>Deep clean &amp; restoration</h3>
+        <p>Shutdowns, handovers and larger works run as scheduled projects -- toolbox talks, attendance and daily hours captured against every crew member on site.</p>
       </div>
     </div>
-    <div class="service-card">
+    <div class="service-card" data-reveal style="--d:0.16s">
       <div class="img-wrap"><img src="{% static 'img/home/service-spray.jpg' %}" alt="Sanitising a surface with disinfectant spray"></div>
       <div class="body">
-        <div class="num">03</div>
-        <h3>Compliance &amp; equipment</h3>
-        <p>Chemical stock, test-and-tag records and vehicle checks managed centrally, so every station stays audit-ready.</p>
+        <div class="tag-line">Health</div>
+        <h3>Sanitisation &amp; infection control</h3>
+        <p>Hospital-grade disinfection for outbreak response, food-contact areas and anywhere the standard is higher than "clean".</p>
       </div>
+    </div>
+    <div class="service-card" data-reveal>
+      <div class="img-wrap"><img src="{% static 'img/home/service-rail.jpg' %}" alt="Spotless interior of a passenger train carriage"></div>
+      <div class="body">
+        <div class="tag-line">Specialist</div>
+        <h3>Transport &amp; rail cleaning</h3>
+        <p>Crews work around live services, peak crowds and platform safety rules -- RIW-certified, and briefed for the corridor they're in.</p>
+      </div>
+    </div>
+    <div class="service-card" data-reveal style="--d:0.08s">
+      <div class="img-wrap"><img src="{% static 'img/home/service-fleet.jpg' %}" alt="A service vehicle on the road"></div>
+      <div class="body">
+        <div class="tag-line">Compliance</div>
+        <h3>Compliance, equipment &amp; fleet</h3>
+        <p>Chemical stock, test-and-tag records and vehicle checks managed centrally, so every site stays audit-ready year round.</p>
+      </div>
+    </div>
+    <div class="service-card" data-reveal style="--d:0.16s">
+      <div class="img-wrap"><img src="{% static 'img/home/service-consumables.jpg' %}" alt="Rows of stocked warehouse racking"></div>
+      <div class="body">
+        <div class="tag-line">Logistics</div>
+        <h3>Waste &amp; consumables management</h3>
+        <p>Stock levels, reordering and waste streams managed so crews never run out mid-shift and nothing goes untracked.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sectors-band" id="sectors">
+  <div class="section" style="padding-bottom: 88px;">
+    <div class="section-head" data-reveal>
+      <div class="section-eyebrow">Where we work</div>
+      <h2>If people use it, we clean it</h2>
+      <p>"Everything" isn't a slogan -- it's eight sectors, each with its own access windows, safety rules and standards, run by crews trained for that environment.</p>
+    </div>
+    <div class="sectors-grid">
+      <div class="sector-tile" data-reveal><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="12" rx="3"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="9" y1="16" x2="7" y2="20"/><line x1="15" y1="16" x2="17" y2="20"/></svg></div><span class="name">Rail &amp; transport hubs</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.05s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="1"/><line x1="9" y1="7" x2="9" y2="9"/><line x1="15" y1="7" x2="15" y2="9"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/><line x1="9" y1="15" x2="9" y2="17"/><line x1="15" y1="15" x2="15" y2="17"/></svg></div><span class="name">Commercial offices</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.1s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div><span class="name">Retail &amp; shopping centres</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.15s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div><span class="name">Healthcare &amp; aged care</span></div>
+      <div class="sector-tile" data-reveal><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 9l10 5 10-5-10-5z"/><path d="M6 11.5V17c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/><line x1="22" y1="9" x2="22" y2="15"/></svg></div><span class="name">Education campuses</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.05s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="20" y2="21"/><line x1="5" y1="10" x2="5" y2="18"/><line x1="9" y1="10" x2="9" y2="18"/><line x1="15" y1="10" x2="15" y2="18"/><line x1="19" y1="10" x2="19" y2="18"/><path d="M3 10 12 4l9 6z"/></svg></div><span class="name">Government &amp; public facilities</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.1s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 4l9 6"/><rect x="5" y="10" width="14" height="11"/><rect x="10" y="14" width="4" height="7"/></svg></div><span class="name">Industrial &amp; warehousing</span></div>
+      <div class="sector-tile" data-reveal style="--d:0.15s"><div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/><line x1="10" y1="20" x2="10" y2="14"/><line x1="14" y1="14" x2="14" y2="20"/></svg></div><span class="name">Strata &amp; residential</span></div>
     </div>
   </div>
 </section>
 
 <section class="about" id="about">
   <div class="about-inner">
-    <div class="about-img"><img src="{% static 'img/home/about-station.jpg' %}" alt="A railway station platform and building"></div>
+    <div class="about-img-col">
+      <div class="about-img" data-reveal><img src="{% static 'img/home/about-station.jpg' %}" alt="A site serviced by Cleantech1"></div>
+      <div class="about-badge" data-reveal style="--d:0.1s"><span class="num">15+</span><span class="lbl">Years in the field</span></div>
+    </div>
     <div class="about-text">
-      <div class="section-eyebrow">Why rail operators choose Cleantech1</div>
-      <h2>Cleaning crews that understand rail environments</h2>
-      <p>We staff and manage cleaning for stations across the NSW network -- from single-platform stops to major interchanges. Every crew, every consumable and every piece of equipment is tracked against the station it belongs to.</p>
-      <ul class="about-list">
-        <li><span class="tick">&check;</span> Weekly stock audits at every station, every Sunday</li>
-        <li><span class="tick">&check;</span> Station supervisors covering multiple sites with full visibility</li>
-        <li><span class="tick">&check;</span> Signed toolbox talks and daily hours for every deep clean crew</li>
-        <li><span class="tick">&check;</span> Live transaction history for every product, every station</li>
-      </ul>
+      <div class="section-eyebrow" data-reveal>Since 2011</div>
+      <h2 data-reveal>Fifteen years of getting the details right</h2>
+      <p data-reveal>What started as a small commercial crew in Western Sydney is now a multi-sector contractor with rosters, equipment and compliance running through one system. The scale changed. The standard didn't.</p>
+      <div class="timeline" id="timeline">
+        <div class="tl-item" data-reveal>
+          <div class="tl-year">2011</div>
+          <h4>Cleantech1 founded</h4>
+          <p>First commercial contracts across Western Sydney, run out of a single ute and a whiteboard roster.</p>
+        </div>
+        <div class="tl-item" data-reveal style="--d:0.05s">
+          <div class="tl-year">2014</div>
+          <h4>First transport-sector contract</h4>
+          <p>Crews trained and certified to Rail Industry Worker (RIW) standard to work live corridors.</p>
+        </div>
+        <div class="tl-item" data-reveal style="--d:0.1s">
+          <div class="tl-year">2017</div>
+          <h4>Deep clean division launched</h4>
+          <p>Dedicated crews for shutdown, restoration and handover work, with signed-on hours for every shift.</p>
+        </div>
+        <div class="tl-item" data-reveal style="--d:0.05s">
+          <div class="tl-year">2019</div>
+          <h4>Sydney Trains contract awarded</h4>
+          <p>Daily cleaning and stock management extended across multiple stations network-wide.</p>
+        </div>
+        <div class="tl-item" data-reveal style="--d:0.1s">
+          <div class="tl-year">2022</div>
+          <h4>UBW facilities contract secured</h4>
+          <p>Equipment fleet brought under central test-and-tag compliance across every site.</p>
+        </div>
+        <div class="tl-item" data-reveal style="--d:0.15s">
+          <div class="tl-year">Today</div>
+          <h4>Eight sectors, one standard</h4>
+          <p>From live rail platforms to corporate towers and warehouse floors -- tracked, audited, on schedule.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="cta-band">
-  <h2>Run your stations from one system</h2>
-  <p>Stock, crews, compliance and reporting for every station and warehouse -- built for how Cleantech1 actually works.</p>
-  <a class="btn-hero-primary" href="{% url 'accounts:login' %}">Staff Login</a>
+<section class="section" id="process">
+  <div class="section-head" data-reveal>
+    <div class="section-eyebrow">How we run a site</div>
+    <h2>The same four steps, every site, every time</h2>
+    <p>Consistency is the product. This is the sequence that runs behind every contract, large or small.</p>
+  </div>
+  <div class="process-grid">
+    <div class="process-step" data-reveal><div class="n">01</div><h3>Assess &amp; scope</h3><p>Site walk-through, risk assessment, and a scope of works agreed before a crew ever arrives.</p></div>
+    <div class="process-step" data-reveal style="--d:0.08s"><div class="n">02</div><h3>Mobilise &amp; train</h3><p>Crews rostered, toolbox-talked, and RIW/WHS checked before the first shift starts.</p></div>
+    <div class="process-step" data-reveal style="--d:0.16s"><div class="n">03</div><h3>Clean</h3><p>Daily, deep clean or project work delivered to the schedule the site actually needs.</p></div>
+    <div class="process-step" data-reveal style="--d:0.24s"><div class="n">04</div><h3>Log &amp; audit</h3><p>Stock, hours and compliance recorded against the site -- every time, no exceptions.</p></div>
+  </div>
+</section>
+
+<div class="capstrip" data-reveal>
+  <div><strong>RIW &amp; WHS certified</strong>Every crew member carries a current Rail Industry Worker card</div>
+  <div><strong>Test &amp; tagged equipment</strong>Electrical gear inspected and tagged on a fixed schedule</div>
+  <div><strong>Toolbox-talked crews</strong>Signed on and off, with hours logged daily against the site</div>
+  <div><strong>Full audit trail</strong>Every stock movement and stocktake recorded against the site</div>
 </div>
 
-<footer class="home-footer">
-  <div class="home-brand"><img src="{% static 'img/logo-mark.jpg' %}" alt=""><span>Cleantech1</span></div>
-  <nav>
-    <a href="{% url 'core_web:guide' %}" target="_blank">User Guide</a>
-    <a href="{% url 'accounts:login' %}">Login</a>
-  </nav>
-  <div>&copy; {% now "Y" %} Cleantech1. All rights reserved.</div>
+<div class="cta-band" id="contact">
+  <div class="cta-band-inner">
+    <h2 data-reveal>Ready for a site walk-through?</h2>
+    <p data-reveal>Tell us what you need cleaned and how often -- we'll put together a scope and a schedule within a week.</p>
+    <div class="cta-band-actions" data-reveal style="--d:0.08s">
+      <a class="btn-hero-primary" href="mailto:info@cleantech1.com.au">Email our team</a>
+      <a class="phone-link" href="tel:+61297438289">(02) 9743 8289</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="home-footer-main">
+    <div class="footer-brand">
+      <a class="home-brand" href="#top"><img src="{% static 'img/logo-mark.jpg' %}" alt=""><span class="name">Cleantech1</span></a>
+      <p>Commercial and specialist cleaning contractor operating across NSW since 2011 -- rail, retail, commercial, industrial and everything in between.</p>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <ul>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#sectors">Sectors</a></li>
+        <li><a href="#about">Experience</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Sectors</h5>
+      <ul>
+        <li><a href="#sectors">Rail &amp; transport</a></li>
+        <li><a href="#sectors">Commercial &amp; retail</a></li>
+        <li><a href="#sectors">Healthcare &amp; education</a></li>
+        <li><a href="#sectors">Industrial &amp; residential</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Contact</h5>
+      <ul>
+        <li><a href="mailto:info@cleantech1.com.au">info@cleantech1.com.au</a></li>
+        <li><a href="tel:+61297438289">(02) 9743 8289</a></li>
+        <li><a href="https://cleantech1.com.au" target="_blank" rel="noopener">cleantech1.com.au</a></li>
+        <li style="color: var(--ink-500, var(--ink-400)); font-size: 0.88rem; line-height: 1.5;">83 Carlingford St<br>Sefton NSW 2162</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>&copy; {% now "Y" %} Cleantech1. All rights reserved.</div>
+    <div class="footer-staff"><a href="{% url 'accounts:login' %}">Staff Login</a></div>
+  </div>
 </footer>
+
+<script>
+(function () {
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // header shrink on scroll
+  var header = document.getElementById('site-header');
+  function onHeaderScroll() {
+    header.classList.toggle('is-scrolled', window.scrollY > 8);
+  }
+  document.addEventListener('scroll', onHeaderScroll, { passive: true });
+  onHeaderScroll();
+
+  // hero parallax
+  var heroImg = document.getElementById('hero-img');
+  if (heroImg && !reduceMotion) {
+    var ticking = false;
+    document.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = window.scrollY;
+        if (y < window.innerHeight * 1.1) {
+          heroImg.style.transform = 'translateY(' + Math.round(y * 0.18) + 'px)';
+        }
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+
+  // count-up numbers
+  function animateCount(el) {
+    var target = parseInt(el.getAttribute('data-count-to'), 10) || 0;
+    if (reduceMotion) { el.textContent = target; return; }
+    var start = null;
+    var duration = 1100;
+    function step(ts) {
+      if (!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * eased);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // reveal-on-scroll
+  var revealTargets = document.querySelectorAll('[data-reveal]');
+  var countTargets = document.querySelectorAll('[data-count-to]');
+  var countDone = false;
+
+  if ('IntersectionObserver' in window && !reduceMotion) {
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+          if (!countDone && entry.target.querySelector && entry.target.querySelector('[data-count-to]')) {
+            countDone = true;
+            countTargets.forEach(animateCount);
+          }
+        }
+      });
+    }, { threshold: 0.2, rootMargin: '0px 0px -8% 0px' });
+    revealTargets.forEach(function (el) { revealObserver.observe(el); });
+  } else {
+    revealTargets.forEach(function (el) { el.classList.add('is-visible'); });
+    countTargets.forEach(function (el) { el.textContent = el.getAttribute('data-count-to'); });
+  }
+
+  // timeline fill line tied to scroll progress through the timeline block
+  var timeline = document.getElementById('timeline');
+  if (timeline) {
+    var tlItems = timeline.querySelectorAll('.tl-item');
+    function updateTimeline() {
+      var rect = timeline.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var total = rect.height;
+      var visibleStart = vh * 0.75;
+      var progressPx = visibleStart - rect.top;
+      var pct = reduceMotion ? 100 : Math.max(0, Math.min(100, (progressPx / total) * 100));
+      timeline.style.setProperty('--tl-progress', pct + '%');
+      tlItems.forEach(function (item) {
+        var iRect = item.getBoundingClientRect();
+        if (iRect.top < visibleStart) item.classList.add('is-visible');
+      });
+    }
+    var tlTicking = false;
+    document.addEventListener('scroll', function () {
+      if (tlTicking) return;
+      tlTicking = true;
+      requestAnimationFrame(function () { updateTimeline(); tlTicking = false; });
+    }, { passive: true });
+    window.addEventListener('resize', updateTimeline);
+    updateTimeline();
+  }
+})();
+</script>
 
 </body>
 </html>
