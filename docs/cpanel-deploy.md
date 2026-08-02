@@ -13,6 +13,11 @@ top of that habit, both one-time:
 
 No `.cpanel.yml`, no "Deploy" button, no dashboard automation. Just SSH.
 
+**Currently blocked on SSH working** (port 22/2222 both unreachable,
+waiting on hosting support to confirm the right port) — see **No-SSH
+fallback** near the bottom for how the app is running right now instead.
+Switch back to the steps below once SSH is confirmed working.
+
 ---
 
 ## One-time setup
@@ -146,3 +151,48 @@ the server, and `git pull` never touches it again no matter how many times
 you deploy. That's the only piece of ceremony this setup has that your old
 projects probably didn't — everything else is the same habit you already
 have.
+
+---
+
+## No-SSH fallback (temporary)
+
+While SSH is unreachable, `passenger_wsgi.py` runs `migrate`,
+`collectstatic`, and `ensure_superuser` itself, automatically, every time
+the app process starts — so the site can come up usable without ever
+running `deploy.sh` by hand. The one thing that still can't happen without
+some form of shell is installing the Python packages themselves
+(`pip install`) — cPanel's Setup Python App page can do that part through
+its own UI though, no SSH needed:
+
+1. Make sure `.env` already exists in `~/cleantech` (Part 4 above).
+2. cPanel → **Git Version Control** → clone/pull this repo into
+   `/home/roshanda/cleantech` if you haven't already (Parts 2–3 above still
+   apply — cloning itself doesn't need SSH).
+3. cPanel → **Setup Python App** → click into the `cleantech` app.
+4. Find the **requirements.txt** field on that page (it's part of the app's
+   configuration, usually right below the venv info) and set it to
+   `requirements.txt` (a root-level file already in the repo, just points
+   at `requirements/prod.txt` — added so this field has something
+   standard-looking to find regardless of what path format the field
+   expects).
+5. Click whatever button installs it — usually labeled **Run Pip Install**
+   or similar, right next to that field.
+6. On the same page, click **Restart** (every Setup Python App page has
+   one). This is what actually triggers `passenger_wsgi.py`, and with it,
+   the migrate/collectstatic/superuser-creation block.
+7. Visit your domain. If it's still a 500, check `stderr.log` via File
+   Manager (Part 6's troubleshooting note higher up) — most likely cause at
+   this point is the `pip install` step not actually completing, since
+   everything downstream depends on those packages being present.
+
+**This is a temporary shortcut, not how this should run long-term** — doing
+migrate/collectstatic on every process boot is wasted work once there's
+real traffic, and if cPanel ever spins up multiple worker processes at
+once on a cold start, they could theoretically race on the migrations
+table. Once SSH is confirmed working (ask your host for the exact
+host/port), the plan is: revert `passenger_wsgi.py` to just importing
+`config.wsgi.application` (drop the `django.setup()` +
+`call_command(...)` block), delete the root `requirements.txt` shim, and
+go back to the plain `bash deploy.sh` flow in the main steps above, which
+only runs those commands once per actual deploy instead of once per
+process start.
