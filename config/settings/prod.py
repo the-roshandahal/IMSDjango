@@ -1,10 +1,20 @@
 from .base import *  # noqa: F401,F403
-from .base import env
+from .base import MIDDLEWARE, env
 
 DEBUG = False
 
 DATABASES = {
-    "default": env.db("DATABASE_URL"),  # e.g. postgres://user:pass@host:5432/ims
+    "default": env.db("DATABASE_URL"),  # e.g. mysql://user:pass@localhost:3306/ims
+}
+
+# Serve collected static files directly from the app process -- shared cPanel
+# hosting doesn't give you an easy way to point Apache at STATIC_ROOT, so
+# whitenoise does it instead. Must sit right after SecurityMiddleware.
+MIDDLEWARE = [MIDDLEWARE[0], "whitenoise.middleware.WhiteNoiseMiddleware", *MIDDLEWARE[1:]]
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 SECURE_SSL_REDIRECT = True

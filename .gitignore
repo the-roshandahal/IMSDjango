@@ -10,3 +10,14 @@ staticfiles/
 .coverage
 htmlcov/
 *.egg-info/
+
+# cPanel Passenger writes this to trigger a restart -- server-side only.
+tmp/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+*.log

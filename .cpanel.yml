@@ -1,0 +1,15 @@
+---
+# Runs automatically when you click "Deploy HEAD Commit" in cPanel's Git
+# Version Control UI (no SSH needed). Requires the repo's checkout path to
+# be the same directory as the Python App root -- see docs/cpanel-deploy.md.
+#
+# ONE-TIME SETUP: replace the venv path below with the exact one shown on
+# Setup Python App -> your app -> "Enter to the virtual environment".
+deployment:
+  tasks:
+    - export VENV=/home/USERNAME/virtualenv/APP_PATH/PYTHON_VERSION/bin/activate
+    - source $VENV && pip install -r requirements/prod.txt
+    - source $VENV && python manage.py migrate --noinput
+    - source $VENV && python manage.py collectstatic --noinput
+    - /bin/mkdir -p tmp
+    - /bin/touch tmp/restart.txt
