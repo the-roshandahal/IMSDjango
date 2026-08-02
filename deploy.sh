@@ -7,7 +7,7 @@
 # (Setup Python App -> your app -> copy the `source .../activate` line).
 set -e
 
-source /home/roshanda/virtualenv/ims/3.13/bin/activate
+source /home/roshanda/virtualenv/cleantech/3.13/bin/activate
 
 cd "$(dirname "$0")"
 

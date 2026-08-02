@@ -20,49 +20,54 @@ No `.cpanel.yml`, no "Deploy" button, no dashboard automation. Just SSH.
 ### 1. Python App (if not already done)
 
 cPanel → **Setup Python App** → **Create Application** → Application root
-`ims`, startup file `passenger_wsgi.py`, entry point `application`. This
-gives you a venv — note the `source .../activate` line it shows you.
+`cleantech`, on your main domain `roshandahal.com.au` (not the `cleantech`
+subdomain — that's where Python wasn't working), startup file
+`passenger_wsgi.py`, entry point `application`. This gives you a venv —
+note the `source .../activate` line it shows you.
 
-### 2. Clean slate — remove whatever's currently in `ims`
+### 2. Clean slate — remove whatever's currently there
 
-You've had a few false starts (wrong domain, `.cpanel.yml` edits) — easiest
-to wipe and start clean rather than untangle it:
+You've had a few false starts (wrong domain, `.cpanel.yml` edits, the
+subdomain attempt) — easiest to wipe and start clean rather than untangle
+it. If you still have the old `ims` app/repo from the subdomain attempt,
+delete that too (Setup Python App → remove that application; Git Version
+Control → remove that repo) so it's not confused with this one.
 
-- cPanel → **Git Version Control** → the `ims` repo → **Manage** → **Delete**
-  (this only removes the git tracking + local files, not your Python App or
-  database).
-- File Manager → confirm the `ims` folder is now empty (delete anything
+- cPanel → **Git Version Control** → the `cleantech` repo (if it already
+  exists from a prior attempt) → **Manage** → **Delete** (this only removes
+  the git tracking + local files, not your Python App or database).
+- File Manager → confirm the `cleantech` folder is empty (delete anything
   left over, e.g. a stray `passenger_wsgi.py` stub).
 
 ### 3. Clone
 
 cPanel → **Git Version Control** → **Create**:
 - Clone URL: `https://github.com/the-roshandahal/IMSDjango.git`
-- Repository Path: `/home/roshanda/ims`
+- Repository Path: `/home/roshanda/cleantech`
 - Click **Create**.
 
 ### 4. Create `.env`
 
-File Manager → `ims` → **+ File** → name it `.env` → **Edit**, paste:
+File Manager → `cleantech` → **+ File** → name it `.env` → **Edit**, paste:
 
 ```
 DJANGO_SETTINGS_MODULE=config.settings.prod
 DJANGO_SECRET_KEY=+dzni)zkozhbrjr2q#ba6=u@3w%vn%f!^7k^xxcisj64yd+m4a
 DJANGO_DEBUG=False
-DJANGO_ALLOWED_HOSTS=<your real domain, e.g. cleantech.roshandahal.com.au>
-DATABASE_URL=mysql://roshanda_cleantech:%5DSktFFzfY%21Z9bP0X@localhost:3306/roshanda_cleantech
+DJANGO_ALLOWED_HOSTS=roshandahal.com.au,www.roshandahal.com.au
+DATABASE_URL=mysql://roshanda_cleantech:<url-encoded db password>@localhost:3306/roshanda_cleantech
 
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=ion.quantumcore.com.au
 EMAIL_PORT=465
 EMAIL_USE_TLS=False
 EMAIL_USE_SSL=True
-EMAIL_HOST_USER=<your real mailbox address>
-EMAIL_HOST_PASSWORD=<the mailbox password>
-DEFAULT_FROM_EMAIL=<your real mailbox address>
+EMAIL_HOST_USER=info@roshandahal.com.au
+EMAIL_HOST_PASSWORD=<the info@ mailbox password>
+DEFAULT_FROM_EMAIL=info@roshandahal.com.au
 
 DJANGO_SUPERUSER_USERNAME=admin
-DJANGO_SUPERUSER_EMAIL=<your real mailbox address>
+DJANGO_SUPERUSER_EMAIL=info@roshandahal.com.au
 DJANGO_SUPERUSER_PASSWORD=<pick a strong password for your first login>
 
 SESSION_INACTIVITY_TIMEOUT_SECONDS=1800
@@ -72,10 +77,15 @@ ACCOUNT_LOCKOUT_COOLDOWN_MINUTES=15
 PASSWORD_MAX_AGE_DAYS=90
 ```
 
-I've deliberately left `DJANGO_ALLOWED_HOSTS` and the email address as
-placeholders this time rather than guessing wrong again — fill in your
-actual domain and mailbox yourself. Everything else is ready to paste as-is
-(the `DATABASE_URL` password is already percent-encoded).
+`DJANGO_ALLOWED_HOSTS` assumes the site serves from the bare main domain —
+adjust if it should actually be reachable at a different hostname. Passwords
+are placeholders here on purpose (see note in this repo's history about why)
+— pull the real, percent-encoded `DATABASE_URL` value from your own private
+notes, and the mailbox password from wherever you saved it.
+`EMAIL_HOST` is carried over from the earlier mailbox, on the assumption
+`info@roshandahal.com.au` sits on the same mail server (same hosting
+account) — check **Email Accounts → Connect Devices** for this new mailbox
+if mail doesn't send, in case that assumption is wrong.
 
 `DJANGO_SUPERUSER_*` creates your first login automatically the first time
 you deploy (next step) — no interactive prompt needed, but also nothing
@@ -83,17 +93,19 @@ extra you have to think about.
 
 ### 5. SSH in and deploy
 
-Find your real SSH host/port on cPanel's **SSH Access** page if
-`roshandahal.com.au` doesn't work directly. From PowerShell:
+From PowerShell:
 
 ```
-ssh roshanda@<your-ssh-host>
+ssh roshanda@roshandahal.com.au
 ```
+
+If that doesn't resolve, check cPanel's **SSH Access** page for the exact
+host/port to use instead.
 
 Enter your cPanel password when prompted. Then:
 
 ```
-cd ~/ims
+cd ~/cleantech
 bash deploy.sh
 ```
 
@@ -116,7 +128,7 @@ git push          # on your dev machine, as usual
 then, over SSH:
 
 ```
-cd ~/ims
+cd ~/cleantech
 git pull
 bash deploy.sh
 ```
