@@ -173,7 +173,7 @@
   .sector-tile:hover { background: var(--accent-soft); }
   .sector-tile span.name { font-family: var(--font-display); font-weight: 600; font-size: 0.96rem; color: var(--ink-800, var(--ink-700)); }
 
-  /* ---------- about + milestones ---------- */
+  /* ---------- about ---------- */
   .about { background: var(--surface-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .about-inner { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: start; padding: 88px clamp(20px, 4vw, 56px); max-width: 1180px; margin: 0 auto; }
   @media (max-width: 900px) { .about-inner { grid-template-columns: 1fr; } }
@@ -192,24 +192,32 @@
   .about-text h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.1rem); margin: 0 0 16px; text-wrap: balance; }
   .about-text > p { color: var(--ink-600); line-height: 1.68; margin: 0 0 36px; max-width: 58ch; }
 
-  /* milestones timeline -- signature scroll element */
-  .timeline { position: relative; padding-left: 30px; }
-  .timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--line); }
-  .timeline::after {
-    content: ""; position: absolute; left: 5px; top: 4px; width: 2px; height: var(--tl-progress, 0%);
-    background: linear-gradient(180deg, var(--accent), var(--gold)); transition: height 0.15s linear;
+  /* ---------- case studies -- carousel linking to single pages ---------- */
+  .cs-rail {
+    display: flex; gap: 24px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 4px 14px;
+    scrollbar-width: none; -ms-overflow-style: none;
   }
-  .tl-item { position: relative; padding-bottom: 32px; }
-  .tl-item:last-child { padding-bottom: 0; }
-  .tl-item::before {
-    content: ""; position: absolute; left: -30px; top: 3px; width: 12px; height: 12px; border-radius: 50%;
-    background: var(--surface-1); border: 2px solid var(--line-strong);
-    transition: border-color 0.4s ease, background 0.4s ease;
+  .cs-rail::-webkit-scrollbar { display: none; }
+  .cs-card {
+    scroll-snap-align: start; flex: 0 0 clamp(280px, 78vw, 380px);
+    text-decoration: none; color: inherit;
+    background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
   }
-  .tl-item.is-visible::before { border-color: var(--accent); background: var(--accent); }
-  .tl-year { font-family: var(--font-mono); font-size: 0.78rem; color: var(--gold); letter-spacing: 0.04em; margin-bottom: 4px; }
-  .tl-item h4 { font-family: var(--font-display); font-size: 1rem; margin: 0 0 6px; }
-  .tl-item p { color: var(--ink-600); font-size: 0.9rem; line-height: 1.6; margin: 0; max-width: 52ch; }
+  .cs-card:hover { transform: translateY(-5px); box-shadow: 0 16px 36px rgba(16,24,40,0.12); border-color: var(--line-strong); }
+  .cs-img { aspect-ratio: 16/10; overflow: hidden; }
+  .cs-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s ease; }
+  .cs-card:hover .cs-img img { transform: scale(1.06); }
+  .cs-body { padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .cs-stat { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+  .cs-stat .num { font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; color: var(--accent); }
+  .cs-stat .lbl { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-400); }
+  .cs-link { margin-top: auto; padding-top: 10px; font-size: 0.86rem; font-weight: 600; color: var(--accent); }
+  .cs-card:hover .cs-link { color: var(--accent-hover); }
+  .cs-dots { display: flex; justify-content: center; gap: 8px; margin-top: 30px; }
+  .cs-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: var(--line-strong); padding: 0; cursor: pointer; transition: background 0.25s ease, transform 0.25s ease; }
+  .cs-dot.is-active { background: var(--accent); transform: scale(1.3); }
 
   /* ---------- process ---------- */
   .process-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; }
@@ -287,6 +295,7 @@
     <a class="link home-anchor" href="#services">Services</a>
     <a class="link home-anchor" href="#sectors">Sectors</a>
     <a class="link home-anchor" href="#about">Experience</a>
+    <a class="link home-anchor" href="#case-studies">Case studies</a>
     <a class="link home-anchor" href="#contact">Contact</a>
     <a class="btn-enquire" href="mailto:info@cleantech1.com.au">Enquire</a>
   </nav>
@@ -413,40 +422,31 @@
       <div class="section-eyebrow" data-reveal>Since 2011</div>
       <h2 data-reveal>Fifteen years of getting the details right</h2>
       <p data-reveal>What started as a small commercial crew in Western Sydney is now a multi-sector contractor with rosters, equipment and compliance running through one system. The scale changed. The standard didn't.</p>
-      <div class="timeline" id="timeline">
-        <div class="tl-item" data-reveal>
-          <div class="tl-year">2011</div>
-          <h4>Cleantech1 founded</h4>
-          <p>First commercial contracts across Western Sydney, run out of a single ute and a whiteboard roster.</p>
-        </div>
-        <div class="tl-item" data-reveal style="--d:0.05s">
-          <div class="tl-year">2014</div>
-          <h4>First transport-sector contract</h4>
-          <p>Crews trained and certified to Rail Industry Worker (RIW) standard to work live corridors.</p>
-        </div>
-        <div class="tl-item" data-reveal style="--d:0.1s">
-          <div class="tl-year">2017</div>
-          <h4>Deep clean division launched</h4>
-          <p>Dedicated crews for shutdown, restoration and handover work, with signed-on hours for every shift.</p>
-        </div>
-        <div class="tl-item" data-reveal style="--d:0.05s">
-          <div class="tl-year">2019</div>
-          <h4>Sydney Trains contract awarded</h4>
-          <p>Daily cleaning and stock management extended across multiple stations network-wide.</p>
-        </div>
-        <div class="tl-item" data-reveal style="--d:0.1s">
-          <div class="tl-year">2022</div>
-          <h4>UBW facilities contract secured</h4>
-          <p>Equipment fleet brought under central test-and-tag compliance across every site.</p>
-        </div>
-        <div class="tl-item" data-reveal style="--d:0.15s">
-          <div class="tl-year">Today</div>
-          <h4>Eight sectors, one standard</h4>
-          <p>From live rail platforms to corporate towers and warehouse floors -- tracked, audited, on schedule.</p>
-        </div>
-      </div>
     </div>
   </div>
+</section>
+
+<section class="section" id="case-studies">
+  <div class="section-head" data-reveal>
+    <div class="section-eyebrow">Case studies</div>
+    <h2>A few of the contracts behind the numbers</h2>
+    <p>Real briefs, the approach we took, and what changed on site. Open one for the full story.</p>
+  </div>
+  <div class="cs-rail" id="cs-rail">
+    {% for cs in case_studies %}
+    <a class="cs-card" href="{% url 'core_web:case-study' slug=cs.slug %}" data-reveal>
+      <div class="cs-img"><img src="{% static cs.hero_image %}" alt=""></div>
+      <div class="cs-body">
+        <div class="tag-line">{{ cs.sector }}</div>
+        <h3>{{ cs.title }}</h3>
+        <p>{{ cs.summary }}</p>
+        <div class="cs-stat"><span class="num">{{ cs.stat_value }}</span><span class="lbl">{{ cs.stat_label }}</span></div>
+        <span class="cs-link">Read case study &rarr;</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <div class="cs-dots" id="cs-dots"></div>
 </section>
 
 <section class="section" id="process">
@@ -590,31 +590,37 @@
     countTargets.forEach(function (el) { el.textContent = el.getAttribute('data-count-to'); });
   }
 
-  // timeline fill line tied to scroll progress through the timeline block
-  var timeline = document.getElementById('timeline');
-  if (timeline) {
-    var tlItems = timeline.querySelectorAll('.tl-item');
-    function updateTimeline() {
-      var rect = timeline.getBoundingClientRect();
-      var vh = window.innerHeight;
-      var total = rect.height;
-      var visibleStart = vh * 0.75;
-      var progressPx = visibleStart - rect.top;
-      var pct = reduceMotion ? 100 : Math.max(0, Math.min(100, (progressPx / total) * 100));
-      timeline.style.setProperty('--tl-progress', pct + '%');
-      tlItems.forEach(function (item) {
-        var iRect = item.getBoundingClientRect();
-        if (iRect.top < visibleStart) item.classList.add('is-visible');
+  // case studies carousel -- snap-scroll cards linking to single case-study pages, with dot nav
+  var csRail = document.getElementById('cs-rail');
+  var csDotsWrap = document.getElementById('cs-dots');
+  if (csRail && csDotsWrap) {
+    var csCards = csRail.querySelectorAll('.cs-card');
+    var csDots = [];
+    csCards.forEach(function (card, i) {
+      var dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'cs-dot';
+      dot.setAttribute('aria-label', 'Go to case study ' + (i + 1));
+      dot.addEventListener('click', function () {
+        card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', inline: 'start', block: 'nearest' });
       });
+      csDotsWrap.appendChild(dot);
+      csDots.push(dot);
+    });
+    if (csDots[0]) csDots[0].classList.add('is-active');
+
+    if ('IntersectionObserver' in window) {
+      var csObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            var idx = Array.prototype.indexOf.call(csCards, entry.target);
+            csDots.forEach(function (d) { d.classList.remove('is-active'); });
+            if (csDots[idx]) csDots[idx].classList.add('is-active');
+          }
+        });
+      }, { root: csRail, threshold: [0, 0.6, 1] });
+      csCards.forEach(function (el) { csObserver.observe(el); });
     }
-    var tlTicking = false;
-    document.addEventListener('scroll', function () {
-      if (tlTicking) return;
-      tlTicking = true;
-      requestAnimationFrame(function () { updateTimeline(); tlTicking = false; });
-    }, { passive: true });
-    window.addEventListener('resize', updateTimeline);
-    updateTimeline();
   }
 })();
 </script>

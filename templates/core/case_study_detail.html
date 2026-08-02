@@ -1,0 +1,182 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ case_study.client }} — {{ case_study.title }} | Cleantech1 Case Study</title>
+<meta name="description" content="{{ case_study.summary }}">
+<link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+<link rel="icon" type="image/jpeg" sizes="200x200" href="{% static 'img/logo-mark.jpg' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<style>
+  :root {
+    --gold: #b8863c;
+    --gold-soft: rgba(184,134,60,0.14);
+    --navy-deep: #0a1220;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --gold: #d7a866; --gold-soft: rgba(215,168,102,0.16); }
+  }
+  body { background: var(--surface-0); }
+
+  .cs-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px clamp(20px, 4vw, 56px);
+    background: var(--surface-1); border-bottom: 1px solid var(--line);
+  }
+  .cs-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .cs-brand img { width: 30px; height: 30px; border-radius: 50%; }
+  .cs-brand span { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--ink-900); }
+  .cs-header-actions { display: flex; align-items: center; gap: 22px; }
+  .cs-back { font-size: 0.86rem; color: var(--ink-600); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .cs-back:hover { color: var(--ink-900); }
+  .cs-header-actions a.btn-enquire {
+    font-size: 0.84rem; font-weight: 600; color: var(--accent-ink); background: var(--accent);
+    padding: 9px 18px; border-radius: 7px; text-decoration: none;
+  }
+  .cs-header-actions a.btn-enquire:hover { background: var(--accent-hover); }
+
+  .cs-hero { position: relative; height: min(52vh, 440px); color: #fff; overflow: hidden; }
+  .cs-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cs-hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(6,10,18,0.55) 0%, rgba(6,10,18,0.35) 45%, var(--navy-deep) 100%);
+  }
+  .cs-hero-inner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 clamp(20px, 4vw, 56px) 44px; }
+  .cs-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #d9c9a8; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .cs-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
+  .cs-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+
+  .cs-body-wrap { max-width: 780px; margin: 0 auto; padding: 64px clamp(20px, 4vw, 56px) 20px; }
+  .cs-body-wrap h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 0 0 16px; }
+  .cs-body-wrap > p.lead { font-size: 1.06rem; line-height: 1.7; color: var(--ink-700, var(--ink-600)); margin: 0 0 48px; }
+  .cs-section { margin-bottom: 48px; }
+  .cs-section p { color: var(--ink-600); line-height: 1.72; margin: 0; }
+
+  .cs-approach { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; counter-reset: cs-step; }
+  .cs-approach li { position: relative; padding-left: 42px; color: var(--ink-600); line-height: 1.62; counter-increment: cs-step; }
+  .cs-approach li::before {
+    content: counter(cs-step); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid var(--line-strong); background: var(--surface-1);
+    font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .cs-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 48px; }
+  .cs-stats div { background: var(--surface-1); padding: 24px 18px; text-align: center; }
+  .cs-stats .num { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 3vw, 1.9rem); color: var(--ink-900); }
+  .cs-stats .lbl { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-400); margin-top: 6px; }
+
+  .cs-nav { border-top: 1px solid var(--line); background: var(--surface-1); }
+  .cs-nav-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
+  .cs-nav-link { display: block; padding: 28px clamp(20px, 4vw, 40px); text-decoration: none; transition: background 0.25s ease; }
+  .cs-nav-link:hover { background: var(--accent-soft); }
+  .cs-nav-link.next { text-align: right; border-left: 1px solid var(--line); }
+  .cs-nav-kicker { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-400); margin-bottom: 6px; }
+  .cs-nav-title { font-family: var(--font-display); font-weight: 600; color: var(--ink-900); font-size: 0.98rem; }
+  @media (max-width: 640px) { .cs-nav-inner { grid-template-columns: 1fr; } .cs-nav-link.next { border-left: none; border-top: 1px solid var(--line); text-align: left; } }
+
+  .cs-cta { position: relative; background: var(--navy-deep); color: #fff; overflow: hidden; }
+  .cs-cta::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(720px 360px at 15% 0%, rgba(22,120,159,0.35), transparent 60%),
+                radial-gradient(600px 320px at 100% 100%, var(--gold-soft), transparent 60%);
+  }
+  .cs-cta-inner { position: relative; z-index: 1; text-align: center; padding: 72px clamp(20px, 4vw, 56px); }
+  .cs-cta h2 { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); margin: 0 0 14px; }
+  .cs-cta p { color: #b7c1d1; max-width: 50ch; margin: 0 auto 28px; line-height: 1.6; }
+  .cs-cta a.btn-hero-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 0.95rem;
+    padding: 14px 26px; border-radius: 8px; text-decoration: none;
+  }
+  .cs-cta a.btn-hero-primary:hover { background: var(--accent-hover); }
+
+  .cs-footer-bottom {
+    padding: 22px clamp(20px, 4vw, 56px); display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+    font-size: 0.82rem; color: var(--ink-400);
+  }
+  .cs-footer-bottom a { color: var(--ink-500, var(--ink-400)); text-decoration: none; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; }
+  .cs-footer-bottom a:hover { border-color: var(--accent); color: var(--accent); }
+
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="cs-header">
+  <a class="cs-brand" href="{% url 'accounts:dashboard' %}#top"><img src="{% static 'img/logo-mark.jpg' %}" alt=""><span>Cleantech1</span></a>
+  <div class="cs-header-actions">
+    <a class="cs-back" href="{% url 'accounts:dashboard' %}#case-studies">&larr; All case studies</a>
+    <a class="btn-enquire" href="mailto:info@cleantech1.com.au">Enquire</a>
+  </div>
+</header>
+
+<section class="cs-hero">
+  <img src="{% static case_study.hero_image %}" alt="">
+  <div class="cs-hero-inner">
+    <div class="cs-eyebrow">{{ case_study.client }} &middot; {{ case_study.sector }}</div>
+    <h1>{{ case_study.title }}</h1>
+  </div>
+</section>
+
+<div class="cs-body-wrap">
+  <p class="lead">{{ case_study.summary }}</p>
+
+  <div class="cs-section">
+    <h2>The challenge</h2>
+    <p>{{ case_study.challenge }}</p>
+  </div>
+
+  <div class="cs-section">
+    <h2>Our approach</h2>
+    <ol class="cs-approach">
+      {% for step in case_study.approach %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <h2>The result</h2>
+  <div class="cs-stats">
+    {% for stat in case_study.results %}
+    <div><div class="num">{{ stat.value }}</div><div class="lbl">{{ stat.label }}</div></div>
+    {% endfor %}
+  </div>
+
+  <div class="cs-section">
+    <p>{{ case_study.narrative }}</p>
+  </div>
+</div>
+
+<nav class="cs-nav">
+  <div class="cs-nav-inner">
+    <a class="cs-nav-link prev" href="{% url 'core_web:case-study' slug=prev_case_study.slug %}">
+      <div class="cs-nav-kicker">&larr; Previous case study</div>
+      <div class="cs-nav-title">{{ prev_case_study.client }} — {{ prev_case_study.title }}</div>
+    </a>
+    <a class="cs-nav-link next" href="{% url 'core_web:case-study' slug=next_case_study.slug %}">
+      <div class="cs-nav-kicker">Next case study &rarr;</div>
+      <div class="cs-nav-title">{{ next_case_study.client }} — {{ next_case_study.title }}</div>
+    </a>
+  </div>
+</nav>
+
+<div class="cs-cta">
+  <div class="cs-cta-inner">
+    <h2>Want a result like this on your sites?</h2>
+    <p>Tell us what you need cleaned and how often -- we'll put together a scope and a schedule within a week.</p>
+    <a class="btn-hero-primary" href="mailto:info@cleantech1.com.au">Email our team</a>
+  </div>
+</div>
+
+<div class="cs-footer-bottom">
+  <div>&copy; {% now "Y" %} Cleantech1. All rights reserved.</div>
+  <a href="{% url 'accounts:login' %}">Staff Login</a>
+</div>
+
+</body>
+</html>

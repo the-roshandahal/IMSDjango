@@ -6,4 +6,5 @@ app_name = "core_web"
 
 urlpatterns = [
     path("guide/", web_views.UserGuideView.as_view(), name="guide"),
+    path("case-studies/<slug:slug>/", web_views.CaseStudyDetailView.as_view(), name="case-study"),
 ]

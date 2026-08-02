@@ -119,7 +119,9 @@ class DashboardView(View):
 
     def get(self, request):
         if not request.user.is_authenticated:
-            return render(request, "core/home.html")
+            from apps.core.case_studies import get_all_case_studies
+
+            return render(request, "core/home.html", {"case_studies": get_all_case_studies()})
 
         from apps.catalogue.models import Product
         from apps.inventory.models import InventoryTransaction
