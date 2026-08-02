@@ -7,13 +7,14 @@
 # (Setup Python App -> your app -> copy the `source .../activate` line).
 set -e
 
-source /home/USERNAME/virtualenv/APP_PATH/PYTHON_VERSION/bin/activate
+source /home/roshanda/virtualenv/ims/3.13/bin/activate
 
 cd "$(dirname "$0")"
 
 pip install -r requirements/prod.txt
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
+python manage.py ensure_superuser
 
 mkdir -p tmp
 touch tmp/restart.txt

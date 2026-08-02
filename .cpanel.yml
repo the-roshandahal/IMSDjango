@@ -7,9 +7,10 @@
 # Setup Python App -> your app -> "Enter to the virtual environment".
 deployment:
   tasks:
-    - export VENV=/home/USERNAME/virtualenv/APP_PATH/PYTHON_VERSION/bin/activate
+    - export VENV=/home/roshanda/virtualenv/ims/3.13/bin/activate
     - source $VENV && pip install -r requirements/prod.txt
     - source $VENV && python manage.py migrate --noinput
     - source $VENV && python manage.py collectstatic --noinput
+    - source $VENV && python manage.py ensure_superuser
     - /bin/mkdir -p tmp
     - /bin/touch tmp/restart.txt
