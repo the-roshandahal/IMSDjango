@@ -322,6 +322,16 @@
   }
   .footer-staff a:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ---------- cursor glow -- soft spotlight that tracks the mouse, dark sections only ---------- */
+  .cursor-glow {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .cursor-glow.is-active { opacity: 1; }
+  .hero .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(255,255,255,0.10), transparent 68%); }
+  .cta-band .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(22,120,159,0.30), transparent 68%); }
+  @media (prefers-reduced-motion: reduce), (hover: none) { .cursor-glow { display: none; } }
+
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -346,6 +356,7 @@
 <section class="hero">
   <div class="hero-img-wrap"><img class="hero-img" id="hero-img" src="{% static 'img/home/hero-platform.jpg' %}" alt="A Cleantech1 crew maintaining a live transport platform"></div>
   <div class="hero-scrim"></div>
+  <div class="cursor-glow" data-glow></div>
   <div class="hero-content" id="hero-content">
     <div class="hero-eyebrow">Cleantech1 &middot; Commercial &amp; Specialist Cleaning</div>
     <h1>We clean everything. Properly, every time.</h1>
@@ -607,6 +618,7 @@
 </div>
 
 <div class="cta-band" id="contact">
+  <div class="cursor-glow" data-glow></div>
   <div class="cta-band-inner">
     <h2 data-reveal>Ready for a site walk-through?</h2>
     <p data-reveal>Tell us what you need cleaned and how often -- we'll put together a scope and a schedule within a week.</p>
@@ -750,6 +762,27 @@
       });
     }, { rootMargin: '-40% 0px -55% 0px' });
     sectionMap.forEach(function (s) { navObserver.observe(s.el); });
+  }
+
+  // cursor glow -- soft spotlight tracking the mouse over dark sections
+  if (!reduceMotion && hasHover) {
+    document.querySelectorAll('[data-glow]').forEach(function (glow) {
+      var section = glow.parentElement;
+      var raf = null, pending = null;
+      section.addEventListener('mousemove', function (e) {
+        var rect = section.getBoundingClientRect();
+        pending = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        if (!raf) {
+          raf = requestAnimationFrame(function () {
+            glow.style.setProperty('--gx', pending.x + 'px');
+            glow.style.setProperty('--gy', pending.y + 'px');
+            raf = null;
+          });
+        }
+      });
+      section.addEventListener('mouseenter', function () { glow.classList.add('is-active'); });
+      section.addEventListener('mouseleave', function () { glow.classList.remove('is-active'); });
+    });
   }
 
   // FAQ accordion

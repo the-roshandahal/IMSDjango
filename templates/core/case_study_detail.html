@@ -105,6 +105,16 @@
   .cs-footer-bottom a { color: var(--ink-500, var(--ink-400)); text-decoration: none; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; }
   .cs-footer-bottom a:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ---------- cursor glow -- soft spotlight that tracks the mouse, dark sections only ---------- */
+  .cursor-glow {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .cursor-glow.is-active { opacity: 1; }
+  .cs-hero .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(255,255,255,0.10), transparent 68%); }
+  .cs-cta .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(22,120,159,0.30), transparent 68%); }
+  @media (prefers-reduced-motion: reduce), (hover: none) { .cursor-glow { display: none; } }
+
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -120,6 +130,7 @@
 
 <section class="cs-hero">
   <img src="{% static case_study.hero_image %}" alt="">
+  <div class="cursor-glow" data-glow></div>
   <div class="cs-hero-inner">
     <div class="cs-eyebrow">{{ case_study.client }} &middot; {{ case_study.sector }}</div>
     <h1>{{ case_study.title }}</h1>
@@ -172,6 +183,7 @@
 </nav>
 
 <div class="cs-cta">
+  <div class="cursor-glow" data-glow></div>
   <div class="cs-cta-inner">
     <h2>Want a result like this on your sites?</h2>
     <p>Tell us what you need cleaned and how often -- we'll put together a scope and a schedule within a week.</p>
@@ -183,6 +195,32 @@
   <div>&copy; {% now "Y" %} Cleantech1. All rights reserved.</div>
   <a href="{% url 'accounts:login' %}">Staff Login</a>
 </div>
+
+<script>
+(function () {
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hasHover = window.matchMedia('(hover: hover)').matches;
+  if (reduceMotion || !hasHover) return;
+
+  document.querySelectorAll('[data-glow]').forEach(function (glow) {
+    var section = glow.parentElement;
+    var raf = null, pending = null;
+    section.addEventListener('mousemove', function (e) {
+      var rect = section.getBoundingClientRect();
+      pending = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      if (!raf) {
+        raf = requestAnimationFrame(function () {
+          glow.style.setProperty('--gx', pending.x + 'px');
+          glow.style.setProperty('--gy', pending.y + 'px');
+          raf = null;
+        });
+      }
+    });
+    section.addEventListener('mouseenter', function () { glow.classList.add('is-active'); });
+    section.addEventListener('mouseleave', function () { glow.classList.remove('is-active'); });
+  });
+})();
+</script>
 
 </body>
 </html>
