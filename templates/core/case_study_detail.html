@@ -48,7 +48,7 @@
   .cs-hero-inner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 clamp(20px, 4vw, 56px) 44px; }
   .cs-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #d9c9a8; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
   .cs-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
-  .cs-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+  .cs-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.1; margin: 0; text-wrap: balance; color: inherit; }
 
   .cs-body-wrap { max-width: 780px; margin: 0 auto; padding: 64px clamp(20px, 4vw, 56px) 20px; }
   .cs-body-wrap h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 0 0 16px; }
@@ -65,10 +65,13 @@
     display: flex; align-items: center; justify-content: center;
   }
 
-  .cs-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 48px; }
-  .cs-stats div { background: var(--surface-1); padding: 24px 18px; text-align: center; }
-  .cs-stats .num { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 3vw, 1.9rem); color: var(--ink-900); }
-  .cs-stats .lbl { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-400); margin-top: 6px; }
+  .cs-results { list-style: none; margin: 0 0 48px; padding: 0; display: grid; gap: 14px; }
+  .cs-results li {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; color: var(--ink-800, var(--ink-700)); line-height: 1.55; font-weight: 500;
+  }
+  .cs-results li svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; color: var(--accent); }
 
   .cs-nav { border-top: 1px solid var(--line); background: var(--surface-1); }
   .cs-nav-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
@@ -86,7 +89,7 @@
                 radial-gradient(600px 320px at 100% 100%, var(--gold-soft), transparent 60%);
   }
   .cs-cta-inner { position: relative; z-index: 1; text-align: center; padding: 72px clamp(20px, 4vw, 56px); }
-  .cs-cta h2 { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); margin: 0 0 14px; }
+  .cs-cta h2 { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); margin: 0 0 14px; color: inherit; }
   .cs-cta p { color: #b7c1d1; max-width: 50ch; margin: 0 auto 28px; line-height: 1.6; }
   .cs-cta a.btn-hero-primary {
     display: inline-flex; align-items: center; gap: 8px;
@@ -111,7 +114,7 @@
   <a class="cs-brand" href="{% url 'accounts:dashboard' %}#top"><img src="{% static 'img/logo-mark.jpg' %}" alt=""><span>Cleantech1</span></a>
   <div class="cs-header-actions">
     <a class="cs-back" href="{% url 'accounts:dashboard' %}#case-studies">&larr; All case studies</a>
-    <a class="btn-enquire" href="mailto:info@cleantech1.com.au">Enquire</a>
+    <a class="btn-enquire" href="mailto:info@roshandahal.com.au">Enquire</a>
   </div>
 </header>
 
@@ -141,11 +144,14 @@
   </div>
 
   <h2>The result</h2>
-  <div class="cs-stats">
-    {% for stat in case_study.results %}
-    <div><div class="num">{{ stat.value }}</div><div class="lbl">{{ stat.label }}</div></div>
+  <ul class="cs-results">
+    {% for outcome in case_study.results %}
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>{{ outcome }}</span>
+    </li>
     {% endfor %}
-  </div>
+  </ul>
 
   <div class="cs-section">
     <p>{{ case_study.narrative }}</p>
@@ -169,7 +175,7 @@
   <div class="cs-cta-inner">
     <h2>Want a result like this on your sites?</h2>
     <p>Tell us what you need cleaned and how often -- we'll put together a scope and a schedule within a week.</p>
-    <a class="btn-hero-primary" href="mailto:info@cleantech1.com.au">Email our team</a>
+    <a class="btn-hero-primary" href="mailto:info@roshandahal.com.au">Email our team</a>
   </div>
 </div>
 
