@@ -14,6 +14,9 @@ htmlcov/
 # cPanel Passenger writes this to trigger a restart -- server-side only.
 tmp/
 
+# backup_db management command writes here -- server-side only.
+backups/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
