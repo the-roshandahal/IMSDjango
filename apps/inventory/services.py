@@ -22,14 +22,16 @@ multi-batch operation never partially commits.
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 
 from apps.catalogue.models import Batch, Product
 from apps.catalogue.signals import low_stock_signal
 from apps.inventory.exceptions import ApprovalRequiredError, InsufficientStockError, StockLevelChangedError
-from apps.inventory.models import InventoryTransaction, StockLevel, Stocktake, StocktakeLine, Transfer, TransactionType
-from apps.warehouses.models import Warehouse
+from apps.inventory.models import (
+    InventoryTransaction, ProductStockThreshold, StockLevel, Stocktake, StocktakeLine, Transfer, TransactionType,
+)
+from apps.warehouses.models import Station, Warehouse
 
 
 def _get_or_create_stock_level(*, product, warehouse_id=None, station_id=None, project_id=None, batch=None) -> StockLevel:
@@ -78,15 +80,55 @@ def _fefo_plan(product: Product, warehouse: Warehouse, quantity: Decimal):
     return plan
 
 
-def _maybe_fire_low_stock(product: Product, warehouse: Warehouse):
+def effective_reorder_point(product: Product, *, warehouse=None, station=None) -> int:
+    """A ProductStockThreshold override for this exact (product, site) pair
+    wins if one exists; otherwise falls back to Product.reorder_point."""
+    if bool(warehouse) == bool(station):
+        raise ValueError("Pass exactly one of warehouse or station.")
+    override = ProductStockThreshold.objects.filter(product=product, warehouse=warehouse, station=station).values_list(
+        "reorder_point", flat=True
+    ).first()
+    return override if override is not None else product.reorder_point
+
+
+def bulk_effective_reorder_points(stock_levels):
+    """{stock_level.pk: effective threshold} for an iterable of StockLevel
+    rows (each already warehouse- or station-scoped), in a bounded number
+    of queries regardless of how many rows are passed -- for list/detail
+    views that would otherwise call effective_reorder_point() once per row."""
+    stock_levels = list(stock_levels)
+    warehouse_ids = {sl.warehouse_id for sl in stock_levels if sl.warehouse_id}
+    station_ids = {sl.station_id for sl in stock_levels if sl.station_id}
+    product_ids = {sl.product_id for sl in stock_levels}
+
+    overrides = {}
+    thresholds = ProductStockThreshold.objects.filter(product_id__in=product_ids).filter(
+        Q(warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids)
+    )
+    for t in thresholds:
+        overrides[(t.product_id, t.warehouse_id, t.station_id)] = t.reorder_point
+
+    result = {}
+    for sl in stock_levels:
+        key = (sl.product_id, sl.warehouse_id, sl.station_id)
+        result[sl.pk] = overrides.get(key, sl.product.reorder_point)
+    return result
+
+
+def _maybe_fire_low_stock(product: Product, *, warehouse: Warehouse = None, station: Station = None):
+    if bool(warehouse) == bool(station):
+        raise ValueError("Pass exactly one of warehouse or station.")
+    site_filter = {"warehouse": warehouse, "station": None} if warehouse else {"warehouse": None, "station": station}
     total = (
-        StockLevel.objects.filter(product=product, warehouse=warehouse, station=None, project=None).aggregate(total=Sum("quantity"))[
-            "total"
-        ]
+        StockLevel.objects.filter(product=product, project=None, **site_filter).aggregate(total=Sum("quantity"))["total"]
         or Decimal("0")
     )
-    if total <= product.reorder_point:
-        low_stock_signal.send(sender=Product, product=product, warehouse_id=warehouse.pk, quantity=total)
+    threshold = effective_reorder_point(product, warehouse=warehouse, station=station)
+    if total <= threshold:
+        low_stock_signal.send(
+            sender=Product, product=product, warehouse_id=warehouse.pk if warehouse else None,
+            station_id=station.pk if station else None, quantity=total, reorder_point=threshold,
+        )
 
 
 @transaction.atomic
@@ -179,7 +221,7 @@ def stock_out(
             project_level = _get_or_create_stock_level(product=product, project_id=project_id, batch=batch)
             StockLevel.objects.filter(pk=project_level.pk).update(quantity=F("quantity") + take_qty)
 
-    _maybe_fire_low_stock(product, warehouse)
+    _maybe_fire_low_stock(product, warehouse=warehouse)
     return txns
 
 
@@ -264,6 +306,7 @@ def adjustment(
     quantity_delta = Decimal(str(quantity_delta))
     product = Product.objects.get(pk=product_id)
     warehouse = Warehouse.objects.get(pk=warehouse_id) if warehouse_id is not None else None
+    station = Station.objects.get(pk=station_id) if station_id is not None else None
     batch = Batch.objects.get(pk=batch_id) if batch_id else None
 
     if quantity_delta < 0:
@@ -284,8 +327,11 @@ def adjustment(
         station_id=station_id,
         reason_code=reason_code, comment=comment, performed_by=performed_by,
     )
-    if warehouse and quantity_delta < 0:
-        _maybe_fire_low_stock(product, warehouse)
+    if quantity_delta < 0:
+        if warehouse:
+            _maybe_fire_low_stock(product, warehouse=warehouse)
+        elif station:
+            _maybe_fire_low_stock(product, station=station)
     return txn
 
 
@@ -401,7 +447,7 @@ def _write_off(
         type=txn_type, product=product, batch=batch, quantity=quantity, source_warehouse=warehouse,
         reason_code=reason_code, comment=comment, performed_by=performed_by, approved_by=approved_by, photo=photo,
     )
-    _maybe_fire_low_stock(product, warehouse)
+    _maybe_fire_low_stock(product, warehouse=warehouse)
     return txn
 
 
@@ -485,7 +531,9 @@ def station_stock_usage(*, product_id, station_id, quantity, performed_by, comme
     if updated == 0:
         raise StockLevelChangedError("Station stock level changed; please retry recording this usage.")
 
-    return InventoryTransaction.objects.create(
+    txn = InventoryTransaction.objects.create(
         type=TransactionType.STATION_USAGE, product=product, batch=batch, quantity=quantity,
         station_id=station_id, comment=comment, performed_by=performed_by,
     )
+    _maybe_fire_low_stock(product, station=Station.objects.get(pk=station_id))
+    return txn

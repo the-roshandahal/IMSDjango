@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
@@ -12,7 +13,7 @@ from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids, ha
 from apps.inventory import forms as inv_forms
 from apps.inventory import services
 from apps.inventory.exceptions import ApprovalRequiredError, InsufficientStockError, StockLevelChangedError
-from apps.inventory.models import InventoryTransaction, Stocktake
+from apps.inventory.models import InventoryTransaction, ProductStockThreshold, Stocktake
 
 ACTION_FORMS = {
     "stock_in": inv_forms.StockInForm,
@@ -202,6 +203,69 @@ class StationUsageWebView(CapabilityRequiredMixin, View):
         else:
             messages.success(request, "Usage recorded.")
         return redirect(reverse("warehouses_web:station-detail", args=[data["station_id"]]))
+
+
+class ThresholdEditView(CapabilityRequiredMixin, View):
+    """Sets or clears a per-warehouse/per-station low-stock threshold for one
+    product, overriding Product.reorder_point just at that site. Reached
+    from an "Edit" link on the warehouse/station stock table, not a
+    standalone picker -- the site and product are already known there."""
+
+    capability = "warehouse.manage"
+    template_name = "inventory/threshold_form.html"
+
+    @staticmethod
+    def _get_site(site_type, site_id):
+        from apps.warehouses.models import Station, Warehouse
+
+        if site_type == "warehouse":
+            return Warehouse.objects.filter(pk=site_id).first()
+        if site_type == "station":
+            return Station.objects.filter(pk=site_id).first()
+        return None
+
+    def _render(self, request, form, site, site_type, product):
+        return render(request, self.template_name, {
+            "form": form, "site": site, "site_type": site_type, "product": product,
+            "default_reorder_point": product.reorder_point,
+        })
+
+    def get(self, request, site_type, site_id, product_id):
+        from apps.catalogue.models import Product
+
+        site = self._get_site(site_type, site_id)
+        product = Product.objects.filter(pk=product_id).first()
+        if site is None or product is None:
+            raise Http404("Site or product not found.")
+
+        existing = ProductStockThreshold.objects.filter(product=product, **{site_type: site}).first()
+        form = inv_forms.ThresholdForm(initial={"reorder_point": existing.reorder_point if existing else None})
+        return self._render(request, form, site, site_type, product)
+
+    def post(self, request, site_type, site_id, product_id):
+        from apps.catalogue.models import Product
+
+        site = self._get_site(site_type, site_id)
+        product = Product.objects.filter(pk=product_id).first()
+        if site is None or product is None:
+            raise Http404("Site or product not found.")
+
+        form = inv_forms.ThresholdForm(request.POST)
+        if not form.is_valid():
+            return self._render(request, form, site, site_type, product)
+
+        value = form.cleaned_data["reorder_point"]
+        if value is None:
+            ProductStockThreshold.objects.filter(product=product, **{site_type: site}).delete()
+            messages.success(request, f"{product.name} at {site.name} now uses the default reorder point again.")
+        else:
+            ProductStockThreshold.objects.update_or_create(
+                product=product, **{site_type: site}, defaults={"reorder_point": value},
+            )
+            messages.success(request, f"Low-stock threshold for {product.name} at {site.name} set to {value}.")
+
+        redirect_name = "warehouses_web:warehouse-detail" if site_type == "warehouse" else "warehouses_web:station-detail"
+        return redirect(reverse(redirect_name, args=[site.pk]))
 
 
 def _can_view_stocktakes(user) -> bool:

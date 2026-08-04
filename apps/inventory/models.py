@@ -117,6 +117,43 @@ class StockLevel(models.Model):
         return f"{self.product} @ {location}: {self.quantity}"
 
 
+class ProductStockThreshold(models.Model):
+    """A per-warehouse or per-station override of Product.reorder_point --
+    a chemical that needs 50 units on hand at the main warehouse might only
+    need 5 at a small station. Falls back to Product.reorder_point wherever
+    no override exists for that exact (product, site) pair; see
+    apps.inventory.services.effective_reorder_point."""
+
+    product = models.ForeignKey("catalogue.Product", on_delete=models.CASCADE, related_name="stock_thresholds")
+    warehouse = models.ForeignKey(
+        "warehouses.Warehouse", null=True, blank=True, on_delete=models.CASCADE, related_name="stock_thresholds"
+    )
+    station = models.ForeignKey(
+        "warehouses.Station", null=True, blank=True, on_delete=models.CASCADE, related_name="stock_thresholds"
+    )
+    reorder_point = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(warehouse__isnull=False, station__isnull=True)
+                    | models.Q(warehouse__isnull=True, station__isnull=False)
+                ),
+                name="threshold_exactly_one_site",
+            ),
+            models.UniqueConstraint(fields=["product", "warehouse"], name="uniq_threshold_product_warehouse"),
+            models.UniqueConstraint(fields=["product", "station"], name="uniq_threshold_product_station"),
+        ]
+
+    @property
+    def site(self):
+        return self.warehouse or self.station
+
+    def __str__(self):
+        return f"{self.product} @ {self.site}: reorder at {self.reorder_point}"
+
+
 class Transfer(models.Model):
     """Warehouse-to-warehouse transfers are two-phase: the debit posts
     immediately, the credit (and StockLevel increment) only on

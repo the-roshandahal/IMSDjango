@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from apps.inventory.models import InventoryTransaction, StockLevel, Stocktake, StocktakeLine, Transfer
+from apps.inventory.models import (
+    InventoryTransaction, ProductStockThreshold, StockLevel, Stocktake, StocktakeLine, Transfer,
+)
 
 
 @admin.register(InventoryTransaction)
@@ -20,6 +22,13 @@ class InventoryTransactionAdmin(admin.ModelAdmin):
 @admin.register(StockLevel)
 class StockLevelAdmin(admin.ModelAdmin):
     list_display = ("product", "warehouse", "station", "batch", "quantity")
+    list_filter = ("warehouse", "station")
+    search_fields = ("product__name",)
+
+
+@admin.register(ProductStockThreshold)
+class ProductStockThresholdAdmin(admin.ModelAdmin):
+    list_display = ("product", "warehouse", "station", "reorder_point")
     list_filter = ("warehouse", "station")
     search_fields = ("product__name",)
 

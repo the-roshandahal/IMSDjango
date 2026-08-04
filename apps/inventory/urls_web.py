@@ -11,4 +11,8 @@ urlpatterns = [
     path("inventory/stocktakes/", web_views.StocktakeListView.as_view(), name="stocktake-list"),
     path("inventory/stocktakes/new/", web_views.StocktakeCreateView.as_view(), name="stocktake-new"),
     path("inventory/stocktakes/<int:pk>/", web_views.StocktakeDetailView.as_view(), name="stocktake-detail"),
+    path(
+        "inventory/thresholds/<str:site_type>/<int:site_id>/<int:product_id>/edit/",
+        web_views.ThresholdEditView.as_view(), name="threshold-edit",
+    ),
 ]

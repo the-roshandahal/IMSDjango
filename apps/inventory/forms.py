@@ -6,6 +6,13 @@ from apps.catalogue.models import Batch, Product
 from apps.warehouses.models import Station, Warehouse
 
 
+class ThresholdForm(forms.Form):
+    reorder_point = forms.IntegerField(
+        min_value=0, required=False, label="Low-stock threshold at this site",
+        help_text="Leave blank to use this product's default reorder point instead of a site-specific one.",
+    )
+
+
 class StockInForm(forms.Form):
     product = forms.ModelChoiceField(queryset=Product.objects.filter(is_archived=False))
     warehouse = forms.ModelChoiceField(queryset=Warehouse.objects.filter(is_active=True))

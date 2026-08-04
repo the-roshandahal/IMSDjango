@@ -71,13 +71,19 @@ def admins_and_supervisors():
     return User.objects.filter(role__in=[Role.ADMIN, Role.WH_SUPERVISOR], is_active=True)
 
 
-def notify_low_stock(product, warehouse, quantity):
+def notify_low_stock(product, quantity, reorder_point, *, warehouse=None, station=None):
     from django.urls import reverse
 
-    title = f"Low stock: {product.name} at {warehouse.name}"
-    message = f"{product.name} at {warehouse.name} is at {quantity} (reorder point {product.reorder_point})."
+    if bool(warehouse) == bool(station):
+        raise ValueError("Pass exactly one of warehouse or station.")
+    site = warehouse or station
+    recipients = warehouse_recipients(warehouse.pk) if warehouse else station_recipients(station.pk)
+    dedupe_site = f"warehouse:{warehouse.pk}" if warehouse else f"station:{station.pk}"
+
+    title = f"Low stock: {product.name} at {site.name}"
+    message = f"{product.name} at {site.name} is at {quantity} (reorder point {reorder_point})."
     link = reverse("catalogue_web:product-detail", args=[product.pk])
     notify_users(
-        warehouse_recipients(warehouse.pk), type="low_stock", title=title, message=message, link=link,
-        dedupe_key=f"low_stock:{product.pk}:{warehouse.pk}",
+        recipients, type="low_stock", title=title, message=message, link=link,
+        dedupe_key=f"low_stock:{product.pk}:{dedupe_site}",
     )
