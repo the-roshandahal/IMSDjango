@@ -9,13 +9,23 @@
 <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
 <link rel="icon" type="image/jpeg" sizes="200x200" href="{% static 'img/logo-mark.jpg' %}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/app.css' %}">
 <style>
   :root {
+    --accent: #7ab800;
+    --accent-hover: #669b00;
+    --accent-soft: rgba(122,184,0,0.12);
+    --accent-ink: #ffffff;
     --gold: #b8863c;
     --gold-soft: rgba(184,134,60,0.14);
     --navy-deep: #0a1220;
+    --font-display: "Figtree", sans-serif;
+    --font-body: "Figtree", sans-serif;
+    --font-mono: "Figtree", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --accent: #8fd400; --accent-hover: #7ab800; }
   }
   @media (prefers-color-scheme: dark) {
     :root { --gold: #d7a866; --gold-soft: rgba(215,168,102,0.16); }
@@ -60,8 +70,8 @@
   .cs-approach li { position: relative; padding-left: 42px; color: var(--ink-600); line-height: 1.62; counter-increment: cs-step; }
   .cs-approach li::before {
     content: counter(cs-step); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
-    border: 1.5px solid var(--line-strong); background: var(--surface-1);
-    font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; color: var(--accent);
+    background: var(--accent);
+    font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; color: #fff;
     display: flex; align-items: center; justify-content: center;
   }
 
@@ -71,7 +81,7 @@
     background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px;
     padding: 18px 20px; color: var(--ink-800, var(--ink-700)); line-height: 1.55; font-weight: 500;
   }
-  .cs-results li svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; color: var(--accent); }
+  .cs-results li svg { flex-shrink: 0; width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin-top: 1px; color: var(--accent); }
 
   .cs-nav { border-top: 1px solid var(--line); background: var(--surface-1); }
   .cs-nav-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; }
@@ -85,7 +95,7 @@
   .cs-cta { position: relative; background: var(--navy-deep); color: #fff; overflow: hidden; }
   .cs-cta::before {
     content: ""; position: absolute; inset: 0;
-    background: radial-gradient(720px 360px at 15% 0%, rgba(22,120,159,0.35), transparent 60%),
+    background: radial-gradient(720px 360px at 15% 0%, rgba(122,184,0,0.32), transparent 60%),
                 radial-gradient(600px 320px at 100% 100%, var(--gold-soft), transparent 60%);
   }
   .cs-cta-inner { position: relative; z-index: 1; text-align: center; padding: 72px clamp(20px, 4vw, 56px); }
@@ -112,7 +122,7 @@
   }
   .cursor-glow.is-active { opacity: 1; }
   .cs-hero .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(255,255,255,0.10), transparent 68%); }
-  .cs-cta .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(22,120,159,0.30), transparent 68%); }
+  .cs-cta .cursor-glow { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(122,184,0,0.30), transparent 68%); }
   @media (prefers-reduced-motion: reduce), (hover: none) { .cursor-glow { display: none; } }
 
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -158,7 +168,7 @@
   <ul class="cs-results">
     {% for outcome in case_study.results %}
     <li>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.5 14.5-4-4 1.4-1.4 2.6 2.6 6.6-6.6 1.4 1.4-8 8Z"/></svg>
       <span>{{ outcome }}</span>
     </li>
     {% endfor %}
