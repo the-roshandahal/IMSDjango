@@ -31,8 +31,13 @@ urlpatterns = [
     path("", include("apps.safety.urls_web")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Always serve /media/, not just under DEBUG -- on shared cPanel hosting
+# there's no separate web-server config to point at MEDIA_ROOT directly
+# (unlike a VPS with real Apache/Nginx vhost access), so Django has to be
+# the one serving these files in production too, the same way whitenoise
+# already serves collected static files here. Fine for this app's traffic
+# level; revisit if that ever changes.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler400 = "apps.core.error_views.error_400"
 handler403 = "apps.core.error_views.error_403"
