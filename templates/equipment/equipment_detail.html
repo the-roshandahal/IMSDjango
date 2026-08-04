@@ -141,18 +141,6 @@
     {% endif %}
     {% endif %}
 
-    <div class="panel">
-      <div class="panel-head"><h2>Identification</h2></div>
-      <div class="panel-body" style="text-align:center;">
-        {% if item.qr_code_image %}
-        <div class="qr-box"><img src="{{ item.qr_code_image.url }}" alt="QR code"></div>
-        <p class="mono" style="margin-top:10px;font-size:0.75rem;color:var(--ink-400);">{{ item.qr_code_data }}</p>
-        {% else %}
-        <p class="muted">QR code not generated.</p>
-        {% endif %}
-      </div>
-    </div>
-
     {% include "documents/_attachments.html" with documents=documents can_manage_documents=can_manage_documents document_model_key=document_model_key document_object_id=document_object_id %}
   </div>
 </div>
