@@ -163,6 +163,7 @@
               <div class="name">{{ request.user.get_full_name|default:request.user.username }}</div>
               <div class="role">{{ request.user.get_role_display }}</div>
             </div>
+            <a class="btn-ghost-sm" href="{% url 'accounts:change-password' %}">Change password</a>
             <form method="post" action="{% url 'accounts:logout' %}">
               {% csrf_token %}
               <button type="submit" class="btn-ghost-sm">Log out</button>

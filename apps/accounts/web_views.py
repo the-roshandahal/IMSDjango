@@ -1,7 +1,8 @@
 import datetime
 
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -12,6 +13,8 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from apps.accounts import services
 from apps.accounts.forms import (
+    AdminSetPasswordForm,
+    ChangeOwnPasswordForm,
     LoginForm,
     PermissionChecklistForm,
     SiteAssignmentForm,
@@ -237,6 +240,7 @@ class UserDetailView(CapabilityRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["role_form"] = UserRoleForm(initial={"role": self.object.role})
+        ctx["password_form"] = AdminSetPasswordForm(target_user=self.object)
         ctx["deactivate_form"] = UserDeactivateForm()
         ctx["site_form"] = SiteAssignmentForm()
         ctx["pending_blockers"] = services.check_pending_assets(self.object) if self.object.is_active else []
@@ -276,6 +280,57 @@ class UserRoleChangeWebView(CapabilityRequiredMixin, View):
             )
             messages.success(request, "Role updated.")
         return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class UserPasswordResetWebView(CapabilityRequiredMixin, View):
+    """Admin-only -- sets a new password for another user directly. This is
+    deliberately not reachable by any other role: self-service password
+    changes go through ChangeOwnPasswordView instead, which requires
+    knowing the current password."""
+
+    capability = "user.manage"
+
+    def post(self, request, pk):
+        user_obj = get_object_or_404(User, pk=pk)
+        form = AdminSetPasswordForm(request.POST, target_user=user_obj)
+        if form.is_valid():
+            user_obj.set_password(form.cleaned_data["new_password"])
+            user_obj.password_changed_at = timezone.now()
+            user_obj.save(update_fields=["password", "password_changed_at"])
+            AuditLog.log(
+                actor=request.user, action="user.password_reset_by_admin", entity_type="User", entity_id=user_obj.pk,
+            )
+            messages.success(request, f"Password set for {user_obj.username}.")
+        else:
+            messages.error(request, " ".join(form.errors.get("new_password", ["Could not set that password."])))
+        return redirect(reverse("accounts:user-detail-page", args=[pk]))
+
+
+class ChangeOwnPasswordView(LoginRequiredMixin, View):
+    """Self-service -- any authenticated user can change their own
+    password, proving they know the current one first. Deliberately
+    separate from UserPasswordResetWebView (admin-only, no current-password
+    check) so the two never share a code path."""
+
+    template_name = "accounts/change_password.html"
+
+    def get(self, request):
+        return render(request, self.template_name, {"form": ChangeOwnPasswordForm(user=request.user)})
+
+    def post(self, request):
+        form = ChangeOwnPasswordForm(request.POST, user=request.user)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form})
+
+        request.user.set_password(form.cleaned_data["new_password"])
+        request.user.password_changed_at = timezone.now()
+        request.user.save(update_fields=["password", "password_changed_at"])
+        update_session_auth_hash(request, request.user)  # keep the current session logged in
+        AuditLog.log(
+            actor=request.user, action="auth.password_changed", entity_type="User", entity_id=request.user.pk,
+        )
+        messages.success(request, "Password changed.")
+        return redirect(reverse("accounts:dashboard"))
 
 
 class UserDeactivateWebView(CapabilityRequiredMixin, View):

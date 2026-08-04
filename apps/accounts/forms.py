@@ -41,6 +41,47 @@ class UserRoleForm(forms.Form):
     role = forms.ChoiceField(choices=Role.choices)
 
 
+class AdminSetPasswordForm(forms.Form):
+    """Admin-only -- sets a new password for another user directly, no
+    knowledge of their current password required (mirrors the "Temporary
+    password" field already used at account creation, just for an existing
+    account)."""
+
+    new_password = forms.CharField(widget=forms.PasswordInput, label="New password")
+
+    def __init__(self, *args, target_user=None, **kwargs):
+        self.target_user = target_user
+        super().__init__(*args, **kwargs)
+
+    def clean_new_password(self):
+        password = self.cleaned_data["new_password"]
+        validate_password(password, user=self.target_user)
+        return password
+
+
+class ChangeOwnPasswordForm(forms.Form):
+    """Self-service -- anyone can change their own password, but must prove
+    they know the current one first."""
+
+    current_password = forms.CharField(widget=forms.PasswordInput, label="Current password")
+    new_password = forms.CharField(widget=forms.PasswordInput, label="New password")
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_current_password(self):
+        password = self.cleaned_data["current_password"]
+        if not self.user.check_password(password):
+            raise forms.ValidationError("Incorrect password.")
+        return password
+
+    def clean_new_password(self):
+        password = self.cleaned_data["new_password"]
+        validate_password(password, user=self.user)
+        return password
+
+
 class UserDeactivateForm(forms.Form):
     reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}))
     override = forms.BooleanField(required=False, label="Override (Administrator)")

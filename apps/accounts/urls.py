@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts import views
 from apps.accounts.web_views import (
+    ChangeOwnPasswordView,
     DashboardView,
     LoginPageView,
     LogoutPageView,
@@ -11,6 +12,7 @@ from apps.accounts.web_views import (
     UserDeactivateWebView,
     UserDetailView,
     UserListView,
+    UserPasswordResetWebView,
     UserPermissionOverrideDeleteWebView,
     UserPermissionsView,
     UserReactivateWebView,
@@ -48,6 +50,8 @@ web_urlpatterns = [
     path("users/create/", UserCreateView.as_view(), name="user-create-page"),
     path("users/<int:pk>/", UserDetailView.as_view(), name="user-detail-page"),
     path("users/<int:pk>/role/", UserRoleChangeWebView.as_view(), name="user-role-page"),
+    path("users/<int:pk>/password/", UserPasswordResetWebView.as_view(), name="user-password-reset-page"),
+    path("change-password/", ChangeOwnPasswordView.as_view(), name="change-password"),
     path("users/<int:pk>/deactivate/", UserDeactivateWebView.as_view(), name="user-deactivate-page"),
     path("users/<int:pk>/reactivate/", UserReactivateWebView.as_view(), name="user-reactivate-page"),
     path("users/<int:pk>/unlock/", UserUnlockWebView.as_view(), name="user-unlock-page"),

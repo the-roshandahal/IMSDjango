@@ -120,6 +120,21 @@
       </div>
     </div>
 
+    <div class="panel">
+      <div class="panel-head"><h2>Password</h2></div>
+      <div class="panel-body">
+        <p class="muted" style="margin-top:0;">Sets a new password directly -- no need to know the current one. Only admins can do this for another user.</p>
+        <form method="post" action="{% url 'accounts:user-password-reset-page' target_user.pk %}">
+          {% csrf_token %}
+          <div class="field">
+            <label for="{{ password_form.new_password.id_for_label }}">{{ password_form.new_password.label }}</label>
+            {{ password_form.new_password }}
+          </div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Set new password</button>
+        </form>
+      </div>
+    </div>
+
     {% if target_user.is_locked %}
     <div class="panel">
       <div class="panel-head"><h2>Lockout</h2></div>
