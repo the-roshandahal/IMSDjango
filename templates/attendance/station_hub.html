@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ station.name }} Attendance - IMS{% endblock %}
+{% block crumb %}Attendance / {{ station.name }}{% endblock %}
+{% block page_title %}{{ station.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">
+    <form method="get" style="display:inline;">
+      <input type="date" name="date" value="{{ date|date:'Y-m-d' }}" onchange="this.form.submit()">
+    </form>
+  </div>
+  {% if can_manage %}
+  <div class="actions-row">
+    <a class="btn btn-primary" href="{% url 'attendance_web:duty-sheet-create' station.pk %}">New duty sheet</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div>
+    {% if duty_sheets %}
+    {% for ds in duty_sheets %}
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ ds.name }}</h2>
+        <span class="sub mono">{{ ds.start_time|time:"H:i" }}-{{ ds.end_time|time:"H:i" }}</span>
+        {% if not ds.is_active %}<span class="status-rail pending">Inactive</span>{% endif %}
+      </div>
+      <div class="panel-body">
+        {% if ds.assignment %}
+        <p class="hint" style="margin:0;">Claimed by <strong>{{ ds.assignment.employee.full_name }}</strong> for {{ date }}.</p>
+        {% else %}
+        <p class="hint" style="margin:0;">Not claimed for {{ date }} yet -- open to whoever picks it at clock-in.</p>
+        {% endif %}
+        {% if can_manage %}
+        <form method="post" action="{% url 'attendance_web:duty-sheet-assign' ds.pk %}" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+          <select name="employee" style="flex:1;min-width:160px;">
+            <option value="">-- unclaim --</option>
+            {% for e in ds.available_employees %}<option value="{{ e.pk }}" {% if ds.assignment.employee_id == e.pk %}selected{% endif %}>{{ e.full_name }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="btn btn-secondary btn-sm">{% if ds.assignment %}Reassign{% else %}Assign{% endif %}</button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="panel-body flush">
+        {% if ds.today_tasks %}
+        <table class="data">
+          <thead><tr><th>Task</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for task in ds.today_tasks %}
+            <tr>
+              <td>{{ task.description }}</td>
+              <td>{% if task.today.is_completed %}<span class="status-rail good">Done -- {{ task.today.completed_by.full_name }}</span>{% else %}<span class="status-rail pending">Not done</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No tasks on this duty sheet.</div>
+        {% endif %}
+      </div>
+      <div class="panel-body">
+        <a href="{% url 'attendance_web:duty-sheet-detail' ds.pk %}">Manage tasks &amp; view history &rarr;</a>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="panel"><div class="panel-body"><div class="empty-state">No duty sheets set up for this station yet.</div></div></div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="panel-head"><h2>Currently clocked in</h2></div>
+      <div class="panel-body flush">
+        {% if open_events %}
+        <table class="data">
+          <thead><tr><th>Employee</th><th>Duty sheet</th><th>Since</th></tr></thead>
+          <tbody>
+            {% for ev in open_events %}
+            <tr><td>{{ ev.employee.full_name }}</td><td>{{ ev.duty_sheet.name }}</td><td class="mono muted">{{ ev.clock_in_at|date:"d M H:i" }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">Nobody clocked in right now.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if can_manage %}
+    <div class="panel">
+      <div class="panel-head"><h2>NFC tag <span class="sub">optional</span></h2></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-top:0;">Employees can already clock in from Attendance &gt; Clock In/Out -- an NFC tag at the station is just a shortcut. Write this link to a tag (any NFC-writer app) if you want one.</p>
+        <div class="field">
+          <input type="text" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'attendance_web:kiosk' station.nfc_token %}" onclick="this.select();" class="mono" style="font-size:0.8rem;">
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

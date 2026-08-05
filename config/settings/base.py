@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "apps.trains",
     "apps.employees",
     "apps.safety",
+    "apps.attendance",
 ]
 
 MIDDLEWARE = [

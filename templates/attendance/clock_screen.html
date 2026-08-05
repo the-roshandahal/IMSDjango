@@ -1,0 +1,136 @@
+{% extends "auth_base.html" %}
+{% block title %}Clock in/out - Cleantech1{% endblock %}
+{% block auth_sub %}{% if station %}{{ station.name }}{% else %}Clock in / out{% endif %}{% endblock %}
+{% block content %}
+
+<style>
+  /* Tap anywhere on the row, not just the tiny checkbox -- this is meant
+     to be used one-handed on a phone, often mid-shift. */
+  .task-row { margin-bottom: 10px; }
+  .task-row label {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--surface-1); cursor: pointer; min-height: 48px;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .task-row label:active { background: var(--surface-sunken); }
+  .task-row input[type=checkbox] {
+    width: 24px; height: 24px; flex-shrink: 0; margin-top: 1px; accent-color: var(--accent);
+  }
+  .task-row .desc { font-size: 0.96rem; line-height: 1.4; }
+  .task-row .desc.done { text-decoration: line-through; color: var(--ink-400); }
+  .task-row .desc .hint { display: block; margin-top: 2px; }
+  .duty-sheet-pick { display: block; margin-bottom: 10px; }
+  .duty-sheet-pick .btn { min-height: 52px; font-size: 0.95rem; }
+  .station-pick .btn { min-height: 52px; font-size: 0.95rem; margin-bottom: 10px; }
+</style>
+
+{% if no_employee_profile %}
+<div class="empty-state">
+  <div class="big">No employee record linked</div>
+  <p class="muted">Ask your supervisor to set up clock-in access for your account.</p>
+</div>
+
+{% elif no_stations %}
+<div class="empty-state">
+  <div class="big">Not assigned to any station</div>
+  <p class="muted">Ask your supervisor to assign you to a station.</p>
+</div>
+
+{% elif not_assigned %}
+<div class="empty-state">
+  <div class="big">Not assigned here</div>
+  <p class="muted">You're not assigned to {{ station.name }}. Ask your supervisor if this is wrong.</p>
+</div>
+
+{% elif clocked_in_elsewhere %}
+<div class="empty-state">
+  <div class="big">Already clocked in elsewhere</div>
+  <p class="muted">You're clocked in at {{ clocked_in_elsewhere.station.name }} since {{ clocked_in_elsewhere.clock_in_at|date:"H:i" }}. Clock out there first.</p>
+</div>
+
+{% elif pick_station %}
+<p class="hint" style="margin-top:0;">Pick a station:</p>
+<div class="station-pick">
+  {% for s in stations %}
+  <a class="btn btn-secondary" style="width:100%;justify-content:center;" href="?station={{ s.pk }}">{{ s.name }}</a>
+  {% endfor %}
+</div>
+
+{% elif open_event %}
+  <p class="hint" style="margin-top:0;">Clocked in for <strong>{{ open_event.duty_sheet.name }}</strong> since {{ open_event.clock_in_at|date:"H:i" }}.</p>
+
+  {% if own_tasks %}
+  <div class="field"><label>Your duty sheet -- tap to check off</label></div>
+  {% for task in own_tasks %}
+  <form method="post" action="{% if task.today.is_completed %}{% url 'attendance_web:task-undo' task.pk %}{% else %}{% url 'attendance_web:task-complete' task.pk %}{% endif %}" class="task-row">
+    {% csrf_token %}
+    <label>
+      <input type="checkbox" onchange="this.form.submit()" {% if task.today.is_completed %}checked{% endif %}>
+      <span class="desc {% if task.today.is_completed %}done{% endif %}">{{ task.description }}</span>
+    </label>
+  </form>
+  {% endfor %}
+  {% endif %}
+
+  {% if carried_over_tasks %}
+  <div class="field" style="margin-top:24px;"><label>Left over from another duty sheet today</label></div>
+  {% for task in carried_over_tasks %}
+  <form method="post" action="{% url 'attendance_web:task-complete' task.pk %}" class="task-row">
+    {% csrf_token %}
+    <label>
+      <input type="checkbox" onchange="this.form.submit()">
+      <span class="desc">{{ task.description }}<span class="hint">{{ task.duty_sheet.name }}</span></span>
+    </label>
+  </form>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post" action="{% url 'attendance_web:clock-out' open_event.pk %}" style="margin-top:24px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;min-height:52px;font-size:0.95rem;">Clock out</button>
+  </form>
+
+{% elif assigned_duty_sheets %}
+  <p class="hint" style="margin-top:0;">You're assigned to:</p>
+  <div class="duty-sheet-pick">
+    {% for ds in assigned_duty_sheets %}
+    <form method="post" action="{% url 'attendance_web:clock' %}" style="margin-bottom:10px;">
+      {% csrf_token %}
+      <input type="hidden" name="station_id" value="{{ station.pk }}">
+      <input type="hidden" name="duty_sheet" value="{{ ds.pk }}">
+      {% if request.GET.via %}<input type="hidden" name="via" value="{{ request.GET.via }}">{% endif %}
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Clock in for {{ ds.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+
+{% elif duty_sheets %}
+  <form method="post" action="{% url 'attendance_web:clock' %}">
+    {% csrf_token %}
+    <input type="hidden" name="station_id" value="{{ station.pk }}">
+    {% if request.GET.via %}<input type="hidden" name="via" value="{{ request.GET.via }}">{% endif %}
+    <div class="field">
+      <label for="id_duty_sheet">Which duty sheet are you doing?</label>
+      <select name="duty_sheet" id="id_duty_sheet" required>
+        {% for ds in duty_sheets %}<option value="{{ ds.pk }}">{{ ds.name }} ({{ ds.start_time|time:"H:i" }}-{{ ds.end_time|time:"H:i" }})</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;min-height:52px;font-size:0.95rem;">Clock in</button>
+  </form>
+{% else %}
+<div class="empty-state">
+  <div class="big">No duty sheets available</div>
+  <p class="muted">Everything at this station is already claimed for today, or none are set up yet. Ask your supervisor.</p>
+</div>
+{% endif %}
+
+{% if other_stations %}
+<div class="field" style="margin-top:24px;">
+  <label>Switch station</label>
+  <select onchange="window.location='?station='+this.value">
+    {% for s in other_stations %}<option value="{{ s.pk }}" {% if s.pk == station.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+  </select>
+</div>
+{% endif %}
+{% endblock %}

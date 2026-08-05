@@ -29,6 +29,7 @@ urlpatterns = [
     path("", include("apps.trains.urls_web")),
     path("", include("apps.employees.urls_web")),
     path("", include("apps.safety.urls_web")),
+    path("", include("apps.attendance.urls_web")),
 ]
 
 # Always serve /media/, not just under DEBUG -- on shared cPanel hosting

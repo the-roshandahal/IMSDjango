@@ -1,8 +1,22 @@
+import secrets
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 
 from apps.employees.models import Employee, _generate_invite_token
+
+
+class EmployeeLoginError(Exception):
+    """Raised when a login can't be created for an employee (e.g. one already exists)."""
+
+
+class PinLoginResult:
+    OK = "ok"
+    INVALID_PIN = "invalid_pin"
+    LOCKED = "locked"
+    INACTIVE = "inactive"
+    NO_PIN_SET = "no_pin_set"
 
 
 def onboarding_url(request, employee: Employee) -> str:
@@ -75,3 +89,72 @@ def regenerate_invite_token(employee: Employee):
     employee.invite_token = _generate_invite_token()
     employee.save(update_fields=["invite_token"])
     return employee
+
+
+def create_employee_login(*, employee: Employee, role="station_staff"):
+    """One-click "give this employee clock-in access" -- creates a real
+    User (reusing the login/password/change-password system already built,
+    not a separate auth mechanism) and links it. Returns the temp password
+    so the supervisor can pass it on; the employee can change it via the
+    existing self-service change-password page."""
+    from apps.accounts.models import User
+
+    if employee.user_id:
+        raise EmployeeLoginError(f"{employee.full_name} already has a login ({employee.user.username}).")
+
+    if User.objects.filter(email=employee.email).exists():
+        raise EmployeeLoginError(
+            f"A user account already exists with the email {employee.email} -- link it manually via Django admin, "
+            f"or update the employee's email first."
+        )
+
+    username = employee.email
+    if User.objects.filter(username=username).exists():
+        username = f"{employee.email}.{employee.pk}"
+
+    temp_password = secrets.token_urlsafe(9)
+    user = User.objects.create_user(
+        username=username, email=employee.email, first_name=employee.first_name, last_name=employee.last_name,
+        role=role, password=temp_password,
+    )
+    employee.user = user
+    employee.save(update_fields=["user"])
+    return user, temp_password
+
+
+def set_kiosk_pin(*, employee: Employee, pin=None):
+    """Generates (or accepts) a 4-digit PIN for kiosk login and hashes it,
+    the same way a password is hashed -- the raw PIN is never stored.
+    Returns the raw PIN once so the supervisor can pass it on."""
+    from django.contrib.auth.hashers import make_password
+
+    if not employee.user_id:
+        raise EmployeeLoginError(f"{employee.full_name} needs a login before a kiosk PIN can be set.")
+
+    if pin is None:
+        pin = f"{secrets.randbelow(10000):04d}"
+    employee.kiosk_pin_hash = make_password(pin)
+    employee.save(update_fields=["kiosk_pin_hash"])
+    return pin
+
+
+def verify_kiosk_pin(*, employee: Employee, pin: str) -> str:
+    """Same lockout protection as a real password login, reusing the
+    linked User's failed_login_attempts/locked_until -- one shared
+    lockout regardless of whether a password or a PIN is being guessed.
+    Returns a PinLoginResult code, mirroring accounts.services.LoginResult."""
+    from django.contrib.auth.hashers import check_password
+
+    if not employee.is_active or not employee.user_id or not employee.user.is_active:
+        return PinLoginResult.INACTIVE
+    if not employee.has_kiosk_pin:
+        return PinLoginResult.NO_PIN_SET
+    if employee.user.is_locked:
+        return PinLoginResult.LOCKED
+
+    if check_password(pin, employee.kiosk_pin_hash):
+        employee.user.reset_lockout()
+        return PinLoginResult.OK
+
+    employee.user.register_failed_login()
+    return PinLoginResult.LOCKED if employee.user.is_locked else PinLoginResult.INVALID_PIN

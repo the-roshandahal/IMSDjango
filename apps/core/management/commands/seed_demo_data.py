@@ -6,8 +6,11 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, SiteAssignment, User
+from apps.attendance import services as att_services
+from apps.attendance.models import ClockEvent, DutySheet, TaskCompletion
 from apps.catalogue.models import Category, Product
 from apps.catalogue.services import provision_codes
+from apps.employees import services as employee_services
 from apps.employees.models import Employee
 from apps.equipment.models import Equipment, EquipmentStatus, TestResult, TestTag
 from apps.equipment.services import provision_qr_code
@@ -148,6 +151,7 @@ class Command(BaseCommand):
         employees = self._seed_employees(admin, dc_sup)
         self._seed_projects(st1, st2, st3, dc_sup, wh1, equipment, vehicles, products, employees, admin)
         self._seed_purchase_orders(suppliers, wh1, products, wh_sup)
+        self._seed_attendance(admin, st1, employees)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         self.stdout.write(
@@ -466,6 +470,58 @@ class Command(BaseCommand):
                 start_time=time(8, 0), end_time=time(16, 0), employee_ids=[e.id for e in crew[3:5]], logged_by=dc_sup,
             )
             project_services.close_project(project_id=completed.id, performed_by=dc_sup)
+
+    # ---------------------------------------------------------- Attendance
+
+    def _seed_attendance(self, admin, st1, employees):
+        maria = employees["maria.santos@cleantech1.example.com"]
+        liam = employees["liam.chen@cleantech1.example.com"]
+
+        for employee in (maria, liam):
+            if not employee.user_id:
+                user, temp_password = employee_services.create_employee_login(employee=employee)
+                SiteAssignment.objects.get_or_create(user=user, station=st1)
+                self.stdout.write(f"Created clock-in login for {employee.full_name}: {user.username} / {temp_password}")
+            if not employee.has_kiosk_pin:
+                pin = employee_services.set_kiosk_pin(employee=employee, pin="1234")
+                self.stdout.write(f"Set kiosk PIN for {employee.full_name}: {pin}")
+
+        # Two parallel duty sheets covering the same time window -- fixed,
+        # standing checklists an employee picks between at clock-in, not
+        # something recreated day to day.
+        platform, created = DutySheet.objects.get_or_create(
+            station=st1, name="6am-2pm Platform",
+            defaults={"start_time": time(6, 0), "end_time": time(14, 0), "order": 0},
+        )
+        if created:
+            att_services.add_task(duty_sheet=platform, description="Sweep platform 1-4")
+            att_services.add_task(duty_sheet=platform, description="Empty bins")
+            att_services.add_task(duty_sheet=platform, description="Mop concourse")
+            att_services.add_task(duty_sheet=platform, description="Restock soap dispensers")
+
+        concourse, created = DutySheet.objects.get_or_create(
+            station=st1, name="6am-2pm Concourse",
+            defaults={"start_time": time(6, 0), "end_time": time(14, 0), "order": 1},
+        )
+        if created:
+            att_services.add_task(duty_sheet=concourse, description="Clean waiting room windows")
+            att_services.add_task(duty_sheet=concourse, description="Check chemical stock levels")
+
+        # Liam claimed Platform and worked it earlier today, leaving two tasks
+        # undone -- something real to show as "left over" for whoever's next.
+        if not TaskCompletion.objects.filter(task__duty_sheet=platform, date=self.today).exists():
+            att_services.assign_duty_sheet(duty_sheet=platform, date=self.today, employee=liam, assigned_by=admin)
+            platform_tasks = list(platform.tasks.all())
+            att_services.mark_task_complete(task=platform_tasks[0], employee=liam, clock_event=None)
+            att_services.mark_task_complete(task=platform_tasks[1], employee=liam, clock_event=None)
+            # the remaining two tasks are left incomplete deliberately
+
+        # Maria currently clocked in on Concourse, so the "who's clocked in now" view has something to show.
+        if not ClockEvent.objects.filter(employee=maria, clock_out_at__isnull=True).exists():
+            try:
+                att_services.clock_in(employee=maria, station=st1, duty_sheet=concourse)
+            except att_services.ClockInError:
+                pass
 
     # ------------------------------------------------------ Purchase orders
 

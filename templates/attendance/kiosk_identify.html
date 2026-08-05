@@ -1,0 +1,47 @@
+{% extends "auth_base.html" %}
+{% block title %}Clock in - Cleantech1{% endblock %}
+{% block auth_sub %}{{ station.name }}{% endblock %}
+{% block content %}
+
+<style>
+  .kiosk-name-list a {
+    display: block; width: 100%; text-align: center; padding: 16px;
+    margin-bottom: 10px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--surface-1); color: var(--ink-900); font-family: var(--font-display);
+    font-weight: 700; font-size: 1rem; text-decoration: none; min-height: 52px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .kiosk-name-list a:active { background: var(--surface-sunken); }
+  .kiosk-pin-input {
+    width: 100%; text-align: center; font-size: 2rem; letter-spacing: 0.5em;
+    padding: 16px 0 16px 0.5em; font-family: var(--font-mono);
+  }
+</style>
+
+{% if picked %}
+  <p class="hint" style="margin-top:0;text-align:center;font-size:1rem;">Hi, <strong>{{ picked.first_name }}</strong> -- enter your PIN</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="employee" value="{{ picked.pk }}">
+    <div class="field">
+      <input class="kiosk-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" name="pin" maxlength="4" autofocus required>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;min-height:52px;font-size:0.95rem;">Continue</button>
+  </form>
+  <p style="text-align:center;margin-top:16px;"><a href="{% url 'attendance_web:kiosk' token %}">Not {{ picked.first_name }}? Pick another name</a></p>
+
+{% elif employees %}
+  <p class="hint" style="margin-top:0;">Who are you?</p>
+  <div class="kiosk-name-list">
+    {% for e in employees %}
+    <a href="?employee={{ e.pk }}">{{ e.full_name }}</a>
+    {% endfor %}
+  </div>
+
+{% else %}
+<div class="empty-state">
+  <div class="big">Nobody's set up for kiosk sign-in here yet</div>
+  <p class="muted">Ask your supervisor to set you up with a station and a PIN, or sign in normally from Attendance &gt; Clock In/Out.</p>
+</div>
+{% endif %}
+{% endblock %}

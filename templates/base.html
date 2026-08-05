@@ -32,11 +32,23 @@
         <span class="nav-dot"></span> Live Sydney Trains
       </a>
 
-      {% if can_view_hazards %}
+      {% if can_view_hazards or can_manage_attendance or can_clock_attendance %}
       <div class="nav-section">Safety</div>
+      {% if can_view_hazards %}
       <a class="nav-link {% if 'safety_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'safety_web:list' %}">
         <span class="nav-dot"></span> Hazard &amp; Incident Reports
       </a>
+      {% endif %}
+      {% if can_manage_attendance %}
+      <a class="nav-link {% if 'attendance_web:overview' in request.resolver_match.view_name or 'attendance_web:station' in request.resolver_match.view_name or 'attendance_web:duty-sheet' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'attendance_web:overview' %}">
+        <span class="nav-dot"></span> Attendance &amp; Duty Sheets
+      </a>
+      {% endif %}
+      {% if can_clock_attendance %}
+      <a class="nav-link {% if request.resolver_match.view_name == 'attendance_web:clock' %}active{% endif %}" href="{% url 'attendance_web:clock' %}">
+        <span class="nav-dot"></span> Clock In / Out
+      </a>
+      {% endif %}
       {% endif %}
 
       {% if show_inventory_nav %}

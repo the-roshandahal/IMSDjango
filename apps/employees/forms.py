@@ -3,6 +3,16 @@ from django import forms
 from apps.employees.models import Employee
 
 
+class EmployeeStationAssignForm(forms.Form):
+    station = forms.ModelChoiceField(queryset=None, label="Station")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.warehouses.models import Station
+
+        self.fields["station"].queryset = Station.objects.filter(is_active=True)
+
+
 class EmployeeQuickAddForm(forms.ModelForm):
     class Meta:
         model = Employee

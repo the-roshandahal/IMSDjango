@@ -71,6 +71,71 @@
   <div>
     {% if can_manage %}
     <div class="panel">
+      <div class="panel-head"><h2>Clock-in access</h2></div>
+      <div class="panel-body">
+        {% if employee.user %}
+        <p class="hint" style="margin-top:0;">Login: <span class="mono">{{ employee.user.username }}</span></p>
+        <a class="btn-ghost-sm" href="{% url 'accounts:user-detail-page' employee.user.pk %}">Advanced account settings (role, deactivate, permissions)</a>
+        {% else %}
+        <p class="hint" style="margin-top:0;">No login yet -- this employee can't clock in until one is created.</p>
+        <form method="post" action="{% url 'employees_web:create-login' employee.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create login</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if employee.user %}
+    <div class="panel">
+      <div class="panel-head"><h2>Shared NFC kiosk PIN</h2></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-top:0;">
+          {% if employee.has_kiosk_pin %}Set up. They can tap a station's shared tag, pick their name and enter this PIN instead of logging in -- no typing a password.{% else %}Not set up -- they can still log in normally with a username and password.{% endif %}
+        </p>
+        <form method="post" action="{% url 'employees_web:set-kiosk-pin' employee.pk %}" onsubmit="return confirm('{% if employee.has_kiosk_pin %}Replace their current PIN with a new one?{% else %}Set up a kiosk PIN for them?{% endif %}');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">{% if employee.has_kiosk_pin %}Generate new PIN{% else %}Set up kiosk PIN{% endif %}</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if employee.user %}
+    <div class="panel">
+      <div class="panel-head"><h2>Station assignment</h2></div>
+      <div class="panel-body flush">
+        {% if site_assignments %}
+        <table class="data">
+          <thead><tr><th>Station</th><th></th></tr></thead>
+          <tbody>
+            {% for a in site_assignments %}
+            <tr>
+              <td>{{ a.station.name }}</td>
+              <td>
+                <form method="post" action="{% url 'employees_web:site-assignment-delete' employee.pk a.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn-ghost-sm">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">Not assigned to any station yet -- they can't clock in anywhere until they are.</div>
+        {% endif %}
+      </div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'employees_web:site-assignment-create' employee.pk %}" style="display:flex;gap:8px;">
+          {% csrf_token %}
+          {{ site_assignment_form.station }}
+          <button type="submit" class="btn btn-secondary">Assign</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
       <div class="panel-head"><h2>Onboarding link</h2></div>
       <div class="panel-body">
         <p class="hint" style="margin-top:0;">

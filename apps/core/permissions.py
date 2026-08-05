@@ -42,6 +42,8 @@ ROLE_CAPABILITIES = {
     ("wh_supervisor", "hazard.report"): True,
     ("wh_supervisor", "hazard.view"): True,
     ("wh_supervisor", "hazard.manage"): True,
+    ("wh_supervisor", "attendance.duty_sheet.manage"): True,
+    ("wh_supervisor", "attendance.view"): True,
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
@@ -57,6 +59,9 @@ ROLE_CAPABILITIES = {
     ("station_supervisor", "hazard.report"): True,
     ("station_supervisor", "hazard.view"): True,
     ("station_supervisor", "hazard.manage"): True,
+    ("station_supervisor", "attendance.duty_sheet.manage"): True,
+    ("station_supervisor", "attendance.view"): True,
+    ("station_supervisor", "attendance.clock"): True,
 
     ("deepclean_supervisor", "product.view"): True,
     ("deepclean_supervisor", "project.update_own"): True,
@@ -88,6 +93,7 @@ ROLE_CAPABILITIES = {
     ("station_staff", "transaction.view"): True,
     ("station_staff", "hazard.report"): True,
     ("station_staff", "hazard.view"): True,
+    ("station_staff", "attendance.clock"): True,
 }
 
 # Roles that see everything regardless of SiteAssignment (still gated by capability).
@@ -149,6 +155,11 @@ CAPABILITY_CATALOG = [
         ("hazard.report", "Report a hazard, near miss or incident"),
         ("hazard.view", "View hazard/incident reports for your site"),
         ("hazard.manage", "Investigate, assign and close out reports"),
+    ]),
+    ("Attendance & Duty Sheets", [
+        ("attendance.clock", "Clock in/out and complete duty sheet tasks (self-service)"),
+        ("attendance.duty_sheet.manage", "Manage duty sheets and their assignment to employees"),
+        ("attendance.view", "View clock-in history and duty sheet completion across stations"),
     ]),
     ("Suppliers & Purchasing", [
         ("supplier.view", "View suppliers"),

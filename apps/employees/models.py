@@ -46,6 +46,19 @@ class Employee(models.Model):
     )
     profile_completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Most cleaning staff still never need this -- only set when a supervisor
+    # explicitly grants clock-in access (see attendance app). Deliberately
+    # optional: keeps the directory/self-service onboarding flow above
+    # untouched for everyone who doesn't need a login.
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="employee_profile"
+    )
+
+    # For the shared NFC kiosk: tap the tag, pick your name, enter this PIN --
+    # no username/password typing on a shared device. Hashed the same way a
+    # password is; blank means kiosk PIN login isn't set up for this employee.
+    kiosk_pin_hash = models.CharField(max_length=128, blank=True, editable=False)
+
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -63,6 +76,10 @@ class Employee(models.Model):
     @property
     def profile_complete(self) -> bool:
         return self.profile_completed_at is not None
+
+    @property
+    def has_kiosk_pin(self) -> bool:
+        return bool(self.kiosk_pin_hash)
 
     @property
     def riw_is_expired(self) -> bool:

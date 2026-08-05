@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Attendance - IMS{% endblock %}
+{% block crumb %}Attendance{% endblock %}
+{% block page_title %}Attendance &amp; Duty Sheets{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Snapshot for {{ today }}. Open a station to manage duty sheets and see who's clocked in.</div>
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if rows %}
+    <table class="data">
+      <thead><tr><th>Station</th><th class="num">Clocked in now</th><th class="num">Duty sheets</th><th class="num">Open tasks today</th><th></th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.station.name }}</td>
+          <td class="num mono">{{ row.clocked_in_count }}</td>
+          <td class="num mono">{{ row.duty_sheet_count }}</td>
+          <td class="num mono">{{ row.open_task_count }}</td>
+          <td><a class="btn btn-secondary btn-sm" href="{% url 'attendance_web:station-hub' row.station.pk %}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="big">No stations in your view.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

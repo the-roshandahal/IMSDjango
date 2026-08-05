@@ -6,7 +6,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.core.mixins import CapabilityRequiredMixin
 from apps.employees import services
-from apps.employees.forms import EmployeeEditForm, EmployeeOnboardingForm, EmployeeQuickAddForm
+from apps.employees.forms import EmployeeEditForm, EmployeeOnboardingForm, EmployeeQuickAddForm, EmployeeStationAssignForm
 from apps.employees.models import Employee
 
 
@@ -55,6 +55,9 @@ class EmployeeDetailView(CapabilityRequiredMixin, DetailView):
         ctx["can_manage"] = can_manage
         if can_manage:
             ctx["invite_link"] = services.onboarding_url(self.request, self.object)
+            if self.object.user_id:
+                ctx["site_assignments"] = self.object.user.site_assignments.select_related("station").order_by("station__name")
+                ctx["site_assignment_form"] = EmployeeStationAssignForm()
         return ctx
 
 
@@ -127,6 +130,77 @@ class EmployeeReactivateView(CapabilityRequiredMixin, View):
         employee = get_object_or_404(Employee, pk=pk)
         services.reactivate(employee)
         messages.success(request, f"{employee.full_name} reactivated.")
+        return redirect(reverse("employees_web:detail", args=[pk]))
+
+
+class EmployeeCreateLoginView(CapabilityRequiredMixin, View):
+    """Grants clock-in access -- creates the linked User account. Station
+    assignment happens right here on the employee page too (see the two
+    views below), no detour through the accounts app needed for the
+    common case."""
+
+    capability = "employee.manage"
+
+    def post(self, request, pk):
+        employee = get_object_or_404(Employee, pk=pk)
+        try:
+            user, temp_password = services.create_employee_login(employee=employee)
+            messages.success(
+                request,
+                f"Login created for {employee.full_name}: username {user.username}, temporary password {temp_password}. "
+                f"Assign them to a station below and share these details -- they should change the password on first login.",
+            )
+        except services.EmployeeLoginError as exc:
+            messages.error(request, str(exc))
+        return redirect(reverse("employees_web:detail", args=[pk]))
+
+
+class EmployeeSetKioskPinView(CapabilityRequiredMixin, View):
+    """Generates a fresh 4-digit PIN for the shared NFC kiosk -- tap the
+    tag, pick your name, enter this. Shown once, same "share it out of
+    band" pattern as the temp password from Create login."""
+
+    capability = "employee.manage"
+
+    def post(self, request, pk):
+        employee = get_object_or_404(Employee, pk=pk)
+        try:
+            pin = services.set_kiosk_pin(employee=employee)
+            messages.success(request, f"Kiosk PIN for {employee.full_name}: {pin}. Share it with them directly -- it won't be shown again.")
+        except services.EmployeeLoginError as exc:
+            messages.error(request, str(exc))
+        return redirect(reverse("employees_web:detail", args=[pk]))
+
+
+class EmployeeSiteAssignmentCreateView(CapabilityRequiredMixin, View):
+    capability = "employee.manage"
+
+    def post(self, request, pk):
+        employee = get_object_or_404(Employee, pk=pk)
+        if not employee.user_id:
+            messages.error(request, "Create a login first.")
+            return redirect(reverse("employees_web:detail", args=[pk]))
+
+        form = EmployeeStationAssignForm(request.POST)
+        if form.is_valid():
+            from apps.accounts.models import SiteAssignment
+
+            SiteAssignment.objects.get_or_create(user=employee.user, station=form.cleaned_data["station"])
+            messages.success(request, f"{employee.full_name} assigned to {form.cleaned_data['station'].name}.")
+        else:
+            messages.error(request, "Pick a station.")
+        return redirect(reverse("employees_web:detail", args=[pk]))
+
+
+class EmployeeSiteAssignmentDeleteView(CapabilityRequiredMixin, View):
+    capability = "employee.manage"
+
+    def post(self, request, pk, assignment_id):
+        from apps.accounts.models import SiteAssignment
+
+        employee = get_object_or_404(Employee, pk=pk)
+        SiteAssignment.objects.filter(pk=assignment_id, user=employee.user).delete()
+        messages.success(request, "Station assignment removed.")
         return redirect(reverse("employees_web:detail", args=[pk]))
 
 
