@@ -158,7 +158,7 @@ CAPABILITY_CATALOG = [
     ]),
     ("Attendance & Duty Sheets", [
         ("attendance.clock", "Clock in/out and complete duty sheet tasks (self-service)"),
-        ("attendance.duty_sheet.manage", "Manage duty sheets and their assignment to employees"),
+        ("attendance.duty_sheet.manage", "Create, edit, retire/reactivate, delete and assign duty sheets to employees"),
         ("attendance.view", "View clock-in history and duty sheet completion across stations"),
     ]),
     ("Suppliers & Purchasing", [

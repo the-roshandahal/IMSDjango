@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -136,6 +137,32 @@ class DutySheetEditView(CapabilityRequiredMixin, View):
         form.save()
         messages.success(request, f"{duty_sheet.name} updated.")
         return redirect(reverse("attendance_web:duty-sheet-detail", args=[duty_sheet.pk]))
+
+
+class DutySheetDeleteView(CapabilityRequiredMixin, View):
+    """Permanently removes a duty sheet -- only possible while it has no
+    real clock-in history (ClockEvent.duty_sheet is PROTECT), same
+    audit-trail-can't-be-destroyed rule as everywhere else in the system.
+    A duty sheet that's actually been used should be deactivated instead,
+    not deleted."""
+
+    capability = "attendance.duty_sheet.manage"
+
+    def post(self, request, pk):
+        duty_sheet = get_object_or_404(DutySheet, pk=pk)
+        _ensure_station_access(request.user, duty_sheet.station)
+        station_id = duty_sheet.station_id
+        name = duty_sheet.name
+        try:
+            duty_sheet.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Can't delete {name} -- it has clock-in history. Deactivate it instead.",
+            )
+            return redirect(reverse("attendance_web:duty-sheet-detail", args=[pk]))
+        messages.success(request, f"{name} deleted.")
+        return redirect(reverse("attendance_web:station-hub", args=[station_id]))
 
 
 class DutySheetToggleActiveView(CapabilityRequiredMixin, View):

@@ -18,6 +18,10 @@
       {% csrf_token %}
       <button type="submit" class="btn btn-secondary">{% if duty_sheet.is_active %}Deactivate{% else %}Reactivate{% endif %}</button>
     </form>
+    <form method="post" action="{% url 'attendance_web:duty-sheet-delete' duty_sheet.pk %}" onsubmit="return confirm('Delete {{ duty_sheet.name }}? This can\'t be undone. Duty sheets with clock-in history can\'t be deleted -- deactivate those instead.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
     {% endif %}
     <a class="btn btn-secondary" href="{% url 'attendance_web:station-hub' duty_sheet.station.pk %}">Back to station</a>
   </div>

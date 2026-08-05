@@ -11,6 +11,7 @@ urlpatterns = [
     path("attendance/duty-sheets/<int:pk>/assign/", web_views.DutySheetAssignView.as_view(), name="duty-sheet-assign"),
     path("attendance/duty-sheets/<int:pk>/", web_views.DutySheetDetailView.as_view(), name="duty-sheet-detail"),
     path("attendance/duty-sheets/<int:pk>/edit/", web_views.DutySheetEditView.as_view(), name="duty-sheet-edit"),
+    path("attendance/duty-sheets/<int:pk>/delete/", web_views.DutySheetDeleteView.as_view(), name="duty-sheet-delete"),
     path("attendance/duty-sheets/<int:pk>/toggle/", web_views.DutySheetToggleActiveView.as_view(), name="duty-sheet-toggle"),
     path("attendance/duty-sheets/<int:pk>/tasks/add/", web_views.DutySheetAddTaskView.as_view(), name="task-add"),
     path("attendance/tasks/<int:pk>/toggle-active/", web_views.DutySheetTaskToggleActiveView.as_view(), name="task-toggle-active"),
