@@ -11,6 +11,8 @@ This guide explains how to use the Cleantech1 Inventory Management System (IMS).
 3. After **10 minutes of no activity**, you'll be signed out automatically for security. Just log back in.
 4. Forgot your password or locked out after failed attempts? Contact your Administrator — only they can reset accounts or unlock you.
 
+An employee clocking in at a station doesn't need any of this — see **[3. Attendance & Duty Sheets](#3-attendance--duty-sheets-job-tracking)** for the tap-and-PIN alternative.
+
 ---
 
 ## 2. What your role can do
@@ -20,17 +22,85 @@ Every account has one role, set by an Administrator. Your role decides what you 
 | Role | Day-to-day job |
 |---|---|
 | **Administrator** | Full access to everything, including user management and system-wide settings. |
-| **Warehouse Supervisor** | Runs the warehouse and has company-wide oversight: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, and see reports across every site, not just their own. |
+| **Warehouse Supervisor** | Runs the warehouse and has company-wide oversight: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, manage duty sheets and view attendance across every station, and see reports across every site, not just their own. |
 | **Warehouse Staff** | Not currently in use -- reserved for if a second warehouse person is hired. Would view products, view equipment/vehicles assigned to them, take part in stocktakes, create purchase orders. |
-| **Station Supervisor** | Runs a cleaning station (can cover several): request stock from a warehouse, record daily chemical usage, run weekly stock audits, view reports for their stations. |
-| **Station Cleaning Staff** | Works at a station: request stock, record chemical usage, run weekly stock audits. |
+| **Station Supervisor** | Runs a cleaning station (can cover several): request stock from a warehouse, record daily chemical usage, run weekly stock audits, set up and manage duty sheets, view attendance/task history, clock in/out themselves, view reports for their stations. |
+| **Station Cleaning Staff** | Works at a station: request stock, record chemical usage, run weekly stock audits, clock in/out and work through their duty sheet's tasks. |
 | **Deep Clean Supervisor** | Runs deep clean projects: dispatch chemicals, take equipment/vehicles, log shifts and hours, close out projects. |
 
 You only see menu sections your role has access to — if something described below isn't in your menu, your role doesn't use it.
 
 ---
 
-## 3. Dashboard
+## 3. Attendance & Duty Sheets (Job Tracking)
+
+This is how clocking in/out and the daily cleaning checklist work — the core of day-to-day job tracking at a station.
+
+### 3.1 Duty sheets — set up once, reused every day
+
+A **duty sheet** is a standing checklist for a shift at a station (e.g. "6am-2pm Platform"). It's created once and never needs recreating — only the tick marks reset each day.
+
+From `Attendance → [a station]` (**Station Supervisor / Warehouse Supervisor / Administrator**):
+- **New duty sheet** — give it a name, a start and end time, and its task list (one task per line). Tick times overnight-style if the shift crosses midnight (e.g. 10pm-6am) — the system handles the date rollover automatically (see 3.4).
+- **Edit name & times** — on the duty sheet's own page, change the name or start/end time any time. Tasks aren't edited here on purpose — add or retire them separately so completed-task history stays intact.
+- **Add a task** / **Retire a task** — grow the checklist over time, or retire an item you no longer need without losing its past completion history. A retired task can be reactivated later.
+- **Deactivate / Reactivate** the whole duty sheet — hides it from the clock-in picker without deleting its history.
+- **Assign ahead of time** — pick an employee from the dropdown to claim a duty sheet for a given date yourself, instead of leaving it open for someone to pick. Only employees assigned to that station are offered, and someone already claimed on another duty sheet that day won't double up.
+
+### 3.2 Clocking in and working a shift (employee)
+
+From `Attendance → Clock In/Out` (**Station Cleaning Staff / Station Supervisor**):
+1. If you cover more than one station, pick which one.
+2. **If a duty sheet is already yours** (you picked it earlier, or a supervisor assigned it) — you go straight to clocking in, no picker shown.
+3. **Otherwise**, pick from whichever duty sheets nobody's claimed yet for today. Picking one claims it for the day — it drops off the list for everyone else.
+4. Once clocked in, you see your duty sheet's tasks. Tap a task to check it off — this reveals an optional **notes** box and a **photo** upload before you confirm with **Mark done**, so nothing saves until you actually submit it. Both are optional; use them to record why something couldn't be fully done, or as photo proof it was.
+5. Anything left undone on **other** duty sheets at the same station shows underneath as **"Left over from another duty sheet today"** — visible so you know it's outstanding, but you can only tick off tasks on your own duty sheet, not someone else's.
+6. **Clock out** when you're done.
+
+You can only ever be clocked in at one place at a time — the system blocks a second clock-in until you clock out of the first.
+
+### 3.3 Tap-and-PIN kiosk (shared device, no typing a password)
+
+A station can have one shared NFC tag that any employee taps to identify themselves — no username or password ever typed on the shared device:
+1. Tap the tag (or open its link) → pick your name from the list of employees assigned to that station.
+2. Enter your short **PIN** (see 3.5 for how a supervisor sets one up).
+3. You're signed in and land straight on the clock screen for that station.
+4. Tap the tag again later (same shift) and, if you're still signed in, it skips straight to your tasks.
+5. **Clocking out automatically signs the shared device out too**, so it's ready for the next person to tap in clean.
+
+Too many wrong PIN attempts locks the account the same way a wrong password does — ask a supervisor to unlock it.
+
+### 3.4 Overnight shifts
+
+A duty sheet whose end time is earlier than its start time (e.g. 10pm-6am) is treated as one continuous overnight shift: the early-morning hours after midnight still count as the date the shift started on, so it doesn't accidentally split into two days or let someone else "pick" it again right after midnight.
+
+### 3.5 Supervisor view: history, evidence, who's on-site
+
+From a duty sheet's page (**Station Supervisor / Warehouse Supervisor / Administrator**):
+- A **date picker** lets you look back at any past day and see, per task: done or not done, who did it, when, their notes, and a link to view any attached photo.
+- Status resets automatically for the new day — nothing carries over, so today always starts clean.
+- The station page also shows who's **currently clocked in** right now, across every duty sheet.
+
+To let an employee use the tap-and-PIN kiosk, they need a PIN set up first — see **[4. Employees](#4-employees) → Kiosk PIN**.
+
+---
+
+## 4. Employees
+
+The employee directory (`Employees`) is separate from user login accounts — it's where you manage the people actually doing the work, including what's needed for Attendance (section 3) above.
+
+- **Add an employee** — name, position, contact details, date started.
+- **Onboarding link** — send this to a new employee so they fill in their own details (date of birth, address, RIW card number and expiry, emergency contact) without you typing it for them. They can revisit the same link any time to update it, e.g. after their RIW card renews.
+- **Create login** — gives the employee an actual username/password account, needed before they can clock in at all. (Blocked if another account already uses that email.)
+- **Station assignment** — which station(s) they're allowed to clock in at and be offered duty sheets for. Add or remove stations from their profile page.
+- **Kiosk PIN** — set up (or regenerate) a short PIN so this employee can use the tap-and-PIN kiosk (3.3) instead of typing a password on a shared device.
+- **Deactivate / Reactivate** — deactivating stops their onboarding link and login from working.
+
+RIW card expiry is flagged on the employee's page (valid / expiring soon / expired) once they've completed onboarding.
+
+---
+
+## 5. Dashboard
 
 The first screen after login. Shows:
 - Quick counts (products, warehouses, stations, low stock, pending requests, and role-specific alerts like equipment maintenance due or expired safety test tags)
@@ -43,7 +113,7 @@ Tap any number or row to jump straight to that item.
 
 ---
 
-## 4. Inventory
+## 6. Inventory
 
 ### Products (`Inventory → Products`)
 - Search by name or barcode.
@@ -59,7 +129,7 @@ The full, permanent history of every stock movement — stock in, stock out, tra
 
 ---
 
-## 5. Sites: Warehouses & Stations
+## 7. Sites: Warehouses & Stations
 
 - **Warehouses** hold bulk stock. Each has an address and active/inactive status.
 - **Stations** are the railway station cleaning sites stock gets issued to.
@@ -68,7 +138,7 @@ The full, permanent history of every stock movement — stock in, stock out, tra
 
 ---
 
-## 6. Stock Requests (`Requests → Stock Requests`)
+## 8. Stock Requests (`Requests → Stock Requests`)
 
 How a station gets more stock from a warehouse.
 
@@ -80,7 +150,7 @@ Filter the list by status: Pending, Approved, Rejected, Partially Fulfilled, Ful
 
 ---
 
-## 7. Deep Clean Projects (`Deep Clean → Projects`)
+## 9. Deep Clean Projects (`Deep Clean → Projects`)
 
 For multi-day deep-clean jobs at a station — tracks chemicals, equipment, vehicles, and hours separately from routine station stock.
 
@@ -95,7 +165,7 @@ For multi-day deep-clean jobs at a station — tracks chemicals, equipment, vehi
 
 ---
 
-## 8. Fleet: Equipment, Test Tags & Vehicles
+## 10. Fleet: Equipment, Test Tags & Vehicles
 
 ### Equipment (`Fleet → Equipment`)
 Reusable gear (vacuums, scrubbers, pressure washers, etc.), each with its own asset ID and QR code.
@@ -112,7 +182,7 @@ Same idea as Equipment: assign to a station/project and driver, release, log run
 
 ---
 
-## 9. Purchasing: Suppliers & Purchase Orders
+## 11. Purchasing: Suppliers & Purchase Orders
 
 ### Suppliers (`Purchasing → Suppliers`)
 Contact details for who you buy from, plus what products each supplier sells and at what price — used to auto-fill pricing when you create a purchase order.
@@ -127,7 +197,7 @@ Contact details for who you buy from, plus what products each supplier sells and
 
 ---
 
-## 10. Reports (`Reports`)
+## 12. Reports (`Reports`)
 
 On-screen reports, filterable by date range where relevant:
 
@@ -145,7 +215,7 @@ What you see is scoped to your role — a Station Supervisor sees their own stat
 
 ---
 
-## 11. Notifications
+## 13. Notifications
 
 Click **Notifications** (top-right, with an unread count badge) to see your alerts:
 - **Low stock** — a product you're responsible for dropped to/below its reorder point.
@@ -158,7 +228,7 @@ You also get an email for each one (if your account has an email address on file
 
 ---
 
-## 12. Attaching files
+## 14. Attaching files
 
 Products, purchase orders, equipment, vehicles, and deep clean projects each have an **Attachments** section on their detail page — for Safety Data Sheets, certificates, invoices, service records, contracts, site photos, etc.
 
@@ -166,9 +236,11 @@ Products, purchase orders, equipment, vehicles, and deep clean projects each hav
 - Click **Upload**, choose the file, add an optional description.
 - Anyone who can edit that record can also upload/remove attachments for it.
 
+(A completed duty sheet task's photo, in section 3, is a separate, smaller attachment point specific to that one task — not this general Attachments panel.)
+
 ---
 
-## 13. Administration (Admin only)
+## 15. Administration (Admin only)
 
 ### Users (`Administration → Users`)
 Create accounts, assign roles, assign which warehouses/stations a user covers, deactivate accounts (with a reason — this is logged), reset passwords, unlock locked-out accounts.
@@ -178,22 +250,27 @@ A permanent, unchangeable record of every significant action in the system — l
 
 ---
 
-## 14. Tips for using it on your phone
+## 16. Tips for using it on your phone
 
 - Tap the **☰** icon top-left to open the menu; tap outside it or a menu item to close it.
 - Wide tables (lots of columns) scroll **sideways within the table** — swipe left/right on the table itself, not the whole page.
 - Forms and buttons are sized for tapping — no need to zoom in.
+- The Attendance clock screen (section 3) is built for one-handed phone use on shift — large tap targets, camera-ready photo upload.
 - Everything works the same as on desktop; only the layout adapts.
 
 ---
 
-## 15. Common questions
+## 17. Common questions
 
 **I don't see a menu item I need.** — Your role doesn't have access to it. Ask your Administrator if you think that's wrong.
 
 **A button/action is greyed out or missing.** — Usually a permission or a status issue (e.g. you can't dispatch stock request until it's approved). Check the item's status first.
 
 **Equipment/vehicle assignment is blocked.** — It has overdue maintenance, an overdue/failed safety test, or (for vehicles) overdue service/expired insurance. Fix the underlying issue, or override with a reason if it's genuinely urgent — overrides are logged.
+
+**I can't tick off a task I can see on the clock screen.** — It belongs to a different duty sheet than the one you're clocked in for (shown under "Left over from another duty sheet today"). It's visible so you're aware of it, but only the person clocked in on that duty sheet can tick it off.
+
+**The kiosk PIN says locked / too many attempts.** — Same lockout as a normal password, just triggered by the shared tag instead. Ask a supervisor to unlock the account.
 
 **I closed a deep clean project by mistake / need to reopen something.** — Nothing in this system can be deleted or un-done by design (it's an audit trail). Contact your Administrator to figure out the right correction.
 

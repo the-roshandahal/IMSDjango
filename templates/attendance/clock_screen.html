@@ -20,6 +20,17 @@
   .task-row .desc { font-size: 0.96rem; line-height: 1.4; }
   .task-row .desc.done { text-decoration: line-through; color: var(--ink-400); }
   .task-row .desc .hint { display: block; margin-top: 2px; }
+  .task-row.readonly label { cursor: default; }
+  .task-panel {
+    margin-top: 8px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--radius);
+    background: var(--surface-1); display: flex; flex-direction: column; gap: 8px;
+  }
+  .task-panel textarea { width: 100%; resize: vertical; font: inherit; }
+  .task-panel .photo-field { font-size: 0.85rem; color: var(--ink-500); }
+  .task-panel .btn { align-self: flex-start; min-height: 40px; }
+  .task-meta { margin-top: 4px; padding-left: 14px; }
+  .task-meta p { margin: 0 0 4px; }
+  .task-photo-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
   .duty-sheet-pick { display: block; margin-bottom: 10px; }
   .duty-sheet-pick .btn { min-height: 52px; font-size: 0.95rem; }
   .station-pick .btn { min-height: 52px; font-size: 0.95rem; margin-bottom: 10px; }
@@ -63,26 +74,47 @@
   {% if own_tasks %}
   <div class="field"><label>Your duty sheet -- tap to check off</label></div>
   {% for task in own_tasks %}
-  <form method="post" action="{% if task.today.is_completed %}{% url 'attendance_web:task-undo' task.pk %}{% else %}{% url 'attendance_web:task-complete' task.pk %}{% endif %}" class="task-row">
-    {% csrf_token %}
-    <label>
-      <input type="checkbox" onchange="this.form.submit()" {% if task.today.is_completed %}checked{% endif %}>
-      <span class="desc {% if task.today.is_completed %}done{% endif %}">{{ task.description }}</span>
-    </label>
-  </form>
+  <div class="task-row">
+    {% if task.today.is_completed %}
+    <form method="post" action="{% url 'attendance_web:task-undo' task.pk %}">
+      {% csrf_token %}
+      <label>
+        <input type="checkbox" checked onchange="this.form.submit()">
+        <span class="desc done">{{ task.description }}</span>
+      </label>
+    </form>
+    {% if task.today.notes or task.today.photo %}
+    <div class="task-meta">
+      {% if task.today.notes %}<p class="hint">{{ task.today.notes }}</p>{% endif %}
+      {% if task.today.photo %}<a href="{{ task.today.photo.url }}" target="_blank"><img src="{{ task.today.photo.url }}" class="task-photo-thumb" alt="Attached photo"></a>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <form method="post" action="{% url 'attendance_web:task-complete' task.pk %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label>
+        <input type="checkbox" class="task-check" onchange="this.closest('.task-row').querySelector('.task-panel').hidden = !this.checked;">
+        <span class="desc">{{ task.description }}</span>
+      </label>
+      <div class="task-panel" hidden>
+        <textarea name="notes" rows="2" placeholder="Notes (optional) -- e.g. why it couldn't be fully done"></textarea>
+        <label class="photo-field">Photo (optional)<br><input type="file" name="photo" accept="image/*" capture="environment"></label>
+        <button type="submit" class="btn btn-secondary">Mark done</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
   {% endfor %}
   {% endif %}
 
   {% if carried_over_tasks %}
-  <div class="field" style="margin-top:24px;"><label>Left over from another duty sheet today</label></div>
+  <div class="field" style="margin-top:24px;"><label>Left over from another duty sheet today -- not yours to tick, shown so you're aware</label></div>
   {% for task in carried_over_tasks %}
-  <form method="post" action="{% url 'attendance_web:task-complete' task.pk %}" class="task-row">
-    {% csrf_token %}
+  <div class="task-row readonly">
     <label>
-      <input type="checkbox" onchange="this.form.submit()">
       <span class="desc">{{ task.description }}<span class="hint">{{ task.duty_sheet.name }}</span></span>
     </label>
-  </form>
+  </div>
   {% endfor %}
   {% endif %}
 

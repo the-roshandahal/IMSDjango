@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views import View
 
 from apps.attendance import services
-from apps.attendance.forms import AddTaskForm, DutySheetForm
+from apps.attendance.forms import AddTaskForm, DutySheetEditForm, DutySheetForm
 from apps.attendance.models import ClockEvent, DutySheet, DutySheetTask
 from apps.core.mixins import CapabilityRequiredMixin
 from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids, has_capability
@@ -114,6 +114,28 @@ class DutySheetCreateView(CapabilityRequiredMixin, View):
         )
         messages.success(request, f"Duty sheet \"{duty_sheet.name}\" created.")
         return redirect(reverse("attendance_web:station-hub", args=[station.pk]))
+
+
+class DutySheetEditView(CapabilityRequiredMixin, View):
+    capability = "attendance.duty_sheet.manage"
+    template_name = "attendance/duty_sheet_edit_form.html"
+
+    def get(self, request, pk):
+        duty_sheet = get_object_or_404(DutySheet.objects.select_related("station"), pk=pk)
+        _ensure_station_access(request.user, duty_sheet.station)
+        return render(request, self.template_name, {
+            "duty_sheet": duty_sheet, "form": DutySheetEditForm(instance=duty_sheet),
+        })
+
+    def post(self, request, pk):
+        duty_sheet = get_object_or_404(DutySheet.objects.select_related("station"), pk=pk)
+        _ensure_station_access(request.user, duty_sheet.station)
+        form = DutySheetEditForm(request.POST, instance=duty_sheet)
+        if not form.is_valid():
+            return render(request, self.template_name, {"duty_sheet": duty_sheet, "form": form})
+        form.save()
+        messages.success(request, f"{duty_sheet.name} updated.")
+        return redirect(reverse("attendance_web:duty-sheet-detail", args=[duty_sheet.pk]))
 
 
 class DutySheetToggleActiveView(CapabilityRequiredMixin, View):
@@ -367,11 +389,15 @@ class DutySheetTaskCompleteView(LoginRequiredMixin, View):
         employee = getattr(request.user, "employee_profile", None)
         task = get_object_or_404(DutySheetTask, pk=pk)
         open_event = services.open_clock_event_for(employee) if employee else None
-        if not open_event or open_event.station_id != task.duty_sheet.station_id:
+        # Only the duty sheet an employee is actually clocked in for is
+        # theirs to tick off -- leftover tasks from another duty sheet are
+        # shown as a heads-up for whoever picks that one up next, not
+        # something a passer-by can tick on someone else's behalf.
+        if not open_event or open_event.duty_sheet_id != task.duty_sheet_id:
             raise PermissionDenied()
         services.mark_task_complete(
             task=task, employee=employee, clock_event=open_event, date=open_event.shift_date,
-            notes=request.POST.get("notes", ""),
+            notes=request.POST.get("notes", ""), photo=request.FILES.get("photo"),
         )
         return redirect(reverse("attendance_web:clock") + f"?station={task.duty_sheet.station_id}")
 
@@ -381,7 +407,7 @@ class DutySheetTaskUndoView(LoginRequiredMixin, View):
         employee = getattr(request.user, "employee_profile", None)
         task = get_object_or_404(DutySheetTask, pk=pk)
         open_event = services.open_clock_event_for(employee) if employee else None
-        if not open_event or open_event.station_id != task.duty_sheet.station_id:
+        if not open_event or open_event.duty_sheet_id != task.duty_sheet_id:
             raise PermissionDenied()
         services.mark_task_incomplete(task=task, date=open_event.shift_date)
         return redirect(reverse("attendance_web:clock") + f"?station={task.duty_sheet.station_id}")

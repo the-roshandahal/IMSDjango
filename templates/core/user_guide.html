@@ -118,6 +118,8 @@
   <ol>
     <li><a href="#signing-in">Signing in</a></li>
     <li><a href="#roles">Your role</a></li>
+    <li><a href="#attendance">Attendance &amp; duty sheets</a></li>
+    <li><a href="#employees">Employees</a></li>
     <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#inventory">Inventory</a></li>
     <li><a href="#sites">Warehouses &amp; stations</a></li>
@@ -141,6 +143,8 @@
     <ol>
       <li><a href="#signing-in">Signing in</a></li>
       <li><a href="#roles">Your role</a></li>
+      <li><a href="#attendance">Attendance &amp; duty sheets</a></li>
+      <li><a href="#employees">Employees</a></li>
       <li><a href="#dashboard">Dashboard</a></li>
       <li><a href="#inventory">Inventory</a></li>
       <li><a href="#sites">Warehouses &amp; stations</a></li>
@@ -163,7 +167,7 @@
     <img class="wordmark" src="{% static 'img/logo-wordmark.jpg' %}" alt="Cleantech1">
     <div class="eyebrow">Inventory Management System</div>
     <h1>User Guide</h1>
-    <div class="sub">Everything you need to run inventory, equipment, vehicles, deep clean projects, and purchasing through the Cleantech1 IMS — on desktop or on your phone.</div>
+    <div class="sub">Everything you need to run attendance and job tracking, inventory, equipment, vehicles, deep clean projects, and purchasing through the Cleantech1 IMS — on desktop or on your phone.</div>
   </div>
 
   <section id="signing-in">
@@ -183,17 +187,81 @@
       <thead><tr><th>Role</th><th>Day-to-day job</th></tr></thead>
       <tbody>
         <tr><td>Administrator</td><td>Full access to everything, including user management and system-wide settings.</td></tr>
-        <tr><td>Warehouse Supervisor</td><td>Runs the warehouse and has company-wide oversight: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, and see reports across every site, not just their own.</td></tr>
+        <tr><td>Warehouse Supervisor</td><td>Runs the warehouse and has company-wide oversight: manage stock, approve station requests, assign equipment/vehicles, create purchase orders, manage duty sheets and view attendance across every station, and see reports across every site, not just their own.</td></tr>
         <tr><td>Warehouse Staff</td><td>Not currently in use -- reserved for if a second warehouse person is hired. Would view products, view equipment/vehicles assigned to them, take part in stocktakes, create purchase orders.</td></tr>
-        <tr><td>Station Supervisor</td><td>Runs a cleaning station (can cover several): request stock from a warehouse, record daily chemical usage, run weekly stock audits, view reports for their stations.</td></tr>
-        <tr><td>Station Cleaning Staff</td><td>Works at a station: request stock, record chemical usage, run weekly stock audits.</td></tr>
+        <tr><td>Station Supervisor</td><td>Runs a cleaning station (can cover several): request stock from a warehouse, record daily chemical usage, run weekly stock audits, set up and manage duty sheets, view attendance/task history, clock in/out themselves, view reports for their stations.</td></tr>
+        <tr><td>Station Cleaning Staff</td><td>Works at a station: request stock, record chemical usage, run weekly stock audits, clock in/out and work through their duty sheet's tasks.</td></tr>
         <tr><td>Deep Clean Supervisor</td><td>Runs deep clean projects: dispatch chemicals, take equipment/vehicles, log shifts and hours, close out projects.</td></tr>
       </tbody>
     </table>
   </section>
 
+  <section id="attendance">
+    <h2><span class="num">03</span> Attendance &amp; duty sheets <span style="font-weight:400;font-size:0.7em;color:var(--ink-400);">— job tracking</span></h2>
+    <p>This is how clocking in/out and the daily cleaning checklist work — the core of day-to-day job tracking at a station.</p>
+
+    <h3>Duty sheets — set up once, reused every day</h3>
+    <p>A <strong>duty sheet</strong> is a standing checklist for a shift at a station (e.g. "6am-2pm Platform"). It's created once and never needs recreating — only the tick marks reset each day.</p>
+    <p>From <strong>Attendance &rarr; a station</strong> (Station Supervisor / Warehouse Supervisor / Administrator):</p>
+    <ul>
+      <li><strong>New duty sheet</strong> — a name, a start and end time, and its task list (one task per line). Overnight shifts (e.g. 10pm-6am) are handled automatically — see below.</li>
+      <li><strong>Edit name &amp; times</strong> — change these any time from the duty sheet's own page. Tasks aren't edited here on purpose — add or retire them separately so completed-task history stays intact.</li>
+      <li><strong>Add / retire a task</strong> — grow the checklist over time, or retire an item without losing its past completion history. A retired task can be reactivated later.</li>
+      <li><strong>Deactivate / reactivate</strong> the whole duty sheet — hides it from the clock-in picker without deleting its history.</li>
+      <li><strong>Assign ahead of time</strong> — pick an employee to claim a duty sheet for a given date yourself, instead of leaving it open for someone to pick. Only employees assigned to that station are offered, and someone already claimed elsewhere that day won't double up.</li>
+    </ul>
+
+    <h3>Clocking in and working a shift</h3>
+    <p>From <strong>Attendance &rarr; Clock In/Out</strong> (Station Cleaning Staff / Station Supervisor):</p>
+    <ol class="steps">
+      <li>If you cover more than one station, pick which one.</li>
+      <li>If a duty sheet is already yours (you picked it earlier, or a supervisor assigned it), you go straight to clocking in — no picker shown.</li>
+      <li>Otherwise, pick from whichever duty sheets nobody's claimed yet today. Picking one claims it for the day — it drops off the list for everyone else.</li>
+      <li>Once clocked in, tap a task to check it off. This reveals an optional <strong>notes</strong> box and a <strong>photo</strong> upload before you confirm with <strong>Mark done</strong> — nothing saves until you actually submit it.</li>
+      <li>Anything left undone on <strong>other</strong> duty sheets at the same station shows underneath as "Left over from another duty sheet today" — visible so you're aware, but you can only tick off tasks on your own duty sheet.</li>
+      <li><strong>Clock out</strong> when you're done.</li>
+    </ol>
+    <div class="callout">You can only ever be clocked in at one place at a time — the system blocks a second clock-in until you clock out of the first.</div>
+
+    <h3>Tap-and-PIN kiosk — shared device, no typing a password</h3>
+    <p>A station can have one shared NFC tag that any employee taps to identify themselves — no username or password ever typed on the shared device:</p>
+    <ol class="steps">
+      <li>Tap the tag (or open its link) and pick your name from the list of employees assigned to that station.</li>
+      <li>Enter your short <strong>PIN</strong> (set up by a supervisor — see Employees below).</li>
+      <li>You're signed in and land straight on the clock screen for that station.</li>
+      <li>Tap the tag again later and, if you're still signed in, it skips straight to your tasks.</li>
+      <li><strong>Clocking out automatically signs the shared device out too</strong>, so it's ready for the next person to tap in clean.</li>
+    </ol>
+    <div class="callout warn">Too many wrong PIN attempts locks the account, the same way a wrong password does — ask a supervisor to unlock it.</div>
+
+    <h3>Overnight shifts</h3>
+    <p>A duty sheet whose end time is earlier than its start time (e.g. 10pm-6am) is treated as one continuous overnight shift: the early-morning hours after midnight still count as the date the shift started on, so it doesn't accidentally split into two days or let someone else "pick" it again right after midnight.</p>
+
+    <h3>Supervisor view: history, evidence, who's on-site</h3>
+    <p>From a duty sheet's page (Station Supervisor / Warehouse Supervisor / Administrator):</p>
+    <ul>
+      <li>A <strong>date picker</strong> lets you look back at any past day and see, per task: done or not done, who did it, when, their notes, and a link to any attached photo.</li>
+      <li>Status resets automatically for the new day — nothing carries over, so today always starts clean.</li>
+      <li>The station page also shows who's <strong>currently clocked in</strong> right now, across every duty sheet.</li>
+    </ul>
+  </section>
+
+  <section id="employees">
+    <h2><span class="num">04</span> Employees</h2>
+    <p>The employee directory is separate from user login accounts — it's where you manage the people actually doing the work, including what's needed for Attendance above.</p>
+    <ul>
+      <li><strong>Add an employee</strong> — name, position, contact details, date started.</li>
+      <li><strong>Onboarding link</strong> — send this to a new employee so they fill in their own details (date of birth, address, RIW card number and expiry, emergency contact) without you typing it for them. They can revisit the same link any time to update it, e.g. after their RIW card renews.</li>
+      <li><strong>Create login</strong> — gives the employee an actual username/password account, needed before they can clock in at all. Blocked if another account already uses that email.</li>
+      <li><strong>Station assignment</strong> — which station(s) they're allowed to clock in at and be offered duty sheets for. Add or remove stations from their profile page.</li>
+      <li><strong>Kiosk PIN</strong> — set up (or regenerate) a short PIN so this employee can use the tap-and-PIN kiosk instead of typing a password on a shared device.</li>
+      <li><strong>Deactivate / reactivate</strong> — deactivating stops their onboarding link and login from working.</li>
+    </ul>
+    <div class="callout good">RIW card expiry is flagged on the employee's page (valid / expiring soon / expired) once they've completed onboarding.</div>
+  </section>
+
   <section id="dashboard">
-    <h2><span class="num">03</span> Dashboard</h2>
+    <h2><span class="num">05</span> Dashboard</h2>
     <p>The first screen after login:</p>
     <ul>
       <li>Quick counts — products, warehouses, stations, low stock, pending requests, plus role-specific alerts like equipment maintenance due or expired safety test tags.</li>
@@ -206,7 +274,7 @@
   </section>
 
   <section id="inventory">
-    <h2><span class="num">04</span> Inventory</h2>
+    <h2><span class="num">06</span> Inventory</h2>
     <h3>Products</h3>
     <p>Search by name or barcode. Each product shows current stock, its <strong>reorder point</strong> (the level that triggers a low-stock alert), and a hazard flag if it's a hazardous chemical. Open a product for stock by location, batch/expiry info, its QR code, Safety Data Sheet, and file attachments.</p>
     <div class="callout">Warehouse Supervisors/Admins create and edit products, and set the reorder point — set it low for slow-moving items, higher for chemicals you burn through fast, so the alert means something for that specific product.</div>
@@ -217,7 +285,7 @@
   </section>
 
   <section id="sites">
-    <h2><span class="num">05</span> Warehouses &amp; stations</h2>
+    <h2><span class="num">07</span> Warehouses &amp; stations</h2>
     <ul>
       <li><strong>Warehouses</strong> hold bulk stock — each has an address and active/inactive status.</li>
       <li><strong>Stations</strong> are the railway station cleaning sites stock gets issued to.</li>
@@ -227,7 +295,7 @@
   </section>
 
   <section id="requests">
-    <h2><span class="num">06</span> Stock requests</h2>
+    <h2><span class="num">08</span> Stock requests</h2>
     <p>How a station gets more stock from a warehouse.</p>
     <ol class="steps">
       <li><strong>Station staff/supervisor</strong>: open the station, click Request stock, pick a warehouse, add products and quantities, submit.</li>
@@ -238,7 +306,7 @@
   </section>
 
   <section id="projects">
-    <h2><span class="num">07</span> Deep clean projects</h2>
+    <h2><span class="num">09</span> Deep clean projects</h2>
     <p>For multi-day deep-clean jobs at a station — tracks chemicals, equipment, vehicles, and hours separately from routine station stock.</p>
     <ul>
       <li><strong>Admin</strong> creates the project: reference, name, station, supervisor, start/end dates.</li>
@@ -256,7 +324,7 @@
   </section>
 
   <section id="fleet">
-    <h2><span class="num">08</span> Equipment &amp; vehicles</h2>
+    <h2><span class="num">10</span> Equipment &amp; vehicles</h2>
     <h3>Equipment</h3>
     <p>Reusable gear (vacuums, scrubbers, pressure washers), each with its own asset ID and QR code. Assign to a station or project (and a specific person if useful), Release when done, Start/End maintenance, or record a safety test result. Equipment with overdue maintenance or a failed/overdue safety test is blocked from assignment — override with a reason if genuinely necessary. Mark lost or Write off when equipment is gone for good (write-off is permanent).</p>
     <h3>Test tags</h3>
@@ -266,7 +334,7 @@
   </section>
 
   <section id="purchasing">
-    <h2><span class="num">09</span> Suppliers &amp; purchase orders</h2>
+    <h2><span class="num">11</span> Suppliers &amp; purchase orders</h2>
     <h3>Suppliers</h3>
     <p>Contact details for who you buy from, plus what products each supplier sells and at what price — used to auto-fill pricing on a purchase order.</p>
     <h3>Purchase orders</h3>
@@ -281,7 +349,7 @@
   </section>
 
   <section id="reports">
-    <h2><span class="num">10</span> Reports</h2>
+    <h2><span class="num">12</span> Reports</h2>
     <p>On-screen reports, filterable by date range where relevant:</p>
     <ul>
       <li><strong>Inventory</strong> — on hand, estimated stock value, batch ageing, what's expiring soon.</li>
@@ -297,7 +365,7 @@
   </section>
 
   <section id="notifications">
-    <h2><span class="num">11</span> Notifications</h2>
+    <h2><span class="num">13</span> Notifications</h2>
     <p>Tap <strong>Notifications</strong> (top-right, with an unread count badge) for your alerts:</p>
     <ul>
       <li><strong>Low stock</strong> — a product you're responsible for dropped to/below its reorder point.</li>
@@ -310,17 +378,18 @@
   </section>
 
   <section id="attachments">
-    <h2><span class="num">12</span> Attaching files</h2>
+    <h2><span class="num">14</span> Attaching files</h2>
     <p>Products, purchase orders, equipment, vehicles, and deep clean projects each have an <strong>Attachments</strong> section on their detail page — for Safety Data Sheets, certificates, invoices, service records, contracts, site photos.</p>
     <ul>
       <li>Accepted types: <strong>PDF, JPG, PNG, DOCX, XLSX</strong>, up to 10MB each.</li>
       <li>Tap Upload, choose the file, add an optional description.</li>
       <li>Anyone who can edit that record can also upload or remove its attachments.</li>
     </ul>
+    <div class="callout">A completed duty sheet task's photo (section 3) is a separate, smaller attachment point specific to that one task — not this general Attachments panel.</div>
   </section>
 
   <section id="admin">
-    <h2><span class="num">13</span> Administration <span style="font-weight:400;font-size:0.7em;color:var(--ink-400);">— Admin only</span></h2>
+    <h2><span class="num">15</span> Administration <span style="font-weight:400;font-size:0.7em;color:var(--ink-400);">— Admin only</span></h2>
     <h3>Users</h3>
     <p>Create accounts, assign roles, assign which warehouses/stations a user covers, deactivate accounts (with a reason — logged), reset passwords, unlock locked-out accounts.</p>
     <h3>Audit log</h3>
@@ -328,17 +397,18 @@
   </section>
 
   <section id="mobile">
-    <h2><span class="num">14</span> Using it on your phone</h2>
+    <h2><span class="num">16</span> Using it on your phone</h2>
     <ul>
       <li>Tap the <strong>&#9776;</strong> icon top-left to open the menu; tap outside it or a menu item to close it.</li>
       <li>Wide tables scroll <strong>sideways within the table itself</strong> — swipe left/right on the table, not the whole page.</li>
       <li>Forms and buttons are sized for tapping — no need to zoom in.</li>
+      <li>The Attendance clock screen (section 3) is built for one-handed phone use on shift — large tap targets, camera-ready photo upload.</li>
       <li>Everything works the same as on desktop; only the layout adapts.</li>
     </ul>
   </section>
 
   <section id="faq">
-    <h2><span class="num">15</span> Common questions</h2>
+    <h2><span class="num">17</span> Common questions</h2>
     <dl class="faq">
       <dt>I don't see a menu item I need.</dt>
       <dd>Your role doesn't have access to it. Ask your Administrator if you think that's wrong.</dd>
@@ -346,6 +416,10 @@
       <dd>Usually a permission or status issue (e.g. you can't dispatch a stock request until it's approved). Check the item's status first.</dd>
       <dt>Equipment/vehicle assignment is blocked.</dt>
       <dd>It has overdue maintenance, an overdue/failed safety test, or (for vehicles) overdue service/expired insurance. Fix the underlying issue, or override with a reason if it's genuinely urgent — overrides are logged.</dd>
+      <dt>I can't tick off a task I can see on the clock screen.</dt>
+      <dd>It belongs to a different duty sheet than the one you're clocked in for (shown under "Left over from another duty sheet today"). It's visible so you're aware of it, but only the person clocked in on that duty sheet can tick it off.</dd>
+      <dt>The kiosk PIN says locked / too many attempts.</dt>
+      <dd>Same lockout as a normal password, just triggered by the shared tag instead. Ask a supervisor to unlock the account.</dd>
       <dt>I closed a project by mistake, or need to undo something.</dt>
       <dd>Nothing in this system can be deleted or undone by design — it's an audit trail. Contact your Administrator to work out the right correction.</dd>
       <dt>Where do I report a bug or ask for a new feature?</dt>

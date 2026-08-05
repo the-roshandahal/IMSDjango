@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ duty_sheet.name }} - IMS{% endblock %}
+{% block crumb %}Attendance / {{ duty_sheet.station.name }}{% endblock %}
+{% block page_title %}Edit {{ duty_sheet.name }}{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <p class="hint">Tasks aren't edited here -- add or retire them from the duty sheet page so completion history stays intact.</p>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a class="btn btn-secondary" href="{% url 'attendance_web:duty-sheet-detail' duty_sheet.pk %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

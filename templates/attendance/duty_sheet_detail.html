@@ -13,6 +13,7 @@
   </div>
   <div class="actions-row">
     {% if can_manage %}
+    <a class="btn btn-secondary" href="{% url 'attendance_web:duty-sheet-edit' duty_sheet.pk %}">Edit name &amp; times</a>
     <form method="post" action="{% url 'attendance_web:duty-sheet-toggle' duty_sheet.pk %}">
       {% csrf_token %}
       <button type="submit" class="btn btn-secondary">{% if duty_sheet.is_active %}Deactivate{% else %}Reactivate{% endif %}</button>
@@ -26,7 +27,7 @@
   <div class="panel-head"><h2>Tasks -- {{ date }}</h2></div>
   <div class="panel-body flush">
     <table class="data">
-      <thead><tr><th>Task</th><th>Status</th><th>Completed by</th><th>When</th><th>Notes</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+      <thead><tr><th>Task</th><th>Status</th><th>Completed by</th><th>When</th><th>Notes</th><th>Photo</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
       <tbody>
         {% for task in tasks %}
         <tr {% if not task.is_active %}style="opacity:0.55;"{% endif %}>
@@ -35,6 +36,7 @@
           <td class="muted">{{ task.today.completed_by.full_name|default:"—" }}</td>
           <td class="mono muted">{{ task.today.completed_at|date:"d M H:i"|default:"—" }}</td>
           <td class="muted">{{ task.today.notes|default:"—" }}</td>
+          <td>{% if task.today.photo %}<a href="{{ task.today.photo.url }}" target="_blank">View</a>{% else %}<span class="muted">—</span>{% endif %}</td>
           {% if can_manage %}
           <td>
             <form method="post" action="{% url 'attendance_web:task-toggle-active' task.pk %}">
@@ -44,7 +46,7 @@
           {% endif %}
         </tr>
         {% empty %}
-        <tr><td colspan="6"><div class="empty-state">No tasks on this duty sheet.</div></td></tr>
+        <tr><td colspan="7"><div class="empty-state">No tasks on this duty sheet.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>

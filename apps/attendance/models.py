@@ -87,6 +87,7 @@ class TaskCompletion(models.Model):
         "ClockEvent", null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_tasks"
     )
     notes = models.TextField(blank=True, help_text="e.g. why it couldn't be completed")
+    photo = models.ImageField(upload_to="task_completions/%Y/%m/", blank=True, null=True)
 
     class Meta:
         ordering = ["-date"]

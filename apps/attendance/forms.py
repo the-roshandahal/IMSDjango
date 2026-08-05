@@ -13,8 +13,8 @@ class DutySheetForm(forms.ModelForm):
         model = DutySheet
         fields = ["name", "start_time", "end_time"]
         widgets = {
-            "start_time": forms.TimeInput(attrs={"type": "time"}),
-            "end_time": forms.TimeInput(attrs={"type": "time"}),
+            "start_time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "end_time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
         }
 
     def __init__(self, *args, station=None, **kwargs):
@@ -29,6 +29,26 @@ class DutySheetForm(forms.ModelForm):
 
     def task_descriptions(self):
         return [line for line in self.cleaned_data["tasks"].splitlines()]
+
+
+class DutySheetEditForm(forms.ModelForm):
+    """Editing an existing duty sheet -- name and times only. Tasks are
+    managed separately (add/retire on the detail page) since they carry
+    completion history that a blanket re-save shouldn't touch."""
+
+    class Meta:
+        model = DutySheet
+        fields = ["name", "start_time", "end_time"]
+        widgets = {
+            "start_time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "end_time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data["name"]
+        if DutySheet.objects.filter(station=self.instance.station, name=name).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("A duty sheet with this name already exists at this station.")
+        return name
 
 
 class AddTaskForm(forms.Form):

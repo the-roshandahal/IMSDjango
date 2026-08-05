@@ -188,7 +188,7 @@ def clock_out(*, clock_event, method=ClockEvent.Method.WEB):
     return clock_event
 
 
-def mark_task_complete(*, task: DutySheetTask, employee, clock_event, date=None, notes=""):
+def mark_task_complete(*, task: DutySheetTask, employee, clock_event, date=None, notes="", photo=None):
     date = date or timezone.now().date()
     completion, _ = TaskCompletion.objects.get_or_create(task=task, date=date)
     completion.is_completed = True
@@ -197,6 +197,8 @@ def mark_task_complete(*, task: DutySheetTask, employee, clock_event, date=None,
     completion.completed_during_clock_event = clock_event
     if notes:
         completion.notes = notes
+    if photo:
+        completion.photo = photo
     completion.save()
     return completion
 
