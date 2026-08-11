@@ -513,8 +513,9 @@ table.data input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; }
 .rte-toolbar button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .rte-toolbar .rte-sep { width: 1px; background: var(--line-strong); margin: 4px 4px; }
 .rte-editable {
-  min-height: 140px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 0 0 var(--radius) var(--radius);
-  background: var(--surface-1); color: var(--ink-900); font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5;
+  min-height: 380px; max-height: 640px; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--line-strong);
+  border-radius: 0 0 var(--radius) var(--radius); background: var(--surface-1); color: var(--ink-900);
+  font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5;
 }
 .rte-editable:focus { outline: none; border-color: var(--accent); }
 .rte-editable:empty::before { content: attr(data-placeholder); color: var(--ink-400); }

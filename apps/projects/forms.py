@@ -87,6 +87,54 @@ TOOLBOX_AUDIENCE_CHOICES = [
 # shown (detail page, the public sign-off page, the PDF export).
 TOOLBOX_CONTENT_ALLOWED_TAGS = ["p", "br", "b", "strong", "i", "em", "u", "ul", "ol", "li", "h3", "h4", "blockquote"]
 
+# Pre-fills the editor on a new talk with the company's own standing TBT
+# checklist (from the paper form) -- a starting point to trim/edit per talk
+# rather than retyping the same standard checks every time.
+TOOLBOX_CONTENT_DEFAULT = """<h3>1. Start of Shift Meeting</h3>
+<ul>
+<li>Discuss today's job and tasks</li>
+<li>Assign clear roles to each team member</li>
+</ul>
+<h3>2. Uniform &amp; PPE Check</h3>
+<ul>
+<li>All staff wearing correct uniform (long sleeves, pants, approved safety shoes)</li>
+<li>PPE worn correctly: gloves, safety glasses, masks, etc.</li>
+</ul>
+<h3>3. Safety &amp; Hazards</h3>
+<ul>
+<li>Discuss site hazards</li>
+<li>Use wet floor signs at all times</li>
+<li>Never leave trolleys or vans unattended</li>
+<li>Always report hazards to the supervisor</li>
+</ul>
+<h3>4. Equipment Check</h3>
+<ul>
+<li>Use correct mops with wooden handles when working on platforms</li>
+<li>Keep equipment and products tidy and organised</li>
+<li>Store items safely - do not block walkways</li>
+</ul>
+<h3>5. Task-Specific Reminders</h3>
+<ul>
+<li><b>Escalator cleaning:</b> barricade the area; if escalator is running, no one is allowed near it</li>
+<li><b>High dusting:</b> wear safety glasses, use correct PPE, avoid electrical areas, use approved extension poles</li>
+<li><b>Chewing gum removal:</b> use correct scraper; do NOT use orange solvent on painted surfaces or aluminium</li>
+<li><b>Pressure washing:</b> never spray higher than 30cm towards ledges; do not pressure wash walls or ceilings; always check hose position to prevent tripping hazards</li>
+</ul>
+<h3>6. Personnel Responsibility</h3>
+<ul>
+<li>Keys and access cards must always stay with staff members</li>
+<li>If unsure or confused, ask your supervisor</li>
+<li>If challenged or feeling unsafe, contact your supervisor immediately</li>
+</ul>
+<h3>7. End of Shift Responsibilities</h3>
+<ul>
+<li>Collect and dispose of all rubbish on site or at the warehouse</li>
+<li>Van, Ute, and Truck cabins must be wiped and cleaned after returning to the warehouse</li>
+<li>Restock all boxes and prepare vehicles for the next dispatch</li>
+<li>Waterproof cloths: check and empty pockets, place in washing machine, turn on, and message managers so cloths can be hung to dry in the morning</li>
+<li>Mop heads, dusters, and sponges to be disposed of at the end of each project</li>
+</ul>"""
+
 
 class ToolboxTalkForm(forms.Form):
     work_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))

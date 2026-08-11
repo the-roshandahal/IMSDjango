@@ -26,6 +26,7 @@ from apps.projects.forms import (
     ProjectTeamAddForm,
     ProjectVehicleAssignForm,
     ShiftLogForm,
+    TOOLBOX_CONTENT_DEFAULT,
     ToolboxTalkForm,
 )
 from apps.projects.models import DeepCleanProject, ToolboxTalk, ToolboxTalkAttendee
@@ -352,21 +353,21 @@ class ToolboxTalkListView(LoginRequiredMixin, View):
 class ToolboxTalkCreateView(LoginRequiredMixin, View):
     template_name = "projects/toolbox_talk_create.html"
 
-    def dispatch(self, request, *args, **kwargs):
+    def get(self, request):
         if not _can_manage_toolbox_talks(request.user):
             raise PermissionDenied()
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request):
         projects = _visible_projects_for(request.user)
-        initial = {}
+        initial = {"content": TOOLBOX_CONTENT_DEFAULT}
         project_id = request.GET.get("project")
         if project_id and projects.filter(pk=project_id).exists():
-            initial = {"project": project_id, "audience": "project_team"}
+            initial["project"] = project_id
+            initial["audience"] = "project_team"
         form = ToolboxTalkForm(projects=projects, initial=initial)
         return render(request, self.template_name, {"form": form})
 
     def post(self, request):
+        if not _can_manage_toolbox_talks(request.user):
+            raise PermissionDenied()
         projects = _visible_projects_for(request.user)
         form = ToolboxTalkForm(request.POST, request.FILES, projects=projects)
         if not form.is_valid():
