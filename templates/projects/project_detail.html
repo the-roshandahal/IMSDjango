@@ -161,7 +161,10 @@
     {% endif %}
 
     <div class="panel">
-      <div class="panel-head"><h2>Toolbox talks</h2></div>
+      <div class="panel-head">
+        <h2>Toolbox talks</h2>
+        {% if can_manage_toolbox_talks %}<a class="btn btn-secondary btn-sm" href="{% url 'projects_web:toolbox-talk-create' %}?project={{ project.pk }}">Send toolbox talk</a>{% endif %}
+      </div>
       <div class="panel-body flush">
         {% if toolbox_talks %}
         <table class="data">
@@ -170,7 +173,7 @@
             {% for t in toolbox_talks %}
             <tr class="rail-row {% if t.signed_count == t.total_count %}good{% else %}warn{% endif %}">
               <td class="mono">{{ t.work_date }}</td>
-              <td><a href="{% url 'projects_web:toolbox-talk-detail' project.pk t.pk %}">{{ t.topic }}</a></td>
+              <td><a href="{% url 'projects_web:toolbox-talk-detail' t.pk %}">{{ t.topic }}</a></td>
               <td class="num mono">{{ t.signed_count }} / {{ t.total_count }}</td>
             </tr>
             {% endfor %}
@@ -263,26 +266,39 @@
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>New toolbox talk</h2></div>
+      <div class="panel-head"><h2>Team</h2><span class="sub">who a toolbox talk sent to "everyone on this project" reaches</span></div>
+      <div class="panel-body flush">
+        {% if team_members %}
+        <table class="data">
+          <thead><tr><th>Employee</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for e in team_members %}
+            <tr>
+              <td>{{ e.full_name }}</td>
+              {% if can_manage %}
+              <td>
+                <form method="post" action="{% url 'projects_web:team-remove' project.pk e.pk %}">
+                  {% csrf_token %}<button type="submit" class="btn-ghost-sm">Remove</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No team members added yet.</div>
+        {% endif %}
+      </div>
+      {% if can_manage %}
       <div class="panel-body">
-        <form method="post" action="{% url 'projects_web:toolbox-talk-create' project.pk %}" enctype="multipart/form-data">
+        <form method="post" action="{% url 'projects_web:team-add' project.pk %}" style="display:flex;gap:8px;">
           {% csrf_token %}
-          {% if toolbox_talk_form.non_field_errors %}<div class="errors">{{ toolbox_talk_form.non_field_errors }}</div>{% endif %}
-          <div class="field"><label>Date</label>{{ toolbox_talk_form.work_date }}</div>
-          <div class="field"><label>Topic</label>{{ toolbox_talk_form.topic }}</div>
-          <div class="field"><label>Content</label>{{ toolbox_talk_form.content }}
-            <div class="hint">{{ toolbox_talk_form.content.help_text }}</div>
-          </div>
-          <div class="field"><label>{{ toolbox_talk_form.attachment.label }}</label>{{ toolbox_talk_form.attachment }}
-            <div class="hint">{{ toolbox_talk_form.attachment.help_text }}</div>
-          </div>
-          <div class="field"><label>{{ toolbox_talk_form.employees.label }}</label>
-            <div class="checkbox-list">{{ toolbox_talk_form.employees }}</div>
-            <div class="hint">Each attendee is emailed a personal link to read this and sign.</div>
-          </div>
-          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;">Create &amp; email for signing</button>
+          {{ team_add_form.employee }}
+          <button type="submit" class="btn btn-secondary">Add</button>
         </form>
       </div>
+      {% endif %}
     </div>
 
     <div class="panel">

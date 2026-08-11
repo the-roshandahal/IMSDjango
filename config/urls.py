@@ -1,7 +1,7 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve as serve_media
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -38,7 +38,14 @@ urlpatterns = [
 # the one serving these files in production too, the same way whitenoise
 # already serves collected static files here. Fine for this app's traffic
 # level; revisit if that ever changes.
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+#
+# NOTE: django.conf.urls.static.static() looks like it does this but
+# actually no-ops (registers zero URL patterns) whenever DEBUG=False --
+# it's documented as dev-only. Wiring django.views.static.serve directly
+# is what actually makes this unconditional.
+urlpatterns += [
+    re_path(r"^media/(?P<path>.*)$", serve_media, {"document_root": settings.MEDIA_ROOT}),
+]
 
 handler400 = "apps.core.error_views.error_400"
 handler403 = "apps.core.error_views.error_403"

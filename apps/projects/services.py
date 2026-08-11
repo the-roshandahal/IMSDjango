@@ -74,7 +74,7 @@ def log_shift(*, project_id, work_date, shift, start_time, end_time, logged_by, 
     return log
 
 
-def create_toolbox_talk(*, project_id, work_date, topic, content, attachment, conducted_by, employee_ids, request=None):
+def create_toolbox_talk(*, work_date, topic, content, attachment, conducted_by, employee_ids, project_id=None, request=None):
     talk = ToolboxTalk.objects.create(
         project_id=project_id, work_date=work_date, topic=topic, content=content, attachment=attachment,
         conducted_by=conducted_by,
@@ -107,9 +107,10 @@ def send_toolbox_talk_email(attendee: ToolboxTalkAttendee, request) -> bool:
     talk = attendee.toolbox_talk
     link = toolbox_talk_sign_url(request, attendee)
     subject = f"Toolbox talk -- {talk.topic}"
+    where = talk.project.name if talk.project else "your team"
     message = (
         f"Hi {attendee.employee.first_name},\n\n"
-        f"Please read the toolbox talk below for {talk.project.name} ({talk.work_date}) and sign to confirm "
+        f"Please read the toolbox talk below for {where} ({talk.work_date}) and sign to confirm "
         f"you've read and understood it:\n\n{link}\n\nThanks,\nCleantech1"
     )
     attendee.email_sent_at = timezone.now()

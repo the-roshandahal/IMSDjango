@@ -118,7 +118,7 @@
       {% if can_view_projects or can_view_employees %}
       <div class="nav-section">Deep Clean</div>
       {% if can_view_projects %}
-      <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
+      <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name and 'toolbox-talk' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
         <span class="nav-dot"></span> Projects
       </a>
       {% endif %}
@@ -127,6 +127,13 @@
         <span class="nav-dot"></span> Employees
       </a>
       {% endif %}
+      {% endif %}
+
+      {% if can_view_toolbox_talks %}
+      <div class="nav-section">Toolbox Talk</div>
+      <a class="nav-link {% if 'toolbox-talk' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:toolbox-talk-list' %}">
+        <span class="nav-dot"></span> Toolbox Talks
+      </a>
       {% endif %}
 
       {% if can_view_reports %}

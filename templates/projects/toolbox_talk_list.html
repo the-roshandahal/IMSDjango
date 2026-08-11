@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Toolbox Talks - IMS{% endblock %}
+{% block crumb %}Toolbox Talks{% endblock %}
+{% block page_title %}Toolbox Talks{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">Safety briefings sent to employees to read and sign -- general, selected employees, or a project's team.</div>
+  {% if can_create %}
+  <div class="actions-row">
+    <a class="btn btn-primary" href="{% url 'projects_web:toolbox-talk-create' %}">New toolbox talk</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-body flush">
+    {% if talks %}
+    <table class="data">
+      <thead><tr><th>Date</th><th>Topic</th><th>Sent to</th><th class="num">Signed</th><th>Conducted by</th></tr></thead>
+      <tbody>
+        {% for t in talks %}
+        <tr class="rail-row {% if t.signed_count == t.total_count %}good{% else %}warn{% endif %}">
+          <td class="mono">{{ t.work_date }}</td>
+          <td><a href="{% url 'projects_web:toolbox-talk-detail' t.pk %}">{{ t.topic }}</a></td>
+          <td class="muted">{% if t.project %}<a href="{% url 'projects_web:detail' t.project.pk %}">{{ t.project.reference }}</a>{% else %}General{% endif %}</td>
+          <td class="num mono">{{ t.signed_count }} / {{ t.total_count }}</td>
+          <td class="muted">{{ t.conducted_by.username }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No toolbox talks sent yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

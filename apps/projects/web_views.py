@@ -8,6 +8,7 @@ from django.views.generic import CreateView, DetailView, ListView
 
 from apps.accounts.models import Role
 from apps.core.permissions import has_capability
+from apps.employees.models import Employee
 from apps.equipment import services as equipment_services
 from apps.equipment.models import Equipment, EquipmentStatus
 from apps.equipment.services import ComplianceBlockedError as EquipmentComplianceBlockedError
@@ -21,6 +22,7 @@ from apps.projects.forms import (
     ProjectEquipmentAssignForm,
     ProjectForm,
     ProjectReturnForm,
+    ProjectTeamAddForm,
     ProjectVehicleAssignForm,
     ShiftLogForm,
     ToolboxTalkForm,
@@ -44,6 +46,28 @@ def _can_manage_project(user, project) -> bool:
     if has_capability(user, "project.manage"):
         return True
     return has_capability(user, "project.update_own") and project.supervisor_id == user.id
+
+
+def _can_view_toolbox_talks(user) -> bool:
+    return has_capability(user, "employee.manage") or has_capability(user, "employee.view")
+
+
+def _can_manage_toolbox_talks(user) -> bool:
+    """Toolbox talks (project-scoped or general) are an employee-management
+    action, not a project-management one -- a general talk has no project
+    to check _can_manage_project against, and the roles that already send
+    toolbox talks (wh_supervisor, deepclean_supervisor) both hold
+    employee.manage, so this one capability covers every real case."""
+    return has_capability(user, "employee.manage")
+
+
+def _visible_projects_for(user):
+    """Projects a user can pick as a toolbox talk's project -- same
+    visibility rule as the project list/detail views."""
+    qs = DeepCleanProject.objects.all()
+    if not (has_capability(user, "project.manage") or has_capability(user, "project.view")):
+        qs = qs.filter(supervisor=user)
+    return qs
 
 
 class ProjectAccessMixin(LoginRequiredMixin):
@@ -102,6 +126,14 @@ class ProjectDetailView(ProjectAccessMixin, DetailView):
         ctx["total_hours"] = sum((s.hours_worked * s.employees.count() for s in ctx["shift_logs"]), start=0)
         ctx["toolbox_talks"] = project.toolbox_talks.select_related("conducted_by").prefetch_related("attendees")[:30]
 
+        ctx["team_members"] = project.team.filter(is_active=True).order_by("first_name", "last_name")
+        ctx["can_manage_toolbox_talks"] = _can_manage_toolbox_talks(self.request.user)
+        if can_manage:
+            ctx["team_add_form"] = ProjectTeamAddForm()
+            ctx["team_add_form"].fields["employee"].queryset = Employee.objects.filter(is_active=True).exclude(
+                pk__in=project.team.values_list("pk", flat=True)
+            )
+
         from apps.safety.models import HazardReport
 
         ctx["can_report_hazards"] = has_capability(self.request.user, "hazard.report") or has_capability(
@@ -115,7 +147,6 @@ class ProjectDetailView(ProjectAccessMixin, DetailView):
             ctx["equipment_form"] = ProjectEquipmentAssignForm()
             ctx["vehicle_form"] = ProjectVehicleAssignForm()
             ctx["shift_form"] = ShiftLogForm()
-            ctx["toolbox_talk_form"] = ToolboxTalkForm()
             ctx["close_form"] = ProjectCloseForm()
             ctx["outstanding_assets"] = services.outstanding_assets(project)
 
@@ -284,56 +315,104 @@ class ShiftLogCreateView(ProjectAccessMixin, View):
         return redirect(reverse("projects_web:detail", args=[pk]))
 
 
-class ToolboxTalkCreateView(ProjectAccessMixin, View):
+class ProjectTeamAddView(ProjectAccessMixin, View):
     def post(self, request, pk):
         project = get_object_or_404(DeepCleanProject, pk=pk)
         _require_manage(request, project)
-        form = ToolboxTalkForm(request.POST, request.FILES)
+        form = ProjectTeamAddForm(request.POST)
+        if form.is_valid():
+            employee = form.cleaned_data["employee"]
+            project.team.add(employee)
+            messages.success(request, f"{employee.full_name} added to the project team.")
+        else:
+            messages.error(request, "Pick an employee to add.")
+        return redirect(reverse("projects_web:detail", args=[pk]))
+
+
+class ProjectTeamRemoveView(ProjectAccessMixin, View):
+    def post(self, request, pk, employee_id):
+        project = get_object_or_404(DeepCleanProject, pk=pk)
+        _require_manage(request, project)
+        project.team.remove(employee_id)
+        messages.success(request, "Removed from the project team.")
+        return redirect(reverse("projects_web:detail", args=[pk]))
+
+
+class ToolboxTalkListView(LoginRequiredMixin, View):
+    def get(self, request):
+        if not _can_view_toolbox_talks(request.user):
+            raise PermissionDenied()
+        talks = ToolboxTalk.objects.select_related("project", "conducted_by").prefetch_related("attendees")[:100]
+        return render(request, "projects/toolbox_talk_list.html", {
+            "talks": talks, "can_create": _can_manage_toolbox_talks(request.user),
+        })
+
+
+class ToolboxTalkCreateView(LoginRequiredMixin, View):
+    template_name = "projects/toolbox_talk_create.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _can_manage_toolbox_talks(request.user):
+            raise PermissionDenied()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        projects = _visible_projects_for(request.user)
+        initial = {}
+        project_id = request.GET.get("project")
+        if project_id and projects.filter(pk=project_id).exists():
+            initial = {"project": project_id, "audience": "project_team"}
+        form = ToolboxTalkForm(projects=projects, initial=initial)
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        projects = _visible_projects_for(request.user)
+        form = ToolboxTalkForm(request.POST, request.FILES, projects=projects)
         if not form.is_valid():
             for error in form.non_field_errors():
                 messages.error(request, error)
-            if not form.non_field_errors():
-                messages.error(request, "Check the toolbox talk form and try again -- pick at least one attendee.")
-            return redirect(reverse("projects_web:detail", args=[pk]))
+            return render(request, self.template_name, {"form": form})
         data = form.cleaned_data
+        employees = form.resolve_employees()
         talk = services.create_toolbox_talk(
-            project_id=pk, work_date=data["work_date"], topic=data["topic"], content=data["content"],
-            attachment=data["attachment"], conducted_by=request.user, employee_ids=[e.id for e in data["employees"]],
-            request=request,
+            project_id=data["project"].pk if data["project"] else None,
+            work_date=data["work_date"], topic=data["topic"], content=data["content"],
+            attachment=data["attachment"], conducted_by=request.user,
+            employee_ids=[e.id for e in employees], request=request,
         )
-        messages.success(request, "Toolbox talk created -- a signing link has been emailed to each attendee.")
-        return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk, talk.pk]))
+        messages.success(request, f"Toolbox talk sent -- a signing link has been emailed to {len(employees)} employee(s).")
+        return redirect(reverse("projects_web:toolbox-talk-detail", args=[talk.pk]))
 
 
-class ToolboxTalkDetailView(ProjectAccessMixin, View):
-    def get(self, request, pk, talk_id):
-        project = get_object_or_404(DeepCleanProject, pk=pk)
-        talk = get_object_or_404(ToolboxTalk, pk=talk_id, project=project)
+class ToolboxTalkDetailView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        talk = get_object_or_404(ToolboxTalk.objects.select_related("project", "conducted_by"), pk=pk)
+        can_manage = _can_manage_toolbox_talks(request.user)
+        if not can_manage and not _can_view_toolbox_talks(request.user):
+            raise PermissionDenied()
         attendees = talk.attendees.select_related("employee").all()
-        can_manage = _can_manage_project(request.user, project)
         sign_links = {}
         if can_manage:
             sign_links = {a.pk: services.toolbox_talk_sign_url(request, a) for a in attendees}
         return render(request, "projects/toolbox_talk_detail.html", {
-            "project": project, "talk": talk, "attendees": attendees, "sign_links": sign_links,
+            "talk": talk, "project": talk.project, "attendees": attendees, "sign_links": sign_links,
             "can_manage": can_manage,
         })
 
 
-class ToolboxTalkResendEmailView(ProjectAccessMixin, View):
-    def post(self, request, pk, talk_id, attendee_id):
-        project = get_object_or_404(DeepCleanProject, pk=pk)
-        _require_manage(request, project)
-        attendee = get_object_or_404(
-            ToolboxTalkAttendee, pk=attendee_id, toolbox_talk_id=talk_id, toolbox_talk__project=project,
-        )
+class ToolboxTalkResendEmailView(LoginRequiredMixin, View):
+    def post(self, request, pk, attendee_id):
+        talk = get_object_or_404(ToolboxTalk, pk=pk)
+        if not _can_manage_toolbox_talks(request.user):
+            raise PermissionDenied()
+        attendee = get_object_or_404(ToolboxTalkAttendee, pk=attendee_id, toolbox_talk=talk)
         sent = services.send_toolbox_talk_email(attendee, request)
         if sent:
             messages.success(request, f"Signing link re-sent to {attendee.employee.email}.")
         else:
             link = services.toolbox_talk_sign_url(request, attendee)
             messages.warning(request, f"Couldn't send the email -- share this link directly: {link}")
-        return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk, talk_id]))
+        return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk]))
 
 
 def _save_signature(attendee, data_url):
@@ -349,23 +428,22 @@ def _save_signature(attendee, data_url):
     return True
 
 
-class ToolboxTalkSignView(ProjectAccessMixin, View):
+class ToolboxTalkSignView(LoginRequiredMixin, View):
     """Supervisor-side fallback -- sign in person on the supervisor's own
     device. The primary flow is the emailed personal link (see
     ToolboxTalkPublicSignView) but this stays as a backup for anyone
     without email access."""
 
-    def post(self, request, pk, talk_id, attendee_id):
-        project = get_object_or_404(DeepCleanProject, pk=pk)
-        _require_manage(request, project)
-        attendee = get_object_or_404(
-            ToolboxTalkAttendee, pk=attendee_id, toolbox_talk_id=talk_id, toolbox_talk__project=project,
-        )
+    def post(self, request, pk, attendee_id):
+        talk = get_object_or_404(ToolboxTalk, pk=pk)
+        if not _can_manage_toolbox_talks(request.user):
+            raise PermissionDenied()
+        attendee = get_object_or_404(ToolboxTalkAttendee, pk=attendee_id, toolbox_talk=talk)
         if not _save_signature(attendee, request.POST.get("signature_data", "")):
             messages.error(request, "No signature captured -- please sign before saving.")
         else:
             messages.success(request, f"{attendee.employee.full_name} signed.")
-        return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk, talk_id]))
+        return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk]))
 
 
 class ToolboxTalkPublicSignView(View):

@@ -56,6 +56,11 @@ class DeepCleanProject(models.Model):
     )
     close_override_reason = models.TextField(blank=True)
 
+    team = models.ManyToManyField(
+        "employees.Employee", related_name="deep_clean_projects", blank=True,
+        help_text="Employees working on this project -- who a toolbox talk sent to \"this project's team\" reaches.",
+    )
+
     class Meta:
         ordering = ["-start_date"]
         indexes = [models.Index(fields=["status"])]
@@ -106,14 +111,19 @@ class ShiftLog(models.Model):
 
 
 class ToolboxTalk(models.Model):
-    """A pre-work safety briefing (hazards + controls) for a deep clean
-    project on a given day -- SRS-adjacent, requested as a company-wide
-    workforce feature. Each attendee reads it (typed content and/or an
-    attached document) and acknowledges with a signature via a personal
-    link emailed to them -- no login required, same pattern as the
-    Employee onboarding link."""
+    """A pre-work safety briefing (hazards + controls) -- SRS-adjacent,
+    requested as a company-wide workforce feature. Each attendee reads it
+    (typed content and/or an attached document) and acknowledges with a
+    signature via a personal link emailed to them -- no login required,
+    same pattern as the Employee onboarding link.
 
-    project = models.ForeignKey(DeepCleanProject, on_delete=models.CASCADE, related_name="toolbox_talks")
+    `project` is optional: a talk can be tied to a deep clean project (and
+    shows on that project's page), or be a general company-wide talk with
+    no project at all -- both are sent and signed the same way."""
+
+    project = models.ForeignKey(
+        DeepCleanProject, null=True, blank=True, on_delete=models.CASCADE, related_name="toolbox_talks",
+    )
     work_date = models.DateField()
     topic = models.CharField(max_length=200, help_text="e.g. 'Wet floors & chemical handling'")
     content = models.TextField(blank=True, help_text="Hazards discussed, controls, PPE required.")
@@ -129,7 +139,7 @@ class ToolboxTalk(models.Model):
         ordering = ["-work_date", "-created_at"]
 
     def __str__(self):
-        return f"{self.project} {self.work_date} - {self.topic}"
+        return f"{self.project or 'General'} {self.work_date} - {self.topic}"
 
     @property
     def signed_count(self) -> int:

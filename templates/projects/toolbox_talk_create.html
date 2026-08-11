@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}New toolbox talk - IMS{% endblock %}
+{% block crumb %}Toolbox Talks{% endblock %}
+{% block page_title %}New toolbox talk{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="field"><label for="{{ form.work_date.id_for_label }}">Date</label>{{ form.work_date }}</div>
+      <div class="field"><label for="{{ form.topic.id_for_label }}">Topic</label>{{ form.topic }}</div>
+      <div class="field">
+        <label for="{{ form.content.id_for_label }}">Content</label>{{ form.content }}
+        <div class="hint">{{ form.content.help_text }}</div>
+      </div>
+      <div class="field">
+        <label for="{{ form.attachment.id_for_label }}">{{ form.attachment.label }}</label>{{ form.attachment }}
+        <div class="hint">{{ form.attachment.help_text }}</div>
+      </div>
+
+      <div class="field">
+        <label>Send to</label>
+        <div class="checkbox-list" style="max-height:none;">
+          {% for radio in form.audience %}
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 4px;font-weight:400;min-height:36px;">{{ radio.tag }} {{ radio.choice_label }}</label>
+          {% endfor %}
+        </div>
+        {% if form.audience.errors %}<div class="errors">{{ form.audience.errors }}</div>{% endif %}
+      </div>
+
+      <div class="field" id="projectField">
+        <label for="{{ form.project.id_for_label }}">{{ form.project.label }}</label>
+        {{ form.project }}
+        <div class="hint">{{ form.project.help_text }}</div>
+        {% if form.project.errors %}<div class="errors">{{ form.project.errors }}</div>{% endif %}
+      </div>
+
+      <div class="field" id="employeesField">
+        <label>{{ form.employees.label }}</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:400;">
+          <input type="checkbox" id="selectAllEmployees"> Select all
+        </label>
+        <div class="checkbox-list">{{ form.employees }}</div>
+        {% if form.employees.errors %}<div class="errors">{{ form.employees.errors }}</div>{% endif %}
+      </div>
+
+      <div class="hint" style="margin-bottom:14px;">Each attendee is emailed a personal link to read this and sign -- no login needed on their end.</div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create &amp; send for signing</button>
+        <a class="btn btn-secondary" href="{% url 'projects_web:toolbox-talk-list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var radios = document.querySelectorAll('input[name="audience"]');
+  var projectField = document.getElementById("projectField");
+  var employeesField = document.getElementById("employeesField");
+
+  function update() {
+    var checked = document.querySelector('input[name="audience"]:checked');
+    var value = checked ? checked.value : "all";
+    projectField.style.display = value === "project_team" ? "" : "none";
+    employeesField.style.display = value === "selected" ? "" : "none";
+  }
+  radios.forEach(function (r) { r.addEventListener("change", update); });
+  update();
+
+  var selectAll = document.getElementById("selectAllEmployees");
+  selectAll.addEventListener("change", function () {
+    document.querySelectorAll('#employeesField input[type=checkbox][name="employees"]').forEach(function (cb) {
+      cb.checked = selectAll.checked;
+    });
+  });
+})();
+</script>
+{% endblock %}

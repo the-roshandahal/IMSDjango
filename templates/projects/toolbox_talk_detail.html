@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% block title %}{{ talk.topic }} - IMS{% endblock %}
-{% block crumb %}Deep Clean / {{ project.reference }}{% endblock %}
+{% block crumb %}Toolbox Talks{% if project %} / {{ project.reference }}{% endif %}{% endblock %}
 {% block page_title %}{{ talk.topic }}{% endblock %}
 {% block content %}
 
 <div class="page-head">
-  <div class="desc">{{ project.reference }} &middot; {{ talk.work_date }} &middot; conducted by {{ talk.conducted_by.username }}</div>
-  <a class="btn btn-secondary" href="{% url 'projects_web:detail' project.pk %}">Back to project</a>
+  <div class="desc">{% if project %}{{ project.reference }} &middot; {% else %}General &middot; {% endif %}{{ talk.work_date }} &middot; conducted by {{ talk.conducted_by.username }}</div>
+  <div class="actions-row">
+    {% if project %}<a class="btn btn-secondary" href="{% url 'projects_web:detail' project.pk %}">Back to project</a>{% endif %}
+    <a class="btn btn-secondary" href="{% url 'projects_web:toolbox-talk-list' %}">All toolbox talks</a>
+  </div>
 </div>
 
 <div class="panel">
@@ -57,7 +60,7 @@
           {% if can_manage %}
           <td class="actions-row" style="margin:0;flex-wrap:nowrap;">
             {% if not a.is_signed %}
-            <form method="post" action="{% url 'projects_web:toolbox-talk-resend-email' project.pk talk.pk a.pk %}" style="display:inline;">
+            <form method="post" action="{% url 'projects_web:toolbox-talk-resend-email' talk.pk a.pk %}" style="display:inline;">
               {% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">Resend email</button>
             </form>
             <button type="button" class="btn btn-secondary btn-sm sign-btn" data-attendee-id="{{ a.pk }}" data-attendee-name="{{ a.employee.full_name }}">Sign in person</button>
@@ -80,7 +83,7 @@
   var padHeading = document.getElementById("padHeading");
   var form = document.getElementById("sigForm");
   var dataInput = document.getElementById("sigData");
-  var signUrlTemplate = "{% url 'projects_web:toolbox-talk-sign' project.pk talk.pk 0 %}";
+  var signUrlTemplate = "{% url 'projects_web:toolbox-talk-sign' talk.pk 0 %}";
   var drawing = false, hasDrawn = false;
 
   function resizeCanvas() {
