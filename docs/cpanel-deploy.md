@@ -149,6 +149,32 @@ Three commands, every time. That's it.
 
 ---
 
+## Optional: auto-deploy on every push (no manual SSH step)
+
+If you'd rather not SSH in after every push, `auto-deploy.sh` (repo root)
+does the `git pull` + `bash deploy.sh` step for you, on a schedule, and
+only actually deploys when there's something new to pull -- a quiet tick
+does nothing and sends no email.
+
+**One-time setup**, cPanel → **Cron Jobs** → **Add New Cron Job**:
+- Command: `bash /home/roshanda/cleantech/auto-deploy.sh`
+- Schedule: every 5–10 minutes is plenty (`*/10 * * * *`, or the Common
+  Settings dropdown).
+
+From then on, `git push` on your dev machine is the only step -- the next
+cron tick (within your chosen interval) picks it up, pulls, and redeploys.
+Check `tmp/auto-deploy.log` in the repo (via File Manager, or `tail` over
+SSH) for a history of what it's actually deployed and when. cPanel will
+also email you directly if a deploy fails (a quiet/no-op tick produces no
+email, only a real deploy or a failure does).
+
+This is a convenience layer on top of the manual flow above, not a
+replacement for understanding it -- if `auto-deploy.sh` ever misbehaves,
+the manual `git pull && bash deploy.sh` steps always still work exactly
+as documented.
+
+---
+
 ## Why `.env` can't just be skipped
 
 Your GitHub repo is public. Anything in a tracked file is visible to
