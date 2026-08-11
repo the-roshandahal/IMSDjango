@@ -44,6 +44,7 @@ ROLE_CAPABILITIES = {
     ("wh_supervisor", "hazard.manage"): True,
     ("wh_supervisor", "attendance.duty_sheet.manage"): True,
     ("wh_supervisor", "attendance.view"): True,
+    ("wh_supervisor", "announcement.manage"): True,
 
     ("station_supervisor", "product.view"): True,
     ("station_supervisor", "station_request.create"): True,
@@ -62,6 +63,7 @@ ROLE_CAPABILITIES = {
     ("station_supervisor", "attendance.duty_sheet.manage"): True,
     ("station_supervisor", "attendance.view"): True,
     ("station_supervisor", "attendance.clock"): True,
+    ("station_supervisor", "announcement.manage"): True,
 
     ("deepclean_supervisor", "product.view"): True,
     ("deepclean_supervisor", "project.update_own"): True,
@@ -74,6 +76,7 @@ ROLE_CAPABILITIES = {
     ("deepclean_supervisor", "hazard.report"): True,
     ("deepclean_supervisor", "hazard.view"): True,
     ("deepclean_supervisor", "hazard.manage"): True,
+    ("deepclean_supervisor", "announcement.manage"): True,
 
     ("wh_staff", "product.view"): True,
     ("wh_staff", "warehouse.view"): True,
@@ -161,6 +164,9 @@ CAPABILITY_CATALOG = [
         ("attendance.duty_sheet.manage", "Create, edit, retire/reactivate, delete and assign duty sheets to employees"),
         ("attendance.view", "View clock-in history and duty sheet completion across stations"),
     ]),
+    ("Announcements", [
+        ("announcement.manage", "Send announcements to employees, and see who's read them"),
+    ]),
     ("Suppliers & Purchasing", [
         ("supplier.view", "View suppliers"),
         ("supplier.manage", "Create/edit suppliers"),
@@ -178,6 +184,35 @@ CAPABILITY_CATALOG = [
         ("audit.view", "View the audit log"),
     ]),
 ]
+
+# child_capability -> parent_capability it requires. Verified against the
+# actual view-level gates, not guessed: for each pair here, the entity's
+# list/detail page is gated on ONLY the parent, while create/edit/action
+# pages are gated on ONLY the child, with no OR between them anywhere --
+# so granting the child without the parent is a real broken state (can
+# trigger the action, can never see the list/detail page it belongs on).
+# Enforced both directions in set_capability_overrides(): granting a child
+# auto-grants its parent; revoking a parent auto-revokes any child that
+# depends on it. Deliberately NOT exhaustive over every *.manage/*.view
+# pair -- several (project.manage, purchase_order.manage, stocktake.manage,
+# warehouse.stock.manage) are already checked via an OR with their view
+# counterpart at the gate itself, so the manage capability alone is already
+# fully functional there; forcing a cascade on those would just be noise.
+# reports.view / reports.view_own_site / reports.view_own_project are
+# independent scope siblings (each report declares its own allowed subset),
+# not a hierarchy -- deliberately excluded too.
+CAPABILITY_REQUIRES = {
+    "product.manage": "product.view",
+    "warehouse.manage": "warehouse.view",
+    "equipment.manage": "equipment.view_own",
+    "equipment.assign": "equipment.view_own",
+    "vehicle.manage": "vehicle.view_own",
+    "vehicle.assign": "vehicle.view_own",
+    "employee.manage": "employee.view",
+    "hazard.manage": "hazard.view",
+    "attendance.duty_sheet.manage": "attendance.view",
+    "supplier.manage": "supplier.view",
+}
 
 
 def _user_overrides(user):
@@ -227,14 +262,42 @@ def effective_capabilities(user) -> dict:
     return result
 
 
+def apply_capability_cascade(grants: dict) -> dict:
+    """Enforces CAPABILITY_REQUIRES on a full {capability: bool} grants
+    dict before it's persisted: granting a child always also grants its
+    required parent. One-directional and monotonic on purpose -- the
+    parent is always the weaker of the two capabilities (e.g. employee.view
+    is strictly less powerful than employee.manage), so silently adding it
+    alongside an explicitly-requested child is never a privilege escalation
+    beyond what was already asked for. (The checklist's own JS keeps the
+    other direction -- unchecking a parent visually unchecks its children
+    -- intuitive in the browser before the form is ever submitted; this is
+    the server-side guarantee for anyone who bypasses that, e.g. a raw
+    POST, so the invariant holds either way.) Pure function, safe to reuse
+    anywhere overrides get set in bulk."""
+    grants = dict(grants)
+    changed = True
+    while changed:
+        changed = False
+        for child, parent in CAPABILITY_REQUIRES.items():
+            if grants.get(child) and parent in grants and not grants[parent]:
+                grants[parent] = True
+                changed = True
+    return grants
+
+
 def set_capability_overrides(*, user, grants: dict, granted_by, expires_at=None, reason=""):
     """`grants` is {capability: bool} for every capability being set from
     the checklist. Only persists a row where the desired state actually
     differs from the role default -- ticking a box the role already has
     isn't an "override", it's just the default, so no row is created (and
-    an existing override matching the default is removed)."""
+    an existing override matching the default is removed). Runs
+    apply_capability_cascade() first so a child/parent pair (see
+    CAPABILITY_REQUIRES) can never end up saved in a broken state even if
+    the submitting form/request didn't enforce it client-side."""
     from apps.accounts.models import UserCapabilityOverride
 
+    grants = apply_capability_cascade(grants)
     changed = []
     for capability, desired in grants.items():
         default = role_default_capability(user.role, capability)

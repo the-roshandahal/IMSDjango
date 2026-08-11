@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 
 from apps.accounts.models import Role, SiteAssignment, User
+from apps.core.permissions import CAPABILITY_REQUIRES
 
 
 class LoginForm(forms.Form):
@@ -107,8 +108,17 @@ class PermissionChecklistForm(forms.Form):
         super().__init__(*args, **kwargs)
         initial_state = initial_state or {}
         for capability, _label in capabilities or []:
+            # data-capability/data-requires let the checklist page's JS keep
+            # a child's required parent in sync as the admin clicks around,
+            # without needing to escape "." in an id= selector (capability
+            # strings like "product.manage" aren't valid CSS id characters
+            # to select on directly).
+            attrs = {"data-capability": capability}
+            requires = CAPABILITY_REQUIRES.get(capability)
+            if requires:
+                attrs["data-requires"] = requires
             self.fields[f"cap_{capability}"] = forms.BooleanField(
-                required=False, initial=initial_state.get(capability, False),
+                required=False, initial=initial_state.get(capability, False), widget=forms.CheckboxInput(attrs=attrs),
             )
 
     def capability_grants(self):

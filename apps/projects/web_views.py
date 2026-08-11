@@ -432,14 +432,32 @@ class ToolboxTalkResendEmailView(LoginRequiredMixin, View):
         return redirect(reverse("projects_web:toolbox-talk-detail", args=[pk]))
 
 
+# A canvas signature is a few KB to maybe a couple hundred -- generous but
+# bounded cap, since this is reachable from an unauthenticated public POST
+# (the emailed sign link) and shouldn't accept an arbitrarily large body.
+MAX_SIGNATURE_BYTES = 2 * 1024 * 1024
+
+
 def _save_signature(attendee, data_url):
     import base64
+    import io
 
     from django.core.files.base import ContentFile
+    from PIL import Image, UnidentifiedImageError
 
     if not data_url.startswith("data:image/png;base64,"):
         return False
-    raw = base64.b64decode(data_url.split(",", 1)[1])
+    try:
+        raw = base64.b64decode(data_url.split(",", 1)[1], validate=True)
+    except ValueError:
+        return False
+    if not raw or len(raw) > MAX_SIGNATURE_BYTES:
+        return False
+    try:
+        Image.open(io.BytesIO(raw)).verify()
+    except (UnidentifiedImageError, OSError):
+        return False
+
     signature_file = ContentFile(raw, name=f"attendee-{attendee.pk}.png")
     services.record_signature(attendee_id=attendee.pk, signature_file=signature_file)
     return True

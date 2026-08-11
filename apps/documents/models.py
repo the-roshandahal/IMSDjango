@@ -1,3 +1,5 @@
+import zipfile
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -17,6 +19,33 @@ def validate_file_size(value):
     max_bytes = settings.DOCUMENT_MAX_UPLOAD_MB * 1024 * 1024
     if value.size > max_bytes:
         raise ValidationError(f"File is larger than the {settings.DOCUMENT_MAX_UPLOAD_MB}MB limit.")
+
+
+def validate_file_content(value):
+    """Extension allowlisting alone is bypassable by just renaming a file
+    (e.g. `payload.php` -> `payload.pdf`) -- this sniffs the actual bytes to
+    confirm the content roughly matches what the extension claims. Cheap
+    defense-in-depth: not currently exploitable given how media is served
+    in this deployment (see config/urls.py), but that's a deployment detail,
+    not something this validator should rely on."""
+    ext = value.name.rsplit(".", 1)[-1].lower() if "." in value.name else ""
+    try:
+        value.seek(0)
+        if ext in ("jpg", "jpeg", "png"):
+            from PIL import Image, UnidentifiedImageError
+
+            try:
+                Image.open(value).verify()
+            except (UnidentifiedImageError, OSError):
+                raise ValidationError("That file doesn't look like a valid image.")
+        elif ext == "pdf":
+            if value.read(5) != b"%PDF-":
+                raise ValidationError("That file doesn't look like a valid PDF.")
+        elif ext in ("docx", "xlsx"):
+            if not zipfile.is_zipfile(value):
+                raise ValidationError(f"That file doesn't look like a valid .{ext} file.")
+    finally:
+        value.seek(0)
 
 
 class ScanStatus(models.TextChoices):
@@ -42,7 +71,9 @@ class Document(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey("content_type", "object_id")
 
-    file = models.FileField(upload_to="documents/%Y/%m/", validators=[validate_file_extension, validate_file_size])
+    file = models.FileField(
+        upload_to="documents/%Y/%m/", validators=[validate_file_extension, validate_file_size, validate_file_content]
+    )
     original_filename = models.CharField(max_length=255, blank=True)
     description = models.CharField(max_length=255, blank=True)
     scan_status = models.CharField(max_length=16, choices=ScanStatus.choices, default=ScanStatus.NOT_SCANNED)

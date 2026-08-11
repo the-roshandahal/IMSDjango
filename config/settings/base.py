@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "apps.employees",
     "apps.safety",
     "apps.attendance",
+    "apps.announcements",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +88,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 AUTH_USER_MODEL = "accounts.User"
+
+# A single custom backend (not the stock ModelBackend) so account lockout is
+# enforced for every login path, including the Django admin at /admin/ --
+# see apps/accounts/backends.py. django.contrib.auth.login() still
+# auto-assigns this as the session's backend with no explicit backend= kwarg
+# needed, same as the default, since there's exactly one entry here.
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.LockoutAwareBackend"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -129,6 +137,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
+        "password_reset": "5/hour",
     },
 }
 

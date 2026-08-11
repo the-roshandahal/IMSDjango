@@ -11,6 +11,7 @@ class NotificationType(models.TextChoices):
     PO_STATUS = "po_status", "Purchase order"
     STOCKTAKE_OVERDUE = "stocktake_overdue", "Stock count overdue"
     HAZARD_REPORTED = "hazard_reported", "Hazard/incident reported"
+    ANNOUNCEMENT = "announcement", "Announcement"
 
 
 class Notification(models.Model):

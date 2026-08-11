@@ -60,7 +60,13 @@ class PurchaseOrderDetailView(PurchaseOrderAccessMixin, DetailView):
     model = PurchaseOrder
     template_name = "purchasing/po_detail.html"
     context_object_name = "po"
-    queryset = PurchaseOrder.objects.select_related("supplier", "warehouse", "created_by").prefetch_related("lines__product")
+
+    def get_queryset(self):
+        qs = PurchaseOrder.objects.select_related("supplier", "warehouse", "created_by").prefetch_related("lines__product")
+        user = self.request.user
+        if user.role not in SITE_SCOPE_EXEMPT_ROLES:
+            qs = qs.filter(warehouse_id__in=list(assigned_site_ids(user, "warehouse")))
+        return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -227,4 +233,10 @@ class PurchaseOrderPrintView(PurchaseOrderAccessMixin, DetailView):
     model = PurchaseOrder
     template_name = "purchasing/po_print.html"
     context_object_name = "po"
-    queryset = PurchaseOrder.objects.select_related("supplier", "warehouse", "created_by").prefetch_related("lines__product")
+
+    def get_queryset(self):
+        qs = PurchaseOrder.objects.select_related("supplier", "warehouse", "created_by").prefetch_related("lines__product")
+        user = self.request.user
+        if user.role not in SITE_SCOPE_EXEMPT_ROLES:
+            qs = qs.filter(warehouse_id__in=list(assigned_site_ids(user, "warehouse")))
+        return qs

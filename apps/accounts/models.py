@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import secrets
 
@@ -174,3 +175,46 @@ class PasswordResetToken(models.Model):
     def mark_used(self):
         self.used_at = timezone.now()
         self.save(update_fields=["used_at"])
+
+
+class RequestRateLimit(models.Model):
+    """Per-IP request counter for auth-adjacent endpoints not otherwise
+    covered by DRF's throttle classes (plain Django views: /login/,
+    /login/2fa/) -- per-account lockout alone doesn't stop someone cycling
+    through many different usernames, and shared cPanel hosting has no
+    OS-level rate limiting available (no root, no fail2ban/WAF), so this has
+    to live at the application layer. DB-backed rather than Django's cache
+    framework specifically so it stays correct if the app ever runs as more
+    than one worker process -- a per-process in-memory counter would let an
+    attacker multiply their effective rate by the process count."""
+
+    ip_address = models.GenericIPAddressField()
+    scope = models.CharField(max_length=32)
+    window_start = models.DateTimeField()
+    count = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["ip_address", "scope", "window_start"], name="uniq_rate_limit_window")
+        ]
+        indexes = [models.Index(fields=["window_start"])]
+
+    @classmethod
+    def hit(cls, *, ip_address, scope, limit, window_seconds=60) -> bool:
+        """Records one request for (ip_address, scope) in the current fixed
+        window and returns whether it's still under `limit`. Old windows are
+        never read again after they end, so a periodic cleanup (e.g. a cron
+        `RequestRateLimit.objects.filter(window_start__lt=...).delete()`)
+        is just housekeeping, not correctness-critical."""
+        now = timezone.now()
+        epoch = int(now.timestamp())
+        window_start = timezone.datetime.fromtimestamp(
+            epoch - (epoch % window_seconds), tz=datetime.timezone.utc
+        )
+        obj, created = cls.objects.get_or_create(
+            ip_address=ip_address, scope=scope, window_start=window_start, defaults={"count": 1},
+        )
+        if not created:
+            cls.objects.filter(pk=obj.pk).update(count=models.F("count") + 1)
+            obj.refresh_from_db(fields=["count"])
+        return obj.count <= limit

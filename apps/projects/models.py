@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import models
 
-from apps.documents.models import validate_file_extension, validate_file_size
+from apps.documents.models import validate_file_content, validate_file_extension, validate_file_size
 
 
 def _generate_token() -> str:
@@ -129,7 +129,7 @@ class ToolboxTalk(models.Model):
     content = models.TextField(blank=True, help_text="Hazards discussed, controls, PPE required.")
     attachment = models.FileField(
         upload_to="toolbox_talks/%Y/%m/", blank=True, null=True,
-        validators=[validate_file_extension, validate_file_size],
+        validators=[validate_file_extension, validate_file_size, validate_file_content],
         help_text="The toolbox talk paper/form, if you have one -- attendees can view it before signing.",
     )
     conducted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")

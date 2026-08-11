@@ -39,11 +39,16 @@
         <thead><tr><th style="width:44px;"></th><th>Permission</th><th>Role default</th></tr></thead>
         <tbody>
           {% for row in group.rows %}
-          <tr>
-            <td>{{ row.field }}</td>
+          <tr class="{% if row.requires %}cap-child-row{% endif %}">
+            <td {% if row.requires %}style="padding-left:28px;"{% endif %}>{{ row.field }}</td>
             <td>
-              {{ row.label }}
+              {% if row.requires %}<span class="hint" style="margin-right:4px;">&#8627;</span>{% endif %}{{ row.label }}
               <div class="hint mono" style="margin-top:2px;">{{ row.capability }}</div>
+              {% if row.requires %}
+              <div class="hint" style="margin-top:2px;">Requires <strong>{{ row.requires_label }}</strong> -- turning this on also turns that on.</div>
+              {% elif row.required_by %}
+              <div class="hint" style="margin-top:2px;">Required by {{ row.required_by|join:", " }} -- turning this off also turns those off.</div>
+              {% endif %}
             </td>
             <td>{% if row.role_default %}<span class="status-rail good">Has it</span>{% else %}<span class="status-rail pending">Doesn't</span>{% endif %}</td>
           </tr>
@@ -59,4 +64,32 @@
     <a class="btn btn-secondary" href="{% url 'accounts:user-detail-page' target_user.pk %}">Cancel</a>
   </div>
 </form>
+
+<script>
+(function () {
+  // Keeps a child capability's required parent in sync as the admin
+  // clicks around -- checking a child also checks its parent; unchecking
+  // a parent also unchecks any child that depends on it. The actual
+  // invariant is enforced server-side regardless (apply_capability_cascade
+  // in apps/core/permissions.py), this is just so the checklist doesn't
+  // *look* broken between clicking and saving.
+  var boxes = Array.prototype.slice.call(document.querySelectorAll("input[data-capability]"));
+  var byCapability = {};
+  boxes.forEach(function (b) { byCapability[b.dataset.capability] = b; });
+
+  boxes.forEach(function (box) {
+    box.addEventListener("change", function () {
+      if (box.checked && box.dataset.requires) {
+        var parent = byCapability[box.dataset.requires];
+        if (parent) parent.checked = true;
+      }
+      if (!box.checked) {
+        boxes.forEach(function (child) {
+          if (child.dataset.requires === box.dataset.capability) child.checked = false;
+        });
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

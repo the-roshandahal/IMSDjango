@@ -34,10 +34,13 @@ class LoginResult:
 
 
 def check_credentials(identifier: str, password: str, request=None):
-    """Looks up by email OR username, applies lockout, and authenticates.
-    Returns (user_or_none, LoginResult code). Increments the failed-attempt
-    counter on wrong password (never on lockout/inactive, to avoid extending
-    a lockout window on repeated hammering of an already-locked account)."""
+    """Looks up by email OR username and authenticates. Returns
+    (user_or_none, LoginResult code). Lockout bookkeeping itself now lives in
+    apps.accounts.backends.LockoutAwareBackend (so it applies to every
+    caller of authenticate(), including the Django admin login form, not
+    just this function) -- this just looks up the pre-attempt state for the
+    INACTIVE/LOCKED-before-even-trying checks, and re-reads it afterwards
+    to report what the backend just did."""
     User = get_user_model()
     try:
         user = User.objects.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
@@ -50,13 +53,11 @@ def check_credentials(identifier: str, password: str, request=None):
     if user.is_locked:
         return None, LoginResult.LOCKED
 
-    authenticated = authenticate(request, username=user.username, password=password)
+    authenticated = authenticate(request, username=identifier, password=password)
     if authenticated is None:
-        user.register_failed_login()
+        user.refresh_from_db()  # backend may have just locked it on this attempt
         return None, LoginResult.LOCKED if user.is_locked else LoginResult.INVALID_CREDENTIALS
 
-    user.reset_lockout()
-
-    if user.is_2fa_enabled:
-        return user, LoginResult.REQUIRES_2FA
-    return user, LoginResult.OK
+    if authenticated.is_2fa_enabled:
+        return authenticated, LoginResult.REQUIRES_2FA
+    return authenticated, LoginResult.OK

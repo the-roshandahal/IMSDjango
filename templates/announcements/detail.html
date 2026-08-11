@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ announcement.title }} - IMS{% endblock %}
+{% block crumb %}Announcements{% endblock %}
+{% block page_title %}{{ announcement.title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="desc">{{ announcement.created_at|date:"d M Y H:i" }} &middot; from {{ announcement.created_by.get_full_name|default:announcement.created_by.username }}</div>
+  <a class="btn btn-secondary" href="{% url 'announcements_web:list' %}">All announcements</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <p style="white-space:pre-wrap;margin:0;">{{ announcement.content }}</p>
+  </div>
+  {% if my_receipt %}
+  <div class="panel-body" style="border-top:1px solid var(--line);">
+    {% if my_receipt.is_read %}
+    <p class="hint" style="margin:0;">You read this {{ my_receipt.read_at|date:"d M Y H:i" }}.</p>
+    {% else %}
+    <form method="post" action="{% url 'announcements_web:mark-read' announcement.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Mark as read</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<div class="panel">
+  <div class="panel-head"><h2>Recipients</h2><span class="sub">{{ announcement.read_count }} / {{ announcement.total_count }} read</span></div>
+  <div class="panel-body flush">
+    {% if recipients %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in recipients %}
+        <tr class="rail-row {% if r.is_read %}good{% else %}pending{% endif %}">
+          <td>{{ r.user.get_full_name|default:r.user.username }}</td>
+          <td>
+            {% if r.is_read %}<span class="status-rail good">Read {{ r.read_at|date:"d M H:i" }}</span>
+            {% else %}<span class="status-rail pending">Not read</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No recipients.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

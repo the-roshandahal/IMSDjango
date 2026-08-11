@@ -1,13 +1,28 @@
 from django.contrib import messages
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.core.mixins import CapabilityRequiredMixin
+from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES
 from apps.employees import services
 from apps.employees.forms import EmployeeEditForm, EmployeeOnboardingForm, EmployeeQuickAddForm, EmployeeStationAssignForm
 from apps.employees.models import Employee
+
+
+def _visible_employees_for(user):
+    """Company-wide for exempt roles (wh_supervisor/admin -- same
+    company-wide oversight they already get everywhere else). Any other
+    role holding employee.view/manage (currently only deepclean_supervisor)
+    is scoped to employees on a project they supervise, or that they
+    personally created -- the `created_by` half matters so adding a brand
+    new employee doesn't immediately 404 you out of their own detail page
+    before you've had a chance to add them to a project's team."""
+    if user.role in SITE_SCOPE_EXEMPT_ROLES:
+        return Employee.objects.all()
+    return Employee.objects.filter(Q(deep_clean_projects__supervisor=user) | Q(created_by=user)).distinct()
 
 
 class EmployeeListView(CapabilityRequiredMixin, ListView):
@@ -18,7 +33,7 @@ class EmployeeListView(CapabilityRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        qs = Employee.objects.all()
+        qs = _visible_employees_for(self.request.user)
         status = self.request.GET.get("status", "")
         if status == "active":
             qs = qs.filter(is_active=True)
@@ -46,6 +61,9 @@ class EmployeeDetailView(CapabilityRequiredMixin, DetailView):
     model = Employee
     template_name = "employees/employee_detail.html"
     context_object_name = "employee"
+
+    def get_queryset(self):
+        return _visible_employees_for(self.request.user)
 
     def get_context_data(self, **kwargs):
         from apps.core.permissions import has_capability
@@ -91,6 +109,9 @@ class EmployeeUpdateView(CapabilityRequiredMixin, UpdateView):
     form_class = EmployeeEditForm
     template_name = "employees/employee_form.html"
 
+    def get_queryset(self):
+        return _visible_employees_for(self.request.user)
+
     def form_valid(self, form):
         messages.success(self.request, f"{form.instance.full_name} updated.")
         return super().form_valid(form)
@@ -103,7 +124,7 @@ class EmployeeResendInviteView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         sent = services.send_invite_email(employee, request, sent_by=request.user)
         link = services.onboarding_url(request, employee)
         if sent:
@@ -117,7 +138,7 @@ class EmployeeDeactivateView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         services.deactivate(employee)
         messages.success(request, f"{employee.full_name} deactivated.")
         return redirect(reverse("employees_web:detail", args=[pk]))
@@ -127,7 +148,7 @@ class EmployeeReactivateView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         services.reactivate(employee)
         messages.success(request, f"{employee.full_name} reactivated.")
         return redirect(reverse("employees_web:detail", args=[pk]))
@@ -142,7 +163,7 @@ class EmployeeCreateLoginView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         try:
             user, temp_password = services.create_employee_login(employee=employee)
             messages.success(
@@ -163,7 +184,7 @@ class EmployeeSetKioskPinView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         try:
             pin = services.set_kiosk_pin(employee=employee)
             messages.success(request, f"Kiosk PIN for {employee.full_name}: {pin}. Share it with them directly -- it won't be shown again.")
@@ -176,7 +197,7 @@ class EmployeeSiteAssignmentCreateView(CapabilityRequiredMixin, View):
     capability = "employee.manage"
 
     def post(self, request, pk):
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         if not employee.user_id:
             messages.error(request, "Create a login first.")
             return redirect(reverse("employees_web:detail", args=[pk]))
@@ -198,7 +219,7 @@ class EmployeeSiteAssignmentDeleteView(CapabilityRequiredMixin, View):
     def post(self, request, pk, assignment_id):
         from apps.accounts.models import SiteAssignment
 
-        employee = get_object_or_404(Employee, pk=pk)
+        employee = get_object_or_404(_visible_employees_for(request.user), pk=pk)
         SiteAssignment.objects.filter(pk=assignment_id, user=employee.user).delete()
         messages.success(request, "Station assignment removed.")
         return redirect(reverse("employees_web:detail", args=[pk]))

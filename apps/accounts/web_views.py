@@ -23,11 +23,12 @@ from apps.accounts.forms import (
     UserDeactivateForm,
     UserRoleForm,
 )
-from apps.accounts.models import Role, SiteAssignment, User, UserCapabilityOverride
+from apps.accounts.models import RequestRateLimit, Role, SiteAssignment, User, UserCapabilityOverride
 from apps.audit.models import AuditLog
 from apps.core.mixins import CapabilityRequiredMixin
 from apps.core.permissions import (
     CAPABILITY_CATALOG,
+    CAPABILITY_REQUIRES,
     SITE_SCOPE_EXEMPT_ROLES,
     assigned_site_ids,
     effective_capabilities,
@@ -46,6 +47,15 @@ class LoginPageView(View):
         return render(request, self.template_name, {"form": LoginForm()})
 
     def post(self, request):
+        ip = get_client_ip(request)
+        # Per-account lockout (services.check_credentials) caps damage to any
+        # ONE username, but doesn't stop a script cycling through many
+        # different ones -- this is the per-IP backstop for that. cPanel has
+        # no OS-level rate limiting available, so this has to live here.
+        if not RequestRateLimit.hit(ip_address=ip, scope="login", limit=20, window_seconds=60):
+            messages.error(request, "Too many attempts. Please wait a minute and try again.")
+            return render(request, self.template_name, {"form": LoginForm()}, status=429)
+
         form = LoginForm(request.POST)
         if not form.is_valid():
             return render(request, self.template_name, {"form": form})
@@ -53,7 +63,6 @@ class LoginPageView(View):
         user, result = services.check_credentials(
             form.cleaned_data["identifier"], form.cleaned_data["password"], request=request
         )
-        ip = get_client_ip(request)
 
         if result == services.LoginResult.OK:
             login(request, user)
@@ -89,6 +98,11 @@ class TwoFactorPageView(View):
         pending_id = request.session.get("pending_2fa_user_id")
         if not pending_id:
             return redirect(reverse_lazy("accounts:login"))
+
+        ip = get_client_ip(request)
+        if not RequestRateLimit.hit(ip_address=ip, scope="login_2fa", limit=15, window_seconds=60):
+            messages.error(request, "Too many attempts. Please wait a minute and try again.")
+            return render(request, self.template_name, {"form": TwoFactorForm()}, status=429)
 
         form = TwoFactorForm(request.POST)
         if not form.is_valid():
@@ -457,13 +471,21 @@ class UserPermissionsView(CapabilityRequiredMixin, View):
         return redirect(reverse("accounts:user-permissions-page", args=[pk]))
 
     def _context(self, request, user_obj, form, state):
+        all_labels = {cap: label for _group, items in CAPABILITY_CATALOG for cap, label in items}
+        parents_of = {}  # parent capability -> [child capability, ...], for the "required by" hint
+        for child, parent in CAPABILITY_REQUIRES.items():
+            parents_of.setdefault(parent, []).append(child)
+
         groups = []
         for group_name, items in CAPABILITY_CATALOG:
             rows = []
             for capability, label in items:
+                requires = CAPABILITY_REQUIRES.get(capability)
                 rows.append({
                     "capability": capability, "label": label, "field": form[f"cap_{capability}"],
                     "role_default": role_default_capability(user_obj.role, capability),
+                    "requires": requires, "requires_label": all_labels.get(requires),
+                    "required_by": [all_labels.get(c, c) for c in parents_of.get(capability, [])],
                 })
             groups.append({"name": group_name, "rows": rows})
         return {

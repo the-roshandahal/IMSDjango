@@ -26,17 +26,15 @@
       <a class="nav-link {% if request.resolver_match.view_name == 'accounts:dashboard' %}active{% endif %}" href="{% url 'accounts:dashboard' %}">
         <span class="nav-dot"></span> Dashboard
       </a>
-
-      <div class="nav-section">Train Lookup</div>
-      <a class="nav-link {% if 'trains_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'trains_web:lookup' %}">
-        <span class="nav-dot"></span> Live Sydney Trains
+      <a class="nav-link {% if 'announcements_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'announcements_web:list' %}">
+        <span class="nav-dot"></span> Announcements
       </a>
 
-      {% if can_view_hazards or can_manage_attendance or can_clock_attendance %}
-      <div class="nav-section">Safety</div>
-      {% if can_view_hazards %}
-      <a class="nav-link {% if 'safety_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'safety_web:list' %}">
-        <span class="nav-dot"></span> Hazard &amp; Incident Reports
+      {% if can_view_employees or can_manage_attendance or can_clock_attendance or can_view_toolbox_talks or can_view_hazards %}
+      <div class="nav-section">Workforce &amp; Safety</div>
+      {% if can_view_employees %}
+      <a class="nav-link {% if 'employees_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'employees_web:list' %}">
+        <span class="nav-dot"></span> Employees
       </a>
       {% endif %}
       {% if can_manage_attendance %}
@@ -49,6 +47,23 @@
         <span class="nav-dot"></span> Clock In / Out
       </a>
       {% endif %}
+      {% if can_view_toolbox_talks %}
+      <a class="nav-link {% if 'toolbox-talk' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:toolbox-talk-list' %}">
+        <span class="nav-dot"></span> Toolbox Talks
+      </a>
+      {% endif %}
+      {% if can_view_hazards %}
+      <a class="nav-link {% if 'safety_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'safety_web:list' %}">
+        <span class="nav-dot"></span> Hazard &amp; Incident Reports
+      </a>
+      {% endif %}
+      {% endif %}
+
+      {% if can_view_projects %}
+      <div class="nav-section">Deep Clean</div>
+      <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name and 'toolbox-talk' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
+        <span class="nav-dot"></span> Projects
+      </a>
       {% endif %}
 
       {% if show_inventory_nav %}
@@ -115,27 +130,6 @@
       {% endif %}
       {% endif %}
 
-      {% if can_view_projects or can_view_employees %}
-      <div class="nav-section">Deep Clean</div>
-      {% if can_view_projects %}
-      <a class="nav-link {% if 'projects_web:' in request.resolver_match.view_name and 'toolbox-talk' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:list' %}">
-        <span class="nav-dot"></span> Projects
-      </a>
-      {% endif %}
-      {% if can_view_employees %}
-      <a class="nav-link {% if 'employees_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'employees_web:list' %}">
-        <span class="nav-dot"></span> Employees
-      </a>
-      {% endif %}
-      {% endif %}
-
-      {% if can_view_toolbox_talks %}
-      <div class="nav-section">Toolbox Talk</div>
-      <a class="nav-link {% if 'toolbox-talk' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects_web:toolbox-talk-list' %}">
-        <span class="nav-dot"></span> Toolbox Talks
-      </a>
-      {% endif %}
-
       {% if can_view_reports %}
       <div class="nav-section">Reports</div>
       <a class="nav-link {% if 'reports_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'reports_web:hub' %}">
@@ -153,7 +147,10 @@
       </a>
       {% endif %}
 
-      <div class="nav-section">Help</div>
+      <div class="nav-section">Tools &amp; Help</div>
+      <a class="nav-link {% if 'trains_web:' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'trains_web:lookup' %}">
+        <span class="nav-dot"></span> Live Sydney Trains
+      </a>
       <a class="nav-link {% if request.resolver_match.view_name == 'core_web:guide' %}active{% endif %}" href="{% url 'core_web:guide' %}" target="_blank">
         <span class="nav-dot"></span> User Guide
       </a>

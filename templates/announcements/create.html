@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}New announcement - IMS{% endblock %}
+{% block crumb %}Announcements{% endblock %}
+{% block page_title %}New announcement{% endblock %}
+{% block content %}
+
+<div class="panel" style="max-width:640px;">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="field">
+        <label for="{{ form.title.id_for_label }}">Title</label>{{ form.title }}
+        <div class="hint">{{ form.title.help_text }}</div>
+      </div>
+      <div class="field">
+        <label for="{{ form.content.id_for_label }}">Message</label>{{ form.content }}
+      </div>
+
+      <div class="field">
+        <label>Send to</label>
+        <div class="checkbox-list" style="max-height:none;">
+          {% for radio in form.audience %}
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 4px;font-weight:400;min-height:36px;">{{ radio.tag }} {{ radio.choice_label }}</label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field" id="employeesField">
+        <label>{{ form.employees.label }}</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:400;">
+          <input type="checkbox" id="selectAllEmployees"> Select all
+        </label>
+        <div class="checkbox-list">{{ form.employees }}</div>
+        {% if form.employees.errors %}<div class="errors">{{ form.employees.errors }}</div>{% endif %}
+        <div class="hint">Only employees with a login can receive this.</div>
+      </div>
+
+      <div class="hint" style="margin-bottom:14px;">Each recipient gets an in-app notification (and an email, if they have one on file).</div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Send announcement</button>
+        <a class="btn btn-secondary" href="{% url 'announcements_web:list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var radios = document.querySelectorAll('input[name="audience"]');
+  var employeesField = document.getElementById("employeesField");
+
+  function update() {
+    var checked = document.querySelector('input[name="audience"]:checked');
+    var value = checked ? checked.value : "all";
+    employeesField.style.display = value === "selected" ? "" : "none";
+  }
+  radios.forEach(function (r) { r.addEventListener("change", update); });
+  update();
+
+  var selectAll = document.getElementById("selectAllEmployees");
+  selectAll.addEventListener("change", function () {
+    document.querySelectorAll('#employeesField input[type=checkbox][name="employees"]').forEach(function (cb) {
+      cb.checked = selectAll.checked;
+    });
+  });
+})();
+</script>
+{% endblock %}

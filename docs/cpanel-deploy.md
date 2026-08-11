@@ -57,7 +57,7 @@ File Manager → `cleantech` → **+ File** → name it `.env` → **Edit**, pas
 
 ```
 DJANGO_SETTINGS_MODULE=config.settings.prod
-DJANGO_SECRET_KEY=+dzni)zkozhbrjr2q#ba6=u@3w%vn%f!^7k^xxcisj64yd+m4a
+DJANGO_SECRET_KEY=<generate one, see below>
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=roshandahal.com.au,www.roshandahal.com.au
 DATABASE_URL=mysql://roshanda_cleantech:<url-encoded db password>@localhost:3306/roshanda_cleantech
@@ -83,10 +83,17 @@ PASSWORD_MAX_AGE_DAYS=90
 ```
 
 `DJANGO_ALLOWED_HOSTS` assumes the site serves from the bare main domain —
-adjust if it should actually be reachable at a different hostname. Passwords
-are placeholders here on purpose (see note in this repo's history about why)
-— pull the real, percent-encoded `DATABASE_URL` value from your own private
-notes, and the mailbox password from wherever you saved it.
+adjust if it should actually be reachable at a different hostname. Every
+secret above is a placeholder on purpose, since this file is tracked in a
+**public** repo — generate a real `DJANGO_SECRET_KEY` with:
+
+```
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+and pull the real, percent-encoded `DATABASE_URL` value and the mailbox
+password from your own private notes (cPanel → MySQL Databases / Email
+Accounts if you need to reset either).
 `EMAIL_HOST` is carried over from the earlier mailbox, on the assumption
 `info@roshandahal.com.au` sits on the same mail server (same hosting
 account) — check **Email Accounts → Connect Devices** for this new mailbox

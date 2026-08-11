@@ -3,12 +3,25 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
 from apps.core.permissions import has_capability
 from apps.documents import services
 from apps.documents.forms import DocumentUploadForm
 from apps.documents.models import Document
+
+
+def _safe_redirect_back(request):
+    """Same intent as request.POST.get("next") or HTTP_REFERER, but never
+    hands an attacker-controlled value straight to redirect() -- both are
+    request-supplied and neither is validated by anything upstream."""
+    for candidate in (request.POST.get("next"), request.META.get("HTTP_REFERER")):
+        if candidate and url_has_allowed_host_and_scheme(
+            candidate, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            return redirect(candidate)
+    return redirect("/")
 
 # Allowlist of what a generic attachment endpoint may attach to -- without
 # this, a URL-crafted request could attach files to arbitrary models
@@ -58,7 +71,7 @@ class DocumentUploadView(LoginRequiredMixin, View):
             for errors in form.errors.values():
                 for e in errors:
                     messages.error(request, e)
-        return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "/")
+        return _safe_redirect_back(request)
 
 
 class DocumentDeleteView(LoginRequiredMixin, View):
@@ -71,4 +84,4 @@ class DocumentDeleteView(LoginRequiredMixin, View):
         document.file.delete(save=False)
         document.delete()
         messages.success(request, "Attachment removed.")
-        return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "/")
+        return _safe_redirect_back(request)

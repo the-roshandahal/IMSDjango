@@ -70,6 +70,8 @@ class LoginView(APIView):
 
 class TwoFactorVerifyView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
         serializer = TwoFactorVerifySerializer(data=request.data)
@@ -142,6 +144,8 @@ class ChangePasswordView(APIView):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -163,6 +167,8 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
