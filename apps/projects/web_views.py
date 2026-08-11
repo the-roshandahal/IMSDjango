@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
@@ -130,7 +131,7 @@ class ProjectDetailView(ProjectAccessMixin, DetailView):
         ctx["can_manage_toolbox_talks"] = _can_manage_toolbox_talks(self.request.user)
         if can_manage:
             ctx["team_add_form"] = ProjectTeamAddForm()
-            ctx["team_add_form"].fields["employee"].queryset = Employee.objects.filter(is_active=True).exclude(
+            ctx["team_add_form"].fields["employees"].queryset = Employee.objects.filter(is_active=True).exclude(
                 pk__in=project.team.values_list("pk", flat=True)
             )
 
@@ -321,11 +322,11 @@ class ProjectTeamAddView(ProjectAccessMixin, View):
         _require_manage(request, project)
         form = ProjectTeamAddForm(request.POST)
         if form.is_valid():
-            employee = form.cleaned_data["employee"]
-            project.team.add(employee)
-            messages.success(request, f"{employee.full_name} added to the project team.")
+            employees = form.cleaned_data["employees"]
+            project.team.add(*employees)
+            messages.success(request, f"{len(employees)} employee(s) added to the project team.")
         else:
-            messages.error(request, "Pick an employee to add.")
+            messages.error(request, "Pick at least one employee to add.")
         return redirect(reverse("projects_web:detail", args=[pk]))
 
 
@@ -398,6 +399,21 @@ class ToolboxTalkDetailView(LoginRequiredMixin, View):
             "talk": talk, "project": talk.project, "attendees": attendees, "sign_links": sign_links,
             "can_manage": can_manage,
         })
+
+
+class ToolboxTalkPdfView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        talk = get_object_or_404(ToolboxTalk.objects.select_related("project", "conducted_by"), pk=pk)
+        if not (_can_manage_toolbox_talks(request.user) or _can_view_toolbox_talks(request.user)):
+            raise PermissionDenied()
+
+        from apps.projects.pdf import build_toolbox_talk_pdf
+
+        pdf_bytes = build_toolbox_talk_pdf(talk)
+        filename = f"toolbox-talk-{talk.pk}-{talk.work_date}.pdf"
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{filename}"'
+        return response
 
 
 class ToolboxTalkResendEmailView(LoginRequiredMixin, View):

@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import bleach
 from django import forms
 
 from apps.accounts.models import Role, User
@@ -80,11 +81,19 @@ TOOLBOX_AUDIENCE_CHOICES = [
 ]
 
 
+# The rich text editor on the create page only ever produces these tags --
+# anything else (script, style, on* attributes, iframe, ...) is stripped on
+# save. Keeps the briefing content safe to render unescaped everywhere it's
+# shown (detail page, the public sign-off page, the PDF export).
+TOOLBOX_CONTENT_ALLOWED_TAGS = ["p", "br", "b", "strong", "i", "em", "u", "ul", "ol", "li", "h3", "h4", "blockquote"]
+
+
 class ToolboxTalkForm(forms.Form):
     work_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     topic = forms.CharField(max_length=200, help_text="e.g. 'Wet floors & chemical handling'")
     content = forms.CharField(
-        required=False, widget=forms.Textarea(attrs={"rows": 4}), help_text="Hazards discussed, controls, PPE required.",
+        required=False, widget=forms.Textarea(attrs={"rows": 4}),
+        help_text="Hazards discussed, controls, PPE required.",
     )
     attachment = forms.FileField(
         required=False, label="Attach a file (optional)",
@@ -105,6 +114,10 @@ class ToolboxTalkForm(forms.Form):
     def __init__(self, *args, projects=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["project"].queryset = projects if projects is not None else DeepCleanProject.objects.none()
+
+    def clean_content(self):
+        content = self.cleaned_data.get("content", "")
+        return bleach.clean(content, tags=TOOLBOX_CONTENT_ALLOWED_TAGS, attributes={}, strip=True)
 
     def clean(self):
         cleaned = super().clean()
@@ -134,7 +147,10 @@ class ToolboxTalkForm(forms.Form):
 
 
 class ProjectTeamAddForm(forms.Form):
-    employee = forms.ModelChoiceField(queryset=Employee.objects.filter(is_active=True), label="Add employee")
+    employees = forms.ModelMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True), label="Add employees",
+        widget=forms.CheckboxSelectMultiple,
+    )
 
 
 class ProjectCloseForm(forms.Form):

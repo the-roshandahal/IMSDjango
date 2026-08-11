@@ -292,11 +292,28 @@
       </div>
       {% if can_manage %}
       <div class="panel-body">
-        <form method="post" action="{% url 'projects_web:team-add' project.pk %}" style="display:flex;gap:8px;">
+        {% if team_add_form.employees.field.queryset %}
+        <form method="post" action="{% url 'projects_web:team-add' project.pk %}" id="teamAddForm">
           {% csrf_token %}
-          {{ team_add_form.employee }}
-          <button type="submit" class="btn btn-secondary">Add</button>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:400;">
+            <input type="checkbox" id="teamSelectAll"> Select all
+          </label>
+          <div class="checkbox-list">{{ team_add_form.employees }}</div>
+          <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px;">Add selected</button>
         </form>
+        <script>
+        (function () {
+          var selectAll = document.getElementById("teamSelectAll");
+          selectAll.addEventListener("change", function () {
+            document.querySelectorAll('#teamAddForm input[type=checkbox][name="employees"]').forEach(function (cb) {
+              cb.checked = selectAll.checked;
+            });
+          });
+        })();
+        </script>
+        {% else %}
+        <div class="empty-state">Every active employee is already on this project's team.</div>
+        {% endif %}
       </div>
       {% endif %}
     </div>

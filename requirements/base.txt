@@ -7,3 +7,5 @@ qrcode==7.4.*
 python-barcode==0.15.*
 Pillow==10.4.*
 requests==2.32.*
+bleach==6.1.*
+fpdf2==2.8.*

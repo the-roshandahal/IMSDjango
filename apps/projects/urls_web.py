@@ -31,6 +31,7 @@ urlpatterns = [
     path("toolbox-talks/", web_views.ToolboxTalkListView.as_view(), name="toolbox-talk-list"),
     path("toolbox-talks/create/", web_views.ToolboxTalkCreateView.as_view(), name="toolbox-talk-create"),
     path("toolbox-talks/<int:pk>/", web_views.ToolboxTalkDetailView.as_view(), name="toolbox-talk-detail"),
+    path("toolbox-talks/<int:pk>/pdf/", web_views.ToolboxTalkPdfView.as_view(), name="toolbox-talk-pdf"),
     path(
         "toolbox-talks/<int:pk>/attendees/<int:attendee_id>/sign/",
         web_views.ToolboxTalkSignView.as_view(), name="toolbox-talk-sign",

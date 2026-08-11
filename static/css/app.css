@@ -498,6 +498,31 @@ table.data input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; }
 .signature-pad-wrap { border: 1px dashed var(--line-strong); border-radius: var(--radius); background: #fff; touch-action: none; }
 .signature-pad-wrap canvas { display: block; width: 100%; height: 160px; cursor: crosshair; }
 .signature-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ---------- Rich text editor (toolbox talk content) ---------- */
+.rte-toolbar {
+  display: flex; gap: 2px; flex-wrap: wrap; padding: 4px; border: 1px solid var(--line-strong);
+  border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; background: var(--surface-sunken);
+}
+.rte-toolbar button {
+  border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 6px 10px;
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: var(--ink-700); cursor: pointer;
+  min-height: 32px; min-width: 32px;
+}
+.rte-toolbar button:hover { background: var(--surface-1); border-color: var(--line-strong); }
+.rte-toolbar button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.rte-toolbar .rte-sep { width: 1px; background: var(--line-strong); margin: 4px 4px; }
+.rte-editable {
+  min-height: 140px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface-1); color: var(--ink-900); font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5;
+}
+.rte-editable:focus { outline: none; border-color: var(--accent); }
+.rte-editable:empty::before { content: attr(data-placeholder); color: var(--ink-400); }
+.rte-editable h3, .rte-content h3 { font-size: 1.02rem; margin: 10px 0 4px; color: var(--accent); }
+.rte-editable h4, .rte-content h4 { font-size: 0.94rem; margin: 8px 0 4px; color: var(--accent); }
+.rte-editable p, .rte-content p { margin: 0 0 8px; }
+.rte-editable ul, .rte-editable ol, .rte-content ul, .rte-content ol { margin: 0 0 8px; padding-left: 22px; }
+.rte-content { font-size: 0.92rem; line-height: 1.55; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
 .form-actions { display: flex; gap: 10px; margin-top: 6px; }

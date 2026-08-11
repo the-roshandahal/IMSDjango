@@ -21,7 +21,7 @@
 <div class="panel" style="text-align:left;">
   <div class="panel-head"><h2>{{ talk.topic }}</h2></div>
   <div class="panel-body">
-    {% if talk.content %}<p style="white-space:pre-wrap;margin:0 0 12px;">{{ talk.content }}</p>{% endif %}
+    {% if talk.content %}<div class="rte-content" style="margin:0 0 12px;">{{ talk.content|safe }}</div>{% endif %}
     {% if talk.attachment %}
     <a class="btn btn-secondary" href="{{ talk.attachment.url }}" target="_blank" rel="noopener">View attached file</a>
     {% endif %}
