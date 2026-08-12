@@ -30,27 +30,48 @@ class Announcement(models.Model):
 
 
 class AnnouncementRecipient(models.Model):
-    """Who an announcement went to. No read_at of its own on purpose --
-    `notification` is the exact Notification row this recipient got, and
-    its own is_read/read_at (already fully wired up: in-app badge, mark
-    read/mark all read, best-effort email) is the single source of truth
-    for whether they've read it. A second parallel "read" flag here would
-    just be a sync bug waiting to happen."""
+    """Who an announcement went to. Employees with a login get `user` +
+    `notification` set, and "read" is that Notification's own is_read/
+    read_at (single source of truth -- see Announcement docstring).
+    Employees with no login can't have a Notification (it's strictly
+    per-User), so they get a plain `email_sent` instead -- there's no
+    login to read it *in*, so read/unread doesn't apply to them; the best
+    we can show a manager is whether the email went out."""
 
     announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name="recipients")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="announcement_receipts")
+    employee = models.ForeignKey(
+        "employees.Employee", on_delete=models.CASCADE, related_name="announcement_receipts", null=True, blank=True,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="announcement_receipts",
+        null=True, blank=True,
+    )
     notification = models.ForeignKey(
         "notifications.Notification", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    email_sent = models.BooleanField(default=False, help_text="Set for no-login employees, emailed directly.")
 
     class Meta:
-        ordering = ["user__first_name", "user__last_name", "user__username"]
+        ordering = ["employee__first_name", "employee__last_name", "user__username"]
         constraints = [
-            models.UniqueConstraint(fields=["announcement", "user"], name="uniq_announcement_recipient")
+            models.UniqueConstraint(fields=["announcement", "user"], name="uniq_announcement_recipient_user"),
+            models.UniqueConstraint(fields=["announcement", "employee"], name="uniq_announcement_recipient_employee"),
         ]
 
     def __str__(self):
-        return f"{self.user} -- {self.announcement}"
+        return f"{self.user or self.employee} -- {self.announcement}"
+
+    @property
+    def display_name(self) -> str:
+        if self.user:
+            return self.user.get_full_name() or self.user.username
+        if self.employee:
+            return f"{self.employee.first_name} {self.employee.last_name}"
+        return "(unknown)"
+
+    @property
+    def has_login(self) -> bool:
+        return self.user_id is not None
 
     @property
     def is_read(self) -> bool:

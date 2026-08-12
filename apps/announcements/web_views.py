@@ -62,7 +62,7 @@ class AnnouncementDetailView(LoginRequiredMixin, View):
 
         recipients = None
         if can_manage:
-            recipients = announcement.recipients.select_related("user", "notification").all()
+            recipients = announcement.recipients.select_related("employee", "user", "notification").all()
         return render(request, "announcements/detail.html", {
             "announcement": announcement, "can_manage": can_manage,
             "my_receipt": my_receipt, "recipients": recipients,

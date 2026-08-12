@@ -34,10 +34,10 @@
         </label>
         <div class="checkbox-list">{{ form.employees }}</div>
         {% if form.employees.errors %}<div class="errors">{{ form.employees.errors }}</div>{% endif %}
-        <div class="hint">Only employees with a login can receive this.</div>
+        <div class="hint">Employees marked "no login -- emailed only" can't see this in the app, so they're emailed directly instead.</div>
       </div>
 
-      <div class="hint" style="margin-bottom:14px;">Each recipient gets an in-app notification (and an email, if they have one on file).</div>
+      <div class="hint" style="margin-bottom:14px;">Employees with a login get an in-app notification (and an email, if they have one on file). Employees without a login are emailed directly, if they have an email on file.</div>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Send announcement</button>
         <a class="btn btn-secondary" href="{% url 'announcements_web:list' %}">Cancel</a>

@@ -11,16 +11,23 @@ ANNOUNCEMENT_AUDIENCE_CHOICES = [
 ]
 
 
+class _EmployeeMultipleChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, employee):
+        name = f"{employee.first_name} {employee.last_name}"
+        return name if employee.user_id else f"{name} (no login -- emailed only)"
+
+
 class AnnouncementForm(forms.Form):
     title = forms.CharField(max_length=200, help_text="e.g. 'New PPE supplier from Monday'")
     content = forms.CharField(widget=forms.Textarea(attrs={"rows": 6}))
     audience = forms.ChoiceField(
         choices=ANNOUNCEMENT_AUDIENCE_CHOICES, widget=forms.RadioSelect, initial=ANNOUNCEMENT_AUDIENCE_ALL, label="Send to",
     )
-    # Only employees with a login can actually receive this -- announcements
-    # ride the existing Notification system, which is strictly per-User.
-    employees = forms.ModelMultipleChoiceField(
-        queryset=Employee.objects.filter(is_active=True, user__isnull=False), required=False, label="Recipients",
+    # Employees with a login get an in-app notification (+ email); employees
+    # without one are emailed directly instead (see services.create_announcement)
+    # -- either way, every active employee is a valid recipient.
+    employees = _EmployeeMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True), required=False, label="Recipients",
         widget=forms.CheckboxSelectMultiple,
     )
 
@@ -34,5 +41,5 @@ class AnnouncementForm(forms.Form):
         """The actual employees to notify, based on the chosen audience --
         call only after is_valid() has passed."""
         if self.cleaned_data["audience"] == ANNOUNCEMENT_AUDIENCE_ALL:
-            return list(Employee.objects.filter(is_active=True, user__isnull=False))
+            return list(Employee.objects.filter(is_active=True))
         return list(self.cleaned_data["employees"])

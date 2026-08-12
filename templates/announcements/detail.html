@@ -36,11 +36,16 @@
       <thead><tr><th>Name</th><th>Status</th></tr></thead>
       <tbody>
         {% for r in recipients %}
-        <tr class="rail-row {% if r.is_read %}good{% else %}pending{% endif %}">
-          <td>{{ r.user.get_full_name|default:r.user.username }}</td>
+        <tr class="rail-row {% if r.has_login %}{% if r.is_read %}good{% else %}pending{% endif %}{% endif %}">
+          <td>{{ r.display_name }}</td>
           <td>
-            {% if r.is_read %}<span class="status-rail good">Read {{ r.read_at|date:"d M H:i" }}</span>
-            {% else %}<span class="status-rail pending">Not read</span>{% endif %}
+            {% if r.has_login %}
+              {% if r.is_read %}<span class="status-rail good">Read {{ r.read_at|date:"d M H:i" }}</span>
+              {% else %}<span class="status-rail pending">Not read</span>{% endif %}
+            {% else %}
+              {% if r.email_sent %}<span class="status-rail" title="No login -- can't confirm they've read it">Emailed</span>
+              {% else %}<span class="status-rail pending" title="No login, and no email on file">Not delivered</span>{% endif %}
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
