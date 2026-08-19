@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db.models import Q
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views import View
@@ -6,6 +7,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.core.mixins import CapabilityRequiredMixin
 from apps.core.permissions import has_capability
+from apps.inventory.services import attach_low_stock_counts, bulk_effective_reorder_points
 from apps.vehicles import services
 from apps.vehicles.forms import (
     VehicleAssignForm,
@@ -31,9 +33,9 @@ class VehicleListView(CapabilityRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = Vehicle.objects.select_related("current_project", "assigned_driver").order_by("registration")
-        if _can_manage_fleet(self.request.user):
-            return qs
-        return qs.filter(assigned_driver=self.request.user)
+        if not _can_manage_fleet(self.request.user):
+            qs = qs.filter(assigned_driver=self.request.user)
+        return attach_low_stock_counts(qs, "vehicle")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -54,6 +56,8 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
         return qs.filter(assigned_driver=self.request.user)
 
     def get_context_data(self, **kwargs):
+        from apps.inventory.models import StockLevel
+
         ctx = super().get_context_data(**kwargs)
         ctx["can_manage_fleet"] = _can_manage_fleet(self.request.user)
         ctx["logs"] = self.object.logs.select_related("driver", "performed_by")[:20]
@@ -63,6 +67,19 @@ class VehicleDetailView(CapabilityRequiredMixin, DetailView):
         ctx["release_form"] = VehicleReleaseForm()
         ctx["maintenance_end_form"] = VehicleMaintenanceEndForm()
         ctx["cost_form"] = VehicleCostLogForm()
+
+        stock = list(
+            StockLevel.objects.filter(vehicle=self.object)
+            .filter(Q(quantity__gt=0) | Q(quantity__lte=0, product__reorder_point__gt=0))
+            .select_related("product", "batch")
+            .order_by("product__name")
+        )
+        thresholds = bulk_effective_reorder_points(stock)
+        for sl in stock:
+            sl.effective_reorder_point = thresholds[sl.pk]
+        ctx["stock"] = stock
+        ctx["can_manage_thresholds"] = has_capability(self.request.user, "warehouse.manage")
+        ctx["can_record_usage"] = has_capability(self.request.user, "vehicle.usage.record")
 
         from apps.documents.services import documents_for
 

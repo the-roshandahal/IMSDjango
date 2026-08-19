@@ -65,23 +65,41 @@ def station_recipients(station_id):
     ).filter(is_active=True).distinct()
 
 
+def vehicle_recipients(vehicle_id):
+    """The vehicle's own driver (if any), plus fleet managers -- vehicles
+    have no SiteAssignment, so scope comes from Vehicle.assigned_driver
+    directly instead."""
+    from apps.accounts.models import Role, User
+    from apps.vehicles.models import Vehicle
+
+    driver_id = Vehicle.objects.filter(pk=vehicle_id).values_list("assigned_driver_id", flat=True).first()
+    return User.objects.filter(
+        Q(id=driver_id) | Q(role__in=[Role.ADMIN, Role.WH_SUPERVISOR])
+    ).filter(is_active=True).distinct()
+
+
 def admins_and_supervisors():
     from apps.accounts.models import Role, User
 
     return User.objects.filter(role__in=[Role.ADMIN, Role.WH_SUPERVISOR], is_active=True)
 
 
-def notify_low_stock(product, quantity, reorder_point, *, warehouse=None, station=None):
+def notify_low_stock(product, quantity, reorder_point, *, warehouse=None, station=None, vehicle=None):
     from django.urls import reverse
 
-    if bool(warehouse) == bool(station):
-        raise ValueError("Pass exactly one of warehouse or station.")
-    site = warehouse or station
-    recipients = warehouse_recipients(warehouse.pk) if warehouse else station_recipients(station.pk)
-    dedupe_site = f"warehouse:{warehouse.pk}" if warehouse else f"station:{station.pk}"
+    if sum(bool(site) for site in (warehouse, station, vehicle)) != 1:
+        raise ValueError("Pass exactly one of warehouse, station, or vehicle.")
+    site = warehouse or station or vehicle
+    site_name = site.name if (warehouse or station) else site.registration
+    if warehouse:
+        recipients, dedupe_site = warehouse_recipients(warehouse.pk), f"warehouse:{warehouse.pk}"
+    elif station:
+        recipients, dedupe_site = station_recipients(station.pk), f"station:{station.pk}"
+    else:
+        recipients, dedupe_site = vehicle_recipients(vehicle.pk), f"vehicle:{vehicle.pk}"
 
-    title = f"Low stock: {product.name} at {site.name}"
-    message = f"{product.name} at {site.name} is at {quantity} (reorder point {reorder_point})."
+    title = f"Low stock: {product.name} at {site_name}"
+    message = f"{product.name} at {site_name} is at {quantity} (reorder point {reorder_point})."
     link = reverse("catalogue_web:product-detail", args=[product.pk])
     notify_users(
         recipients, type="low_stock", title=title, message=message, link=link,

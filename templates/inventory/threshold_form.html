@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Low-stock threshold - IMS{% endblock %}
 {% block crumb %}Sites / {{ site_type|title }}s{% endblock %}
-{% block page_title %}{{ product.name }} @ {{ site.name }}{% endblock %}
+{% block page_title %}{{ product.name }} @ {{ site_label }}{% endblock %}
 {% block content %}
 <div class="panel" style="max-width:480px;">
   <div class="panel-body">
     <div class="hint" style="margin-bottom:16px;">
       This product's default reorder point is <strong>{{ default_reorder_point }}</strong>.
-      Set a number below to use a different threshold just at {{ site.name }}, or leave it
+      Set a number below to use a different threshold just at {{ site_label }}, or leave it
       blank to go back to using the default.
     </div>
     <form method="post">
@@ -24,8 +24,10 @@
         <button type="submit" class="btn btn-primary">Save</button>
         {% if site_type == "warehouse" %}
         <a class="btn btn-secondary" href="{% url 'warehouses_web:warehouse-detail' site.pk %}">Cancel</a>
-        {% else %}
+        {% elif site_type == "station" %}
         <a class="btn btn-secondary" href="{% url 'warehouses_web:station-detail' site.pk %}">Cancel</a>
+        {% else %}
+        <a class="btn btn-secondary" href="{% url 'vehicles_web:detail' site.pk %}">Cancel</a>
         {% endif %}
       </div>
     </form>

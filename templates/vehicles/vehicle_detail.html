@@ -7,6 +7,7 @@
 <div class="page-head">
   <div class="desc">{{ vehicle.make_model|default:"No make/model on file" }}</div>
   <div class="actions-row">
+    {% if can_manage_stock %}<a class="btn btn-primary" href="{% url 'inventory_web:new-transaction' %}?type=stock_out&vehicle={{ vehicle.pk }}">Restock from warehouse</a>{% endif %}
     {% if can_manage_fleet %}<a class="btn btn-secondary" href="{% url 'vehicles_web:edit' vehicle.pk %}">Edit</a>{% endif %}
     {% if vehicle.status == "available" and can_manage_fleet %}
     <form method="post" action="{% url 'vehicles_web:maintenance-start' vehicle.pk %}" style="display:inline;">
@@ -39,6 +40,36 @@
           <div><dt>Service due</dt><dd class="mono">{{ vehicle.service_due_date|default:"—" }}</dd></div>
           <div><dt>Insurance expiry</dt><dd class="mono">{{ vehicle.insurance_expiry|default:"—" }}</dd></div>
         </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Current stock</h2><span class="sub">{{ stock|length }} line{{ stock|length|pluralize }}</span></div>
+      <div class="panel-body flush">
+        {% if stock %}
+        <table class="data">
+          <thead><tr><th>Product</th><th>Batch</th><th class="num">Quantity</th><th>Status</th>{% if can_manage_thresholds %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for sl in stock %}
+            <tr class="rail-row {% if sl.quantity <= 0 %}critical{% elif sl.quantity <= sl.effective_reorder_point %}warn{% else %}good{% endif %}">
+              <td><a href="{% url 'catalogue_web:product-detail' sl.product_id %}">{{ sl.product.name }}</a></td>
+              <td class="mono">{{ sl.batch.batch_number|default:"—" }}</td>
+              <td class="num mono">{{ sl.quantity }}</td>
+              <td>
+                {% if sl.quantity <= 0 %}<span class="status-rail critical">Out</span>
+                {% elif sl.quantity <= sl.effective_reorder_point %}<span class="status-rail warn">Low (&le;{{ sl.effective_reorder_point }})</span>
+                {% else %}<span class="status-rail good">OK</span>{% endif %}
+              </td>
+              {% if can_manage_thresholds %}
+              <td><a class="btn btn-secondary btn-sm" href="{% url 'inventory_web:threshold-edit' 'vehicle' vehicle.pk sl.product_id %}">Edit threshold</a></td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No equipment or chemicals stocked on this vehicle yet.</div>
+        {% endif %}
       </div>
     </div>
 
@@ -105,6 +136,35 @@
   </div>
 
   <div>
+    {% if can_record_usage and stock %}
+    <div class="panel">
+      <div class="panel-head"><h2>Record usage</h2></div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'inventory_web:vehicle-usage' %}">
+          {% csrf_token %}
+          <input type="hidden" name="vehicle_id" value="{{ vehicle.pk }}">
+          <div class="field">
+            <label for="usage-product">Product</label>
+            <select id="usage-product" name="product_id" required>
+              {% for sl in stock %}
+                <option value="{{ sl.product_id }}">{{ sl.product.name }} ({{ sl.quantity }} on hand)</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="usage-qty">Quantity used</label>
+            <input id="usage-qty" type="number" name="quantity" step="0.01" min="0.01" required>
+          </div>
+          <div class="field">
+            <label for="usage-comment">Note</label>
+            <input id="usage-comment" type="text" name="comment" placeholder="e.g. platform deep clean job">
+          </div>
+          <button type="submit" class="btn btn-primary">Record usage</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     {% if can_manage_fleet %}
     {% if vehicle.status == "available" %}
     <div class="panel">

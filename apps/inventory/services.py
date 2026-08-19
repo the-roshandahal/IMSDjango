@@ -31,11 +31,17 @@ from apps.inventory.exceptions import ApprovalRequiredError, InsufficientStockEr
 from apps.inventory.models import (
     InventoryTransaction, ProductStockThreshold, StockLevel, Stocktake, StocktakeLine, Transfer, TransactionType,
 )
+from apps.vehicles.models import Vehicle
 from apps.warehouses.models import Station, Warehouse
 
 
-def _get_or_create_stock_level(*, product, warehouse_id=None, station_id=None, project_id=None, batch=None) -> StockLevel:
-    filters = dict(product=product, warehouse_id=warehouse_id, station_id=station_id, project_id=project_id, batch=batch)
+def _get_or_create_stock_level(
+    *, product, warehouse_id=None, station_id=None, vehicle_id=None, project_id=None, batch=None
+) -> StockLevel:
+    filters = dict(
+        product=product, warehouse_id=warehouse_id, station_id=station_id, vehicle_id=vehicle_id,
+        project_id=project_id, batch=batch,
+    )
     try:
         with transaction.atomic():
             level, _ = StockLevel.objects.get_or_create(defaults={"quantity": Decimal("0")}, **filters)
@@ -80,54 +86,83 @@ def _fefo_plan(product: Product, warehouse: Warehouse, quantity: Decimal):
     return plan
 
 
-def effective_reorder_point(product: Product, *, warehouse=None, station=None) -> int:
+def effective_reorder_point(product: Product, *, warehouse=None, station=None, vehicle=None) -> int:
     """A ProductStockThreshold override for this exact (product, site) pair
     wins if one exists; otherwise falls back to Product.reorder_point."""
-    if bool(warehouse) == bool(station):
-        raise ValueError("Pass exactly one of warehouse or station.")
-    override = ProductStockThreshold.objects.filter(product=product, warehouse=warehouse, station=station).values_list(
-        "reorder_point", flat=True
-    ).first()
+    if sum(bool(site) for site in (warehouse, station, vehicle)) != 1:
+        raise ValueError("Pass exactly one of warehouse, station, or vehicle.")
+    override = ProductStockThreshold.objects.filter(
+        product=product, warehouse=warehouse, station=station, vehicle=vehicle
+    ).values_list("reorder_point", flat=True).first()
     return override if override is not None else product.reorder_point
 
 
 def bulk_effective_reorder_points(stock_levels):
     """{stock_level.pk: effective threshold} for an iterable of StockLevel
-    rows (each already warehouse- or station-scoped), in a bounded number
-    of queries regardless of how many rows are passed -- for list/detail
-    views that would otherwise call effective_reorder_point() once per row."""
+    rows (each already warehouse-, station-, or vehicle-scoped), in a
+    bounded number of queries regardless of how many rows are passed -- for
+    list/detail views that would otherwise call effective_reorder_point()
+    once per row."""
     stock_levels = list(stock_levels)
     warehouse_ids = {sl.warehouse_id for sl in stock_levels if sl.warehouse_id}
     station_ids = {sl.station_id for sl in stock_levels if sl.station_id}
+    vehicle_ids = {sl.vehicle_id for sl in stock_levels if sl.vehicle_id}
     product_ids = {sl.product_id for sl in stock_levels}
 
     overrides = {}
     thresholds = ProductStockThreshold.objects.filter(product_id__in=product_ids).filter(
-        Q(warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids)
+        Q(warehouse_id__in=warehouse_ids) | Q(station_id__in=station_ids) | Q(vehicle_id__in=vehicle_ids)
     )
     for t in thresholds:
-        overrides[(t.product_id, t.warehouse_id, t.station_id)] = t.reorder_point
+        overrides[(t.product_id, t.warehouse_id, t.station_id, t.vehicle_id)] = t.reorder_point
 
     result = {}
     for sl in stock_levels:
-        key = (sl.product_id, sl.warehouse_id, sl.station_id)
+        key = (sl.product_id, sl.warehouse_id, sl.station_id, sl.vehicle_id)
         result[sl.pk] = overrides.get(key, sl.product.reorder_point)
     return result
 
 
-def _maybe_fire_low_stock(product: Product, *, warehouse: Warehouse = None, station: Station = None):
-    if bool(warehouse) == bool(station):
-        raise ValueError("Pass exactly one of warehouse or station.")
-    site_filter = {"warehouse": warehouse, "station": None} if warehouse else {"warehouse": None, "station": station}
+def attach_low_stock_counts(sites, site_field):
+    """Sets .low_stock_count on each Warehouse/Station/Vehicle in `sites`,
+    respecting any ProductStockThreshold override for that exact site -- a
+    plain Product.reorder_point-only DB annotation can't account for those
+    per-location overrides, so this resolves it in Python instead, in a
+    bounded number of queries regardless of list size."""
+    sites = list(sites)
+    site_ids = [s.pk for s in sites]
+    levels = StockLevel.objects.filter(**{f"{site_field}_id__in": site_ids}).values(
+        "product_id", site_field, "quantity", "product__reorder_point"
+    )
+    overrides = {
+        (t.product_id, getattr(t, f"{site_field}_id")): t.reorder_point
+        for t in ProductStockThreshold.objects.filter(**{f"{site_field}_id__in": site_ids})
+    }
+    counts = {}
+    for row in levels:
+        threshold = overrides.get((row["product_id"], row[site_field]), row["product__reorder_point"])
+        if row["quantity"] <= threshold:
+            site_id = row[site_field]
+            counts[site_id] = counts.get(site_id, 0) + 1
+    for s in sites:
+        s.low_stock_count = counts.get(s.pk, 0)
+    return sites
+
+
+def _maybe_fire_low_stock(product: Product, *, warehouse: Warehouse = None, station: Station = None, vehicle: Vehicle = None):
+    if sum(bool(site) for site in (warehouse, station, vehicle)) != 1:
+        raise ValueError("Pass exactly one of warehouse, station, or vehicle.")
+    site_filter = {"warehouse": warehouse, "station": station, "vehicle": vehicle}
     total = (
         StockLevel.objects.filter(product=product, project=None, **site_filter).aggregate(total=Sum("quantity"))["total"]
         or Decimal("0")
     )
-    threshold = effective_reorder_point(product, warehouse=warehouse, station=station)
+    threshold = effective_reorder_point(product, warehouse=warehouse, station=station, vehicle=vehicle)
     if total <= threshold:
         low_stock_signal.send(
             sender=Product, product=product, warehouse_id=warehouse.pk if warehouse else None,
-            station_id=station.pk if station else None, quantity=total, reorder_point=threshold,
+            station_id=station.pk if station else None, vehicle_id=vehicle.pk if vehicle else None,
+            quantity=total, reorder_point=threshold,
         )
 
 
@@ -156,23 +191,25 @@ def stock_in(
 
 @transaction.atomic
 def stock_out(
-    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None,
+    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None, vehicle_id=None,
     reason_code="", comment="", batch_id=None, override_fefo=False, request_id=None,
 ):
-    """Debits warehouse stock. If `station_id` or `project_id` is given
-    (mutually exclusive), the same quantity is credited to that station's
-    or deep clean project's stock in the same atomic operation
-    (issued-to-station / issued-to-project); otherwise this is a
-    write-off/consumption with no destination stock. Defaults to FEFO for
-    batch-tracked products; passing `batch_id` requires `override_fefo=True`
-    and should carry a `reason_code` (Supervisor override, SRS Section 5.4).
-    `request_id` is purely for traceability back to a StockRequest --
-    callers (e.g. apps.requests.services) are responsible for checking
-    approval status before calling this; this function has no opinion on
-    approval workflow.
+    """Debits warehouse stock. If `station_id`, `project_id`, or
+    `vehicle_id` is given (mutually exclusive), the same quantity is
+    credited to that station's, deep clean project's, or vehicle's stock in
+    the same atomic operation (issued-to-station / issued-to-project /
+    issued-to-vehicle -- vehicles carry their own running stock of
+    equipment and chemicals, restocked from a warehouse just like a
+    station); otherwise this is a write-off/consumption with no destination
+    stock. Defaults to FEFO for batch-tracked products; passing `batch_id`
+    requires `override_fefo=True` and should carry a `reason_code`
+    (Supervisor override, SRS Section 5.4). `request_id` is purely for
+    traceability back to a StockRequest -- callers (e.g.
+    apps.requests.services) are responsible for checking approval status
+    before calling this; this function has no opinion on approval workflow.
     """
-    if station_id is not None and project_id is not None:
-        raise ValueError("Issue stock to a station or a project, not both.")
+    if sum(dest is not None for dest in (station_id, project_id, vehicle_id)) > 1:
+        raise ValueError("Issue stock to a station, a project, or a vehicle -- not more than one.")
 
     quantity = Decimal(str(quantity))
     if quantity <= 0:
@@ -209,8 +246,8 @@ def stock_out(
     for batch, take_qty in consumed:
         txn = InventoryTransaction.objects.create(
             type=TransactionType.STOCK_OUT, product=product, batch=batch, quantity=take_qty,
-            source_warehouse=warehouse, station_id=station_id, project_id=project_id, reason_code=reason_code,
-            comment=comment, performed_by=performed_by, request_id=request_id,
+            source_warehouse=warehouse, station_id=station_id, project_id=project_id, vehicle_id=vehicle_id,
+            reason_code=reason_code, comment=comment, performed_by=performed_by, request_id=request_id,
         )
         txns.append(txn)
 
@@ -220,6 +257,9 @@ def stock_out(
         elif project_id is not None:
             project_level = _get_or_create_stock_level(product=product, project_id=project_id, batch=batch)
             StockLevel.objects.filter(pk=project_level.pk).update(quantity=F("quantity") + take_qty)
+        elif vehicle_id is not None:
+            vehicle_level = _get_or_create_stock_level(product=product, vehicle_id=vehicle_id, batch=batch)
+            StockLevel.objects.filter(pk=vehicle_level.pk).update(quantity=F("quantity") + take_qty)
 
     _maybe_fire_low_stock(product, warehouse=warehouse)
     return txns
@@ -392,13 +432,13 @@ def create_stocktake(*, started_by, lines, warehouse_id=None, station_id=None):
 
 @transaction.atomic
 def return_stock(
-    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None,
+    *, product_id, warehouse_id, quantity, performed_by, station_id=None, project_id=None, vehicle_id=None,
     reason_code="", comment="", batch_id=None,
 ):
-    """Returns from a station or deep clean project (mutually exclusive)
-    back to a warehouse."""
-    if station_id is not None and project_id is not None:
-        raise ValueError("Return from a station or a project, not both.")
+    """Returns from a station, deep clean project, or vehicle (mutually
+    exclusive) back to a warehouse."""
+    if sum(source is not None for source in (station_id, project_id, vehicle_id)) > 1:
+        raise ValueError("Return from a station, a project, or a vehicle -- not more than one.")
 
     quantity = Decimal(str(quantity))
     product = Product.objects.get(pk=product_id)
@@ -407,24 +447,33 @@ def return_stock(
 
     if station_id is not None:
         updated = StockLevel.objects.filter(
-            product=product, station_id=station_id, warehouse=None, project=None, batch=batch, quantity__gte=quantity
+            product=product, station_id=station_id, warehouse=None, project=None, vehicle=None, batch=batch,
+            quantity__gte=quantity,
         ).update(quantity=F("quantity") - quantity)
         if updated == 0:
             raise StockLevelChangedError("Station stock level changed; please retry the return.")
     elif project_id is not None:
         updated = StockLevel.objects.filter(
-            product=product, project_id=project_id, warehouse=None, station=None, batch=batch, quantity__gte=quantity
+            product=product, project_id=project_id, warehouse=None, station=None, vehicle=None, batch=batch,
+            quantity__gte=quantity,
         ).update(quantity=F("quantity") - quantity)
         if updated == 0:
             raise StockLevelChangedError("Project stock level changed; please retry the return.")
+    elif vehicle_id is not None:
+        updated = StockLevel.objects.filter(
+            product=product, vehicle_id=vehicle_id, warehouse=None, station=None, project=None, batch=batch,
+            quantity__gte=quantity,
+        ).update(quantity=F("quantity") - quantity)
+        if updated == 0:
+            raise StockLevelChangedError("Vehicle stock level changed; please retry the return.")
 
     level = _get_or_create_stock_level(product=product, warehouse_id=warehouse_id, batch=batch)
     StockLevel.objects.filter(pk=level.pk).update(quantity=F("quantity") + quantity)
 
     return InventoryTransaction.objects.create(
         type=TransactionType.RETURN, product=product, batch=batch, quantity=quantity,
-        dest_warehouse=warehouse, station_id=station_id, project_id=project_id, reason_code=reason_code,
-        comment=comment, performed_by=performed_by,
+        dest_warehouse=warehouse, station_id=station_id, project_id=project_id, vehicle_id=vehicle_id,
+        reason_code=reason_code, comment=comment, performed_by=performed_by,
     )
 
 
@@ -536,4 +585,31 @@ def station_stock_usage(*, product_id, station_id, quantity, performed_by, comme
         station_id=station_id, comment=comment, performed_by=performed_by,
     )
     _maybe_fire_low_stock(product, station=Station.objects.get(pk=station_id))
+    return txn
+
+
+@transaction.atomic
+def vehicle_stock_usage(*, product_id, vehicle_id, quantity, performed_by, comment="", batch_id=None):
+    """Routine consumption of stock already held on a vehicle -- e.g.
+    equipment or chemicals used on a job. Decrements vehicle-side StockLevel
+    directly; nothing flows back to a warehouse."""
+    quantity = Decimal(str(quantity))
+    if quantity <= 0:
+        raise ValueError("quantity must be positive.")
+
+    product = Product.objects.get(pk=product_id)
+    batch = Batch.objects.get(pk=batch_id) if batch_id else None
+
+    updated = StockLevel.objects.filter(
+        product=product, vehicle_id=vehicle_id, warehouse=None, station=None, project=None, batch=batch,
+        quantity__gte=quantity,
+    ).update(quantity=F("quantity") - quantity)
+    if updated == 0:
+        raise StockLevelChangedError("Vehicle stock level changed; please retry recording this usage.")
+
+    txn = InventoryTransaction.objects.create(
+        type=TransactionType.VEHICLE_USAGE, product=product, batch=batch, quantity=quantity,
+        vehicle_id=vehicle_id, comment=comment, performed_by=performed_by,
+    )
+    _maybe_fire_low_stock(product, vehicle=Vehicle.objects.get(pk=vehicle_id))
     return txn

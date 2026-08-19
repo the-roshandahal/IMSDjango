@@ -5,6 +5,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.core.mixins import CapabilityRequiredMixin
 from apps.core.permissions import SITE_SCOPE_EXEMPT_ROLES, assigned_site_ids
+from apps.inventory.services import attach_low_stock_counts
 from apps.warehouses.forms import StationForm, WarehouseForm
 from apps.warehouses.models import Station, Warehouse
 
@@ -24,34 +25,6 @@ class SiteIsObjectQuerysetMixin:
         return qs.filter(pk__in=list(assigned_site_ids(user, self.site_type)))
 
 
-def _attach_low_stock_counts(sites, site_field):
-    """Sets .low_stock_count on each Warehouse/Station in `sites`, respecting
-    any ProductStockThreshold override for that exact site -- a plain
-    Product.reorder_point-only DB annotation can't account for those
-    per-location overrides, so this resolves it in Python instead, in a
-    bounded number of queries regardless of list size."""
-    from apps.inventory.models import ProductStockThreshold, StockLevel
-
-    sites = list(sites)
-    site_ids = [s.pk for s in sites]
-    levels = StockLevel.objects.filter(**{f"{site_field}_id__in": site_ids}).values(
-        "product_id", site_field, "quantity", "product__reorder_point"
-    )
-    overrides = {
-        (t.product_id, getattr(t, f"{site_field}_id")): t.reorder_point
-        for t in ProductStockThreshold.objects.filter(**{f"{site_field}_id__in": site_ids})
-    }
-    counts = {}
-    for row in levels:
-        threshold = overrides.get((row["product_id"], row[site_field]), row["product__reorder_point"])
-        if row["quantity"] <= threshold:
-            site_id = row[site_field]
-            counts[site_id] = counts.get(site_id, 0) + 1
-    for s in sites:
-        s.low_stock_count = counts.get(s.pk, 0)
-    return sites
-
-
 class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, ListView):
     capability = "warehouse.view"
     site_type = "warehouse"
@@ -61,7 +34,7 @@ class WarehouseListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, List
 
     def get_queryset(self):
         qs = super().get_queryset().filter(is_active=True).order_by("name")
-        return _attach_low_stock_counts(qs, "warehouse")
+        return attach_low_stock_counts(qs, "warehouse")
 
 
 class WarehouseDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, DetailView):
@@ -123,7 +96,7 @@ class StationListView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, ListVi
 
     def get_queryset(self):
         qs = super().get_queryset().filter(is_active=True).order_by("name")
-        return _attach_low_stock_counts(qs, "station")
+        return attach_low_stock_counts(qs, "station")
 
 
 class StationDetailView(CapabilityRequiredMixin, SiteIsObjectQuerysetMixin, DetailView):

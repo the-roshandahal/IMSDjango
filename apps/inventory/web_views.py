@@ -85,7 +85,7 @@ class NewTransactionView(CapabilityRequiredMixin, View):
     capability = "warehouse.stock.manage"
     template_name = "inventory/new_transaction.html"
 
-    def _blank_forms(self, active, warehouse_initial=None):
+    def _blank_forms(self, active, warehouse_initial=None, vehicle_initial=None):
         forms_dict = {}
         for key, form_cls in ACTION_FORMS.items():
             initial = {}
@@ -93,6 +93,10 @@ class NewTransactionView(CapabilityRequiredMixin, View):
                 initial["warehouse"] = warehouse_initial
             if warehouse_initial and "source_warehouse" in form_cls.base_fields:
                 initial["source_warehouse"] = warehouse_initial
+            if vehicle_initial and "vehicle" in form_cls.base_fields:
+                initial["vehicle"] = vehicle_initial
+                if "purpose" in form_cls.base_fields:
+                    initial["purpose"] = inv_forms.StockOutForm.PURPOSE_VEHICLE
             forms_dict[key] = form_cls(initial=initial)
         return forms_dict
 
@@ -100,7 +104,7 @@ class NewTransactionView(CapabilityRequiredMixin, View):
         active = request.GET.get("type", "stock_in")
         if active not in ACTION_FORMS:
             active = "stock_in"
-        forms_dict = self._blank_forms(active, request.GET.get("warehouse"))
+        forms_dict = self._blank_forms(active, request.GET.get("warehouse"), request.GET.get("vehicle"))
         return render(request, self.template_name, {"forms": forms_dict, "active": active, "labels": ACTION_LABELS})
 
     def post(self, request):
@@ -138,11 +142,13 @@ class NewTransactionView(CapabilityRequiredMixin, View):
             reason_code = data["reason_code"] or purpose
             comment = data["comment"]
             station = data.get("station")
+            vehicle = data.get("vehicle")
             if purpose == inv_forms.StockOutForm.PURPOSE_DEEP_CLEAN:
                 comment = f"Deep clean project: {data['project_reference']}. {comment}".strip()
             return services.stock_out(
                 product_id=data["product"].id, warehouse_id=data["warehouse"].id, quantity=data["quantity"],
                 performed_by=user, station_id=station.id if station else None,
+                vehicle_id=vehicle.id if vehicle else None,
                 reason_code=reason_code, comment=comment,
             )
         if action == "transfer":
@@ -163,6 +169,7 @@ class NewTransactionView(CapabilityRequiredMixin, View):
             return services.return_stock(
                 product_id=data["product"].id, warehouse_id=data["warehouse"].id, quantity=data["quantity"],
                 performed_by=user, station_id=data["station"].id if data.get("station") else None,
+                vehicle_id=data["vehicle"].id if data.get("vehicle") else None,
                 reason_code=data["reason_code"], comment=data["comment"],
             )
         if action == "damaged":
@@ -205,29 +212,59 @@ class StationUsageWebView(CapabilityRequiredMixin, View):
         return redirect(reverse("warehouses_web:station-detail", args=[data["station_id"]]))
 
 
+class VehicleUsageWebView(CapabilityRequiredMixin, View):
+    capability = "vehicle.usage.record"
+
+    def post(self, request):
+        form = inv_forms.VehicleUsageForm(request.POST)
+        redirect_url = reverse("vehicles_web:detail", args=[request.POST.get("vehicle_id") or 0])
+        if not form.is_valid():
+            messages.error(request, "Could not record usage: check the form and try again.")
+            return redirect(redirect_url)
+        data = form.cleaned_data
+        try:
+            services.vehicle_stock_usage(
+                product_id=data["product_id"], vehicle_id=data["vehicle_id"], quantity=data["quantity"],
+                performed_by=request.user, comment=data["comment"],
+            )
+        except (StockLevelChangedError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Usage recorded.")
+        return redirect(reverse("vehicles_web:detail", args=[data["vehicle_id"]]))
+
+
+def _site_label(site) -> str:
+    return getattr(site, "name", None) or getattr(site, "registration", str(site))
+
+
 class ThresholdEditView(CapabilityRequiredMixin, View):
-    """Sets or clears a per-warehouse/per-station low-stock threshold for one
-    product, overriding Product.reorder_point just at that site. Reached
-    from an "Edit" link on the warehouse/station stock table, not a
-    standalone picker -- the site and product are already known there."""
+    """Sets or clears a per-warehouse/per-station/per-vehicle low-stock
+    threshold for one product, overriding Product.reorder_point just at
+    that site. Reached from an "Edit" link on the warehouse/station/vehicle
+    stock table, not a standalone picker -- the site and product are
+    already known there."""
 
     capability = "warehouse.manage"
     template_name = "inventory/threshold_form.html"
 
     @staticmethod
     def _get_site(site_type, site_id):
+        from apps.vehicles.models import Vehicle
         from apps.warehouses.models import Station, Warehouse
 
         if site_type == "warehouse":
             return Warehouse.objects.filter(pk=site_id).first()
         if site_type == "station":
             return Station.objects.filter(pk=site_id).first()
+        if site_type == "vehicle":
+            return Vehicle.objects.filter(pk=site_id).first()
         return None
 
     def _render(self, request, form, site, site_type, product):
         return render(request, self.template_name, {
             "form": form, "site": site, "site_type": site_type, "product": product,
-            "default_reorder_point": product.reorder_point,
+            "site_label": _site_label(site), "default_reorder_point": product.reorder_point,
         })
 
     def get(self, request, site_type, site_id, product_id):
@@ -255,17 +292,22 @@ class ThresholdEditView(CapabilityRequiredMixin, View):
             return self._render(request, form, site, site_type, product)
 
         value = form.cleaned_data["reorder_point"]
+        site_label = _site_label(site)
         if value is None:
             ProductStockThreshold.objects.filter(product=product, **{site_type: site}).delete()
-            messages.success(request, f"{product.name} at {site.name} now uses the default reorder point again.")
+            messages.success(request, f"{product.name} at {site_label} now uses the default reorder point again.")
         else:
             ProductStockThreshold.objects.update_or_create(
                 product=product, **{site_type: site}, defaults={"reorder_point": value},
             )
-            messages.success(request, f"Low-stock threshold for {product.name} at {site.name} set to {value}.")
+            messages.success(request, f"Low-stock threshold for {product.name} at {site_label} set to {value}.")
 
-        redirect_name = "warehouses_web:warehouse-detail" if site_type == "warehouse" else "warehouses_web:station-detail"
-        return redirect(reverse(redirect_name, args=[site.pk]))
+        redirect_names = {
+            "warehouse": "warehouses_web:warehouse-detail",
+            "station": "warehouses_web:station-detail",
+            "vehicle": "vehicles_web:detail",
+        }
+        return redirect(reverse(redirect_names[site_type], args=[site.pk]))
 
 
 def _can_view_stocktakes(user) -> bool:

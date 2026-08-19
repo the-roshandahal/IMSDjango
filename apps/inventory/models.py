@@ -16,6 +16,7 @@ class TransactionType(models.TextChoices):
     EXPIRED = "expired", "Expired"
     REVERSAL = "reversal", "Reversal"
     STATION_USAGE = "station_usage", "Station Usage"
+    VEHICLE_USAGE = "vehicle_usage", "Vehicle Usage"
 
 
 class InventoryTransaction(ImmutableModel):
@@ -44,6 +45,7 @@ class InventoryTransaction(ImmutableModel):
         "warehouses.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     station = models.ForeignKey("warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    vehicle = models.ForeignKey("vehicles.Vehicle", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     project = models.ForeignKey(
         "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
@@ -92,6 +94,9 @@ class StockLevel(models.Model):
     station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
     )
+    vehicle = models.ForeignKey(
+        "vehicles.Vehicle", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
+    )
     project = models.ForeignKey(
         "projects.DeepCleanProject", null=True, blank=True, on_delete=models.PROTECT, related_name="stock_levels"
     )
@@ -103,26 +108,27 @@ class StockLevel(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["product", "warehouse", "station", "project", "batch"], name="uniq_stock_level_slot"
+                fields=["product", "warehouse", "station", "vehicle", "project", "batch"], name="uniq_stock_level_slot"
             )
         ]
         indexes = [
             models.Index(fields=["product", "warehouse"]),
             models.Index(fields=["product", "station"]),
+            models.Index(fields=["product", "vehicle"]),
             models.Index(fields=["product", "project"]),
         ]
 
     def __str__(self):
-        location = self.warehouse or self.station or self.project
+        location = self.warehouse or self.station or self.vehicle or self.project
         return f"{self.product} @ {location}: {self.quantity}"
 
 
 class ProductStockThreshold(models.Model):
-    """A per-warehouse or per-station override of Product.reorder_point --
-    a chemical that needs 50 units on hand at the main warehouse might only
-    need 5 at a small station. Falls back to Product.reorder_point wherever
-    no override exists for that exact (product, site) pair; see
-    apps.inventory.services.effective_reorder_point."""
+    """A per-warehouse, per-station, or per-vehicle override of
+    Product.reorder_point -- a chemical that needs 50 units on hand at the
+    main warehouse might only need 5 in a van. Falls back to
+    Product.reorder_point wherever no override exists for that exact
+    (product, site) pair; see apps.inventory.services.effective_reorder_point."""
 
     product = models.ForeignKey("catalogue.Product", on_delete=models.CASCADE, related_name="stock_thresholds")
     warehouse = models.ForeignKey(
@@ -131,24 +137,29 @@ class ProductStockThreshold(models.Model):
     station = models.ForeignKey(
         "warehouses.Station", null=True, blank=True, on_delete=models.CASCADE, related_name="stock_thresholds"
     )
+    vehicle = models.ForeignKey(
+        "vehicles.Vehicle", null=True, blank=True, on_delete=models.CASCADE, related_name="stock_thresholds"
+    )
     reorder_point = models.PositiveIntegerField()
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 check=(
-                    models.Q(warehouse__isnull=False, station__isnull=True)
-                    | models.Q(warehouse__isnull=True, station__isnull=False)
+                    models.Q(warehouse__isnull=False, station__isnull=True, vehicle__isnull=True)
+                    | models.Q(warehouse__isnull=True, station__isnull=False, vehicle__isnull=True)
+                    | models.Q(warehouse__isnull=True, station__isnull=True, vehicle__isnull=False)
                 ),
                 name="threshold_exactly_one_site",
             ),
             models.UniqueConstraint(fields=["product", "warehouse"], name="uniq_threshold_product_warehouse"),
             models.UniqueConstraint(fields=["product", "station"], name="uniq_threshold_product_station"),
+            models.UniqueConstraint(fields=["product", "vehicle"], name="uniq_threshold_product_vehicle"),
         ]
 
     @property
     def site(self):
-        return self.warehouse or self.station
+        return self.warehouse or self.station or self.vehicle
 
     def __str__(self):
         return f"{self.product} @ {self.site}: reorder at {self.reorder_point}"

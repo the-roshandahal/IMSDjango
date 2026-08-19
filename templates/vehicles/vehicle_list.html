@@ -11,7 +11,7 @@
   <div class="panel-body flush">
     {% if vehicles %}
     <table class="data">
-      <thead><tr><th>Registration</th><th>Make/model</th><th>Location</th><th>Driver</th><th>Status</th><th>Service due</th><th>Insurance</th></tr></thead>
+      <thead><tr><th>Registration</th><th>Make/model</th><th>Location</th><th>Driver</th><th>Status</th><th>Stock</th><th>Service due</th><th>Insurance</th></tr></thead>
       <tbody>
         {% for v in vehicles %}
         <tr class="rail-row {% if v.compliance_blockers %}warn{% elif v.status == 'available' %}good{% elif v.status == 'assigned' %}info{% else %}pending{% endif %}">
@@ -25,6 +25,7 @@
             {% elif v.status == "in_maintenance" %}<span class="status-rail warn">Maintenance</span>
             {% else %}<span class="status-rail pending">Written off</span>{% endif %}
           </td>
+          <td>{% if v.low_stock_count %}<span class="status-rail warn">{{ v.low_stock_count }} low</span>{% else %}<span class="status-rail good">OK</span>{% endif %}</td>
           <td>{% if v.is_service_due %}<span class="status-rail warn">{{ v.service_due_date }}</span>{% else %}<span class="muted">{{ v.service_due_date|default:"—" }}</span>{% endif %}</td>
           <td>{% if v.is_insurance_expired %}<span class="status-rail critical">{{ v.insurance_expiry }}</span>{% else %}<span class="muted">{{ v.insurance_expiry|default:"—" }}</span>{% endif %}</td>
         </tr>
