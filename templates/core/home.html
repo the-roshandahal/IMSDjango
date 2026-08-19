@@ -157,6 +157,11 @@
   .client-badge .client-logo-crop { display: inline-block; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #1b1a1a; }
   .client-badge .client-logo-crop img { display: block; width: 77px; height: 40px; max-width: none; object-fit: cover; object-position: left top; }
   .client-badge .icon-badge { width: 40px; height: 40px; }
+  .client-lettermark {
+    width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 800; font-size: 0.92rem; color: #fff; letter-spacing: -0.01em;
+  }
   .client-badge span.badge-text { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--ink-800, var(--ink-700)); letter-spacing: 0.01em; white-space: nowrap; }
   .client-badge span.badge-text small { display: block; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-400); margin-top: 2px; font-weight: 600; }
 
@@ -441,9 +446,9 @@
       {% for i in "12" %}
       <div class="client-badge"><img class="client-logo" src="{% static 'img/home/clients/sydney-trains.svg' %}" alt="Sydney Trains"><span class="badge-text">Sydney Trains<small>Transport &amp; rail</small></span></div>
       <div class="client-badge"><span class="client-logo-crop"><img src="{% static 'img/home/clients/ubw.svg' %}" alt="UBW"></span><span class="badge-text">UBW<small>Facilities</small></span></div>
-      <div class="client-badge"><span class="icon-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7V6a5 5 0 0 1 10 0v1h2.3a1 1 0 0 1 1 .9l1.1 11.2a1 1 0 0 1-1 1.1H3.6a1 1 0 0 1-1-1.1L3.7 7.9a1 1 0 0 1 1-.9H7ZM9 7h6V6a3 3 0 0 0-6 0v1Z"/></svg></span><span class="badge-text">Western Sydney retail portfolio<small>Retail</small></span></div>
-      <div class="client-badge"><span class="icon-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3h4v6h6v4h-6v6h-4v-6H4V9h6V3Z"/></svg></span><span class="badge-text">Sydney aged care operator<small>Healthcare</small></span></div>
-      <div class="client-badge"><span class="icon-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3L12 3Z"/></svg></span><span class="badge-text">NSW strata &amp; facilities manager<small>Strata</small></span></div>
+      <div class="client-badge"><span class="client-lettermark" style="background:#b45f3c;">WS</span><span class="badge-text">Western Sydney retail portfolio<small>Retail</small></span></div>
+      <div class="client-badge"><span class="client-lettermark" style="background:#2b6f76;">AC</span><span class="badge-text">Sydney aged care operator<small>Healthcare</small></span></div>
+      <div class="client-badge"><span class="client-lettermark" style="background:#3a4a63;">SF</span><span class="badge-text">NSW strata &amp; facilities manager<small>Strata</small></span></div>
       {% endfor %}
     </div>
   </div>
