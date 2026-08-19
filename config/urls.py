@@ -3,8 +3,16 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve as serve_media
 
+from apps.core import web_views as core_web_views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Unprefixed on purpose: a service worker's default scope is the
+    # directory it's served from, so /static/sw.js would only ever be
+    # able to control /static/*. Serving it from the root gives it the
+    # whole site.
+    path("sw.js", core_web_views.ServiceWorkerView.as_view(), name="service-worker"),
+    path("manifest.json", core_web_views.ManifestView.as_view(), name="manifest"),
     path("", include("apps.accounts.urls")),
     path("api/", include("apps.catalogue.urls")),
     path("api/", include("apps.warehouses.urls")),
